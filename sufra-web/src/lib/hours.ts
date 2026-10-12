@@ -54,7 +54,7 @@ export function fmtTime(min: number, lang: Lang): string {
 
 export function fmtRange([o, c]: [number, number], lang: Lang): string {
   if (c <= o) return lang === "ar" ? "مقفول" : "Closed";
-  if (c - o >= 1440) return lang === "ar" ? "٢٤ ساعة" : "24 hours";
+  if (c - o >= 1440) return lang === "ar" ? "24 ساعة" : "24 hours";
   return `${fmtTime(o, lang)} – ${fmtTime(c, lang)}`;
 }
 
@@ -63,7 +63,7 @@ export const DAY_PARTS: { id: DayPart; ar: string; en: string; from: number; to:
   { id: "morning", ar: "الصبح", en: "Morning", from: 6 * 60, to: 12 * 60 },
   { id: "afternoon", ar: "الضهر والعصر", en: "Afternoon", from: 12 * 60, to: 17 * 60 },
   { id: "evening", ar: "بالليل", en: "Evening", from: 17 * 60, to: 22 * 60 },
-  { id: "late", ar: "سهر بعد ١٢", en: "Late (after 12)", from: 24 * 60, to: 27 * 60 },
+  { id: "late", ar: "سهر بعد 12", en: "Late (after 12)", from: 24 * 60, to: 27 * 60 },
 ];
 
 /** Does the venue's schedule for `day` overlap the given part of the day? */

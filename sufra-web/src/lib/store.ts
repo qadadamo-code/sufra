@@ -142,7 +142,7 @@ function seedAccount(): Account {
       mode: "delivery",
       breakdown: { subtotal, discount: 0, service: 0, vat, deliveryFee: fee, total: subtotal + vat + fee },
       payment: "cash",
-      address: "١٤ شارع مصدق، الدقي (عنوان تجريبي)",
+      address: "14 شارع مصدق، الدقي (عنوان تجريبي)",
       createdAt: addDays(now, -daysAgo).getTime(),
       stepSec: 8,
       seeded: true,

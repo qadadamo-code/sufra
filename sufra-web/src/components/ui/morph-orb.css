@@ -1,0 +1,374 @@
+/* MorphOrb styles. The keyframes are the owner's (ai-orb-keyframes.css); every .smo-* rule below was written for
+   Sufra because the original styles were not provided. Runtime writes --w --h --r --o* --gs --cs --hOp --dotS --bloom
+   --inScale on .smo-actor, --sOp --sTy on .smo-status and --oCenter on .smo-root. */
+
+@property --angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes smo-spin { to { --angle: 360deg; } }
+@keyframes smo-drift { from { transform: translateX(-14%); } to { transform: translateX(14%); } }
+@keyframes smo-shimmer { from { background-position: 150% 0; } to { background-position: -100% 0; } }
+@keyframes smo-dot { 0%, 80%, 100% { opacity: .25; } 40% { opacity: 1; } }
+@keyframes smo-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes smo-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-6px); } }
+@keyframes smo-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes smo-fade-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes smo-shake {
+  0%, 100% { transform: translate(-50%, -50%); }
+  25% { transform: translate(calc(-50% - 4px), -50%); }
+  75% { transform: translate(calc(-50% + 4px), -50%); }
+}
+
+.smo-root {
+  --mo-top: 100px;
+  --mo-teal: var(--sf-primary, #0d5a53);
+  --mo-brass: var(--sf-brass, #a8700c);
+  position: relative;
+  width: 100%;
+  height: calc(var(--mo-top) + 190px + 50px);
+  isolation: isolate;
+  -webkit-tap-highlight-color: transparent;
+}
+@media (max-width: 639px) {
+  .smo-root { height: calc(var(--mo-top) + 176px + 46px); }
+}
+
+.smo-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(60% 50% at 50% var(--mo-top), color-mix(in srgb, var(--mo-teal) 9%, transparent), transparent 70%);
+}
+.smo-halo {
+  position: absolute;
+  left: 50%;
+  top: var(--mo-top);
+  width: 380px;
+  height: 380px;
+  translate: -50% -50%;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle, color-mix(in srgb, var(--mo-brass) 28%, transparent) 0%, color-mix(in srgb, var(--mo-teal) 14%, transparent) 38%, transparent 68%);
+  opacity: var(--oCenter, 0);
+  filter: blur(6px);
+}
+
+.smo-mover {
+  position: absolute;
+  left: 50%;
+  top: var(--mo-top);
+  width: 0;
+  height: 0;
+  z-index: 2;
+}
+.smo-trail {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--mo-teal) 60%, white), var(--mo-teal));
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+.smo-actor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--w, 560px);
+  height: var(--h, 60px);
+  border-radius: var(--r, 999px);
+  transform: translate(-50%, -50%);
+  will-change: width, height;
+}
+.smo-actor[data-shake] { animation: smo-shake .26s ease; }
+.smo-actor > * { border-radius: inherit; }
+
+.smo-underglow {
+  position: absolute;
+  inset: 6px 10px -4px;
+  background: linear-gradient(90deg, var(--mo-teal), var(--mo-brass), var(--mo-teal));
+  filter: blur(22px);
+  opacity: calc(var(--oGlow, 1) * .32);
+  transition: opacity .3s ease;
+  pointer-events: none;
+}
+.smo-actor[data-typing] .smo-underglow { opacity: calc(var(--oGlow, 1) * .55); }
+
+.smo-surface {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 0 rgb(255 255 255 / .6) inset, 0 18px 40px -24px rgb(13 40 36 / .55);
+  opacity: var(--oPill, 1);
+  transition: border-color .2s ease;
+}
+[data-theme="dark"] .smo-surface { box-shadow: 0 1px 0 rgb(255 255 255 / .04) inset, 0 18px 40px -20px rgb(0 0 0 / .8); }
+.smo-actor[data-flash] .smo-surface { border-color: var(--sf-danger, #c2412d); }
+.smo-aurora {
+  position: absolute;
+  inset: 0;
+  opacity: calc(var(--oAur, 1) * .16);
+  pointer-events: none;
+}
+.smo-aurora i {
+  position: absolute;
+  top: -60%;
+  width: 45%;
+  height: 220%;
+  border-radius: 50%;
+  filter: blur(18px);
+  animation: smo-drift 7s ease-in-out infinite alternate;
+}
+.smo-aurora i:nth-child(1) { left: -5%; background: var(--mo-teal); }
+.smo-aurora i:nth-child(2) { left: 25%; background: var(--mo-brass); animation-duration: 9s; animation-delay: -3s; }
+.smo-aurora i:nth-child(3) { left: 55%; background: var(--mo-teal); animation-duration: 11s; animation-delay: -5s; }
+.smo-aurora i:nth-child(4) { left: 80%; background: var(--mo-brass); animation-duration: 8s; animation-delay: -1s; }
+
+.smo-ball {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--mo-teal) 45%, white), var(--mo-teal) 55%, color-mix(in srgb, var(--mo-teal) 70%, black));
+  opacity: var(--oBall, 0);
+  box-shadow: 0 10px 30px -10px var(--mo-teal);
+  pointer-events: none;
+}
+/* the original's "done green" disc → a brass-on-teal tray (Sufra's mark) */
+.smo-green {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 50%, var(--mo-teal) 0 22%, transparent 23%),
+    radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--mo-brass) 25%, white) 0 52%, transparent 53%),
+    radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--mo-brass) 70%, white), var(--mo-brass) 60%, color-mix(in srgb, var(--mo-brass) 70%, black));
+  opacity: var(--oGreen, 0);
+  transform: scale(var(--gs, .55));
+  pointer-events: none;
+}
+.smo-halo-green {
+  position: absolute;
+  inset: -35%;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--mo-brass) 55%, transparent) 0%, transparent 65%);
+  opacity: var(--oHalo, 0);
+  filter: blur(8px);
+  pointer-events: none;
+}
+.smo-card {
+  position: absolute;
+  inset: 0;
+  background: var(--card);
+  border: 1px solid color-mix(in srgb, var(--mo-brass) 35%, var(--border));
+  box-shadow: 0 24px 60px -30px rgb(13 40 36 / .6);
+  opacity: var(--oCard, 0);
+  transform: scale(var(--cs, 1));
+  pointer-events: none;
+}
+.smo-ring {
+  position: absolute;
+  inset: -1px;
+  padding: 1.5px;
+  background: conic-gradient(from var(--angle), transparent 0deg, var(--mo-teal) 60deg, var(--mo-brass) 110deg, transparent 170deg, transparent 360deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  opacity: calc(var(--oRing, 1) * .9);
+  animation: smo-spin 5s linear infinite;
+  pointer-events: none;
+}
+
+.smo-input {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-inline: 18px 8px;
+  opacity: var(--oInput, 1);
+  transform: scale(var(--inScale, 1));
+  margin: 0;
+}
+.smo-root:not([data-phase="idle"]) .smo-input { pointer-events: none; }
+.smo-spark { width: 20px; height: 20px; flex: none; color: var(--mo-brass); }
+.smo-field {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font-size: 16px;
+  color: var(--foreground);
+}
+.smo-field::placeholder { color: var(--muted-foreground); opacity: 1; }
+.smo-send {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 0;
+  background: var(--muted);
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: background-color .2s ease, color .2s ease, transform .2s ease;
+}
+.smo-send svg { width: 20px; height: 20px; }
+.smo-send[data-ready] { background: var(--mo-teal); color: var(--sf-primary-ink, #fff); }
+.smo-send[data-ready]:hover { transform: translateY(-1px); }
+.smo-input:focus-within ~ .smo-ring, .smo-actor:focus-within .smo-ring { animation-duration: 2.4s; }
+
+.smo-orb {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 220px !important;
+  height: 220px !important;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  border-radius: 0 !important;
+}
+.smo-pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid var(--mo-brass);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.smo-answer {
+  position: absolute;
+  inset: 0;
+  padding: 14px 18px;
+  opacity: var(--hOp, 0);
+  overflow: hidden;
+  text-align: start;
+  outline: none;
+  border-radius: 20px !important;
+}
+.smo-root:not([data-phase="unfold"]):not([data-phase="answered"]) .smo-answer { visibility: hidden; }
+.smo-answer:focus-visible { box-shadow: 0 0 0 2px var(--ring); }
+.smo-a-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .02em;
+  color: var(--mo-brass);
+}
+.smo-a-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--mo-brass);
+  transform: scale(var(--dotS, 0));
+  box-shadow: 0 0 0 calc(var(--bloom, 1) * 4px) color-mix(in srgb, var(--mo-brass) 25%, transparent);
+}
+.smo-a-body {
+  margin: 6px 0 0;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--foreground);
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.smo-w { display: inline-block; will-change: opacity, transform, filter; }
+
+.smo-status {
+  position: absolute;
+  left: 50%;
+  top: calc(var(--mo-top) + 86px);
+  transform: translate(-50%, calc(var(--sTy, 6) * 1px));
+  opacity: var(--sOp, 0);
+  display: grid;
+  justify-items: center;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  pointer-events: none;
+  z-index: 3;
+}
+.smo-lab { grid-area: 1 / 1; display: inline-flex; align-items: baseline; gap: 4px; white-space: nowrap; }
+.smo-lab.smo-in { animation: smo-in .32s cubic-bezier(.22, 1, .36, 1) both; }
+.smo-lab.smo-out { animation: smo-out .26s ease both; }
+.smo-lab-t {
+  background: linear-gradient(90deg, var(--muted-foreground) 0%, var(--muted-foreground) 40%, var(--mo-teal) 50%, var(--muted-foreground) 60%, var(--muted-foreground) 100%);
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: smo-shimmer 1.8s linear infinite;
+}
+.smo-lab-done { color: var(--mo-brass); font-weight: 600; }
+.smo-dots { display: inline-flex; gap: 3px; }
+.smo-dots i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; animation: smo-dot 1.2s infinite; }
+.smo-dots i:nth-child(2) { animation-delay: .16s; }
+.smo-dots i:nth-child(3) { animation-delay: .32s; }
+
+.smo-reset {
+  position: absolute;
+  left: 50%;
+  top: calc(var(--mo-top) + 96px);
+  transform: translate(-50%, 6px);
+  z-index: 3;
+  height: 36px;
+  padding-inline: 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--foreground);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .3s ease, transform .3s ease, visibility 0s .3s;
+}
+.smo-root[data-phase="answered"] .smo-reset { opacity: 1; visibility: visible; transform: translate(-50%, 0); transition: opacity .3s ease .1s, transform .3s ease .1s; }
+.smo-reset:hover { border-color: var(--mo-teal); }
+
+.smo-live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.smo-debug { position: fixed; bottom: 12px; left: 12px; z-index: 99; display: flex; gap: 8px; align-items: center; padding: 6px 10px; border-radius: 10px; background: var(--card); border: 1px solid var(--border); font-size: 12px; }
+.smo-chip { font-family: var(--font-mono); }
+
+@media (prefers-reduced-motion: reduce) {
+  .smo-ring, .smo-aurora i, .smo-lab-t { animation: none; }
+}
+
+/* Sufra: while idle, a quiet dotted tray marks where the orb will form, so the stage never reads as empty. */
+.smo-bg::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: var(--mo-top);
+  width: 132px;
+  height: 132px;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, var(--mo-teal) 0 7px, transparent 8px),
+    radial-gradient(circle, transparent 0 40px, color-mix(in srgb, var(--mo-brass) 30%, transparent) 41px 42px, transparent 43px);
+  border: 2px dotted color-mix(in srgb, var(--mo-brass) 55%, transparent);
+  opacity: .55;
+  transition: opacity .4s ease, scale .6s cubic-bezier(.22, 1, .36, 1);
+  animation: smo-idle-spin 24s linear infinite;
+}
+.smo-root:not([data-phase="idle"]) .smo-bg::after { opacity: 0; scale: .6; }
+@keyframes smo-idle-spin { to { rotate: 360deg; } }
+@media (prefers-reduced-motion: reduce) { .smo-bg::after { animation: none; } }

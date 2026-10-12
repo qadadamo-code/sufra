@@ -200,6 +200,17 @@
   [hidden] {
     display: none !important;
   }
+  /* grid items default to min-width:auto; let scrollers inside them scroll instead of widening the page */
+  :where(.grid) > * {
+    min-width: 0;
+  }
+  /* fieldsets default to min-inline-size: min-content, which lets scrollers inside them blow out grids */
+  fieldset {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0 solid;
+  }
 }
 
 @layer utilities {
@@ -234,6 +245,12 @@
     scroll-snap-type: x mandatory;
     scrollbar-width: none;
     padding-bottom: 6px;
+    scroll-padding-inline: 16px;
+  }
+  @media (min-width: 768px) {
+    .scroll-row {
+      scroll-padding-inline: 32px;
+    }
   }
   .scroll-row::-webkit-scrollbar {
     display: none;
@@ -269,7 +286,9 @@
   }
 }
 
-/* Small helpers used across pages */
+/* Small helpers used across pages (in the components layer so Tailwind utilities can override them) */
+@layer components {
+
 .sf-chip {
   display: inline-flex;
   align-items: center;
@@ -394,4 +413,6 @@ select.sf-input {
   font-family: var(--font-sans);
   font-weight: 600;
   font-size: 13px;
+}
+
 }

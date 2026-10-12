@@ -29,7 +29,9 @@ export interface Restaurant {
   serviceRate?: number;
 }
 
-const data = raw as unknown as { areas: Area[]; cuisines: Record<string, Cuisine>; restaurants: Restaurant[] };
+/** Latin digits everywhere, like Egyptian apps (the generator writes some Arabic-Indic digits). */
+const latin = (s: string) => s.replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
+const data = JSON.parse(latin(JSON.stringify(raw))) as { areas: Area[]; cuisines: Record<string, Cuisine>; restaurants: Restaurant[] };
 
 export const areas: Area[] = data.areas;
 export const cuisines: Record<string, Cuisine> = data.cuisines;
