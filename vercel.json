@@ -1,0 +1,6 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "cd sufra-web && npm ci",
+  "buildCommand": "cd sufra-web && npm run build",
+  "outputDirectory": "sufra-web/dist"
+}
