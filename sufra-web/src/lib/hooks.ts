@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { haversineKm, travel } from "./geo";
 import type { Restaurant } from "./data";
-import { useHome } from "./store";
+import { useAccount, useHome, useStore } from "./store";
+import { useRecentSearches } from "./search";
+import { affinityFn, becauseFn, buildTaste } from "./taste";
 
 /** Current time, refreshed every minute (open/closed badges stay honest). */
 export function useNow(intervalMs = 60_000) {
@@ -34,4 +36,24 @@ export function useMediaQuery(q: string) {
     return () => mq.removeEventListener("change", on);
   }, [q]);
   return m;
+}
+
+/** The current user's taste model + ranking helpers (re-computed when their history changes). */
+export function useTaste(lang: "ar" | "en") {
+  const acc = useAccount();
+  const recent = useStore((s) => s.recent);
+  const searches = useRecentSearches();
+  const hourKey = new Date().getHours();
+  return useMemo(() => {
+    const taste = buildTaste({
+      favourites: acc?.favourites ?? [],
+      bookings: acc?.bookings ?? [],
+      orders: acc?.orders ?? [],
+      recent,
+      searches,
+      moods: acc?.profile.moods ?? [],
+    });
+    return { taste, affinity: affinityFn(taste), because: becauseFn(taste, lang) };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [acc, recent, searches, lang, hourKey]);
 }

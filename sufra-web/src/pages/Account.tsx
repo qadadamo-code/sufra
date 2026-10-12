@@ -8,7 +8,7 @@ import { ActivityHeatmap } from "@/components/ui/activity-heatmap";
 import { VoxelVideoStreakCard } from "@/components/ui/voxel-video-streak-card";
 import { HoldToConfirm } from "@/components/ui/hold-to-confirm";
 import { ShinyButton } from "@/components/ui/shiny-button";
-import { CairoMap } from "@/components/sufra/CairoMap";
+import { SufraMap } from "@/components/sufra/map/SufraMap";
 import { RestaurantCard } from "@/components/sufra/bits";
 import { Photo } from "@/components/sufra/Photo";
 import { areaById, areaName, areas, byId, DAYS_AR, DAYS_EN, MOODS, type Mood } from "@/lib/data";
@@ -378,10 +378,12 @@ function ProfileTab({ acc }: { acc: Acc }) {
         <div className="grid content-start gap-2">
           <h2 className="flex items-center gap-2 text-xl font-bold"><MapPin className="size-5 text-brass" aria-hidden />{L("أو دوس على الخريطة", "Or tap the map")}</h2>
           <p className="text-sm text-muted-foreground">{L("دوس على مكان بيتك بالظبط. هنحفظ أقرب منطقة كمان.", "Tap exactly where home is; we'll also save the nearest area.")}</p>
-          <CairoMap
-            home={home}
+          <SufraMap
+            origin={home}
             center={home}
-            className="h-[380px]"
+            zoom={14}
+            legend={false}
+            className="h-[380px] cursor-crosshair"
             ariaLabel={L("اختار مكان بيتك على الخريطة", "Pick your home on the map")}
             onPick={(pt) => {
               setHome(pt);

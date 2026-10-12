@@ -1,14 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
-import { LayoutGrid, List, Map as MapIcon, Search, SlidersHorizontal, X } from "lucide-react";
+import { Car, Footprints, LayoutGrid, List, Map as MapIcon, Navigation, SlidersHorizontal, X } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { CairoMap, type MapPoint } from "@/components/sufra/CairoMap";
+import { SufraMap, type MapPoint } from "@/components/sufra/map/SufraMap";
+import { LocateButton } from "@/components/sufra/LocateButton";
+import { SmartSearch } from "@/components/sufra/SmartSearch";
 import { RestaurantCard } from "@/components/sufra/bits";
-import { AMENITIES, areaName, areas, cuisineName, cuisines, GROUPS, MOODS, restaurants, type Amenity, type CuisineGroup, type Mood, type Restaurant } from "@/lib/data";
-import { haversineKm } from "@/lib/geo";
+import { AMENITIES, anyGoogle, areaName, areas, cuisineName, cuisines, GROUPS, MOODS, restaurants, type Amenity, type CuisineGroup, type Mood, type Restaurant } from "@/lib/data";
+import { directionsUrl, fmtKm, haversineKm, travel } from "@/lib/geo";
 import { DAY_PARTS, isOpenNow, openDuring, type DayPart } from "@/lib/hours";
-import { useNow } from "@/lib/hooks";
+import { useNow, useTaste } from "@/lib/hooks";
 import { useLang } from "@/lib/i18n";
-import { norm, personalScore } from "@/lib/recommend";
+import { personalScore } from "@/lib/recommend";
+import { matchScore } from "@/lib/search";
 import type { Route } from "@/lib/router";
 import { useAccount, useHome } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -55,7 +58,7 @@ function fromQuery(q: URLSearchParams): { f: F; sort: Sort; view: ViewMode } {
       isNew: q.get("new") === "1",
       maxKm: Number(q.get("km") ?? 0),
     },
-    sort: (q.get("sort") as Sort) || "distance",
+    sort: ((q.get("sort") as Sort) === "google" && !anyGoogle ? "rating" : (q.get("sort") as Sort)) || "distance",
     view: (q.get("view") as ViewMode) || "grid",
   };
 }
@@ -81,13 +84,13 @@ function toQuery(f: F, sort: Sort, view: ViewMode) {
   return q.toString();
 }
 
-const searchable = new Map(restaurants.map((r) => [r.id, norm([r.ar, r.en, cuisines[r.cuisine]?.ar, cuisines[r.cuisine]?.en, areaName(r.area, "ar"), areaName(r.area, "en"), ...r.menu.flatMap((s) => s.items.flatMap((i) => [i.ar, i.en]))].join(" "))]));
 
 export default function Explore({ route }: { route: Route }) {
   const { L, lang } = useLang();
   const now = useNow();
   const acc = useAccount();
-  const { home } = useHome();
+  const { home, source } = useHome();
+  const { affinity } = useTaste(lang);
   const reduced = useReducedMotion();
   const init = useMemo(() => fromQuery(route.query), [route.query]);
   const [f, setF] = useState<F>(init.f);
@@ -113,14 +116,18 @@ export default function Explore({ route }: { route: Route }) {
     });
 
   const results = useMemo(() => {
-    const qn = norm(f.q);
+    const qs = new Map<string, number>();
     const day = now.getDay();
     const favCuisines = acc ? ([...acc.favourites, ...acc.orders.map((o) => o.rid)].map((id) => restaurants.find((r) => r.id === id)?.cuisine).filter(Boolean) as string[]) : [];
-    const ctx = { home, likedMoods: acc?.profile.moods ?? [], favCuisines, favourites: acc?.favourites ?? [] };
+    const ctx = { home, likedMoods: acc?.profile.moods ?? [], favCuisines, favourites: acc?.favourites ?? [], affinity };
     const list = restaurants
       .map((r) => ({ r, km: haversineKm(home, r) }))
       .filter(({ r, km }) => {
-        if (qn && !qn.split(" ").every((w) => searchable.get(r.id)!.includes(w))) return false;
+        if (f.q.trim()) {
+          const m = matchScore(r, f.q);
+          if (!m) return false;
+          qs.set(r.id, m);
+        }
         if (f.group && cuisines[r.cuisine]?.group !== f.group) return false;
         if (f.cuisine && r.cuisine !== f.cuisine) return false;
         if (f.areas.length && !f.areas.includes(r.area)) return false;
@@ -138,16 +145,17 @@ export default function Explore({ route }: { route: Route }) {
         return true;
       });
     const cmp: Record<Sort, (a: { r: Restaurant; km: number }, b: { r: Restaurant; km: number }) => number> = {
-      distance: (a, b) => a.km - b.km,
+      // with a text query, relevance first, then distance
+      distance: (a, b) => (qs.size ? (qs.get(b.r.id) ?? 0) - (qs.get(a.r.id) ?? 0) || a.km - b.km : a.km - b.km),
       visits: (a, b) => b.r.visits - a.r.visits,
       foryou: (a, b) => personalScore(b.r, ctx) - personalScore(a.r, ctx),
-      google: (a, b) => b.r.google - a.r.google || b.r.googleCount - a.r.googleCount,
+      google: (a, b) => (b.r.google ?? 0) - (a.r.google ?? 0) || (b.r.googleCount ?? 0) - (a.r.googleCount ?? 0),
       rating: (a, b) => b.r.rating - a.r.rating || b.r.ratingCount - a.r.ratingCount,
       "price-asc": (a, b) => a.r.avg - b.r.avg,
       "price-desc": (a, b) => b.r.avg - a.r.avg,
     };
     return list.sort(cmp[sort]).map((x) => x.r);
-  }, [f, sort, now, home, acc]);
+  }, [f, sort, now, home, acc, affinity]);
 
   const activeCount =
     (f.group ? 1 : 0) + (f.cuisine ? 1 : 0) + f.areas.length + f.prices.length + +f.open + (f.part ? 1 : 0) + (f.mood ? 1 : 0) + f.amenities.length + (f.minRating ? 1 : 0) + +f.offer + +f.delivery + +f.reservations + +f.isNew + (f.maxKm ? 1 : 0);
@@ -162,7 +170,8 @@ export default function Explore({ route }: { route: Route }) {
     { id: "distance", label: L("الأقرب", "Closest") },
     { id: "visits", label: L("الأكثر زيارة", "Most visited") },
     { id: "foryou", label: L("الأنسب ليك", "Best for you") },
-    { id: "google", label: L("تقييم جوجل", "Google rating") },
+    // Google sort only when the data really carries Google ratings (the OSM data doesn't — never fake it)
+    ...(anyGoogle ? [{ id: "google" as Sort, label: L("تقييم جوجل", "Google rating") }] : []),
     { id: "rating", label: L("تقييم سُفرة", "Sufra rating") },
     { id: "price-asc", label: L("الأرخص", "Price: low → high") },
     { id: "price-desc", label: L("الأغلى", "Price: high → low") },
@@ -239,7 +248,7 @@ export default function Explore({ route }: { route: Route }) {
           </Chip>
         ))}
       </Group>
-      <Group title={L("المسافة من بيتك", "Distance from home")}>
+      <Group title={source === "gps" ? L("المسافة من مكانك", "Distance from you") : L("المسافة من بيتك", "Distance from home")}>
         {[0, 2, 5, 10, 20].map((v) => (
           <Chip key={v} on={f.maxKm === v} onClick={() => set("maxKm", v)}>
             {v ? <span className="num">{L(`أقل من ${v} كم`, `< ${v} km`)}</span> : L("أي مسافة", "Any")}
@@ -268,18 +277,27 @@ export default function Explore({ route }: { route: Route }) {
           <p className="sf-kicker">{L("استكشف القاهرة", "Explore Cairo")}</p>
           <h1 className="text-[32px] font-bold leading-tight sm:text-[44px]">{L("كل الأماكن", "Every place")}</h1>
         </div>
-        <p className="text-sm text-muted-foreground" aria-live="polite">
-          <span className="num font-semibold text-foreground">{results.length}</span> {L("مكان", "places")}
-        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <LocateButton />
+          <p className="text-sm text-muted-foreground" aria-live="polite">
+            <span className="num font-semibold text-foreground">{results.length}</span> {L("مكان", "places")}
+          </p>
+        </div>
       </div>
 
       {/* toolbar */}
       <div className="sticky top-16 z-30 -mx-4 mt-4 flex flex-wrap items-center gap-2 border-b border-border/60 bg-background/85 px-4 py-3 backdrop-blur-xl md:-mx-8 md:px-8">
-        <div className="relative min-w-0 flex-[1_1_220px]">
-          <Search className="pointer-events-none absolute start-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-          <label htmlFor="ex-q" className="sr-only">{L("دوّر", "Search")}</label>
-          <input id="ex-q" type="search" value={f.q} onChange={(e) => set("q", e.target.value)} placeholder={L("مطعم، أكلة، منطقة…", "Restaurant, dish, area…")} className="sf-input h-11 rounded-full ps-10" />
-        </div>
+        <SmartSearch
+          id="ex-q"
+          value={f.q}
+          onChange={(v) => set("q", v)}
+          onSubmit={(v) => set("q", v)}
+          onArea={(id) => setF((x) => ({ ...x, q: "", areas: x.areas.includes(id) ? x.areas : [...x.areas, id] }))}
+          onCuisine={(id) => setF((x) => ({ ...x, q: "", cuisine: id, group: "" }))}
+          placeholder={L("مطعم، أكلة، منطقة…", "Restaurant, dish, area…")}
+          className="min-w-0 flex-[1_1_220px] rounded-full border bg-card"
+          inputClassName="h-11"
+        />
         <button type="button" onClick={() => setSheet(true)} className="sf-btn sf-btn-ghost h-11 bg-card lg:hidden" aria-haspopup="dialog">
           <SlidersHorizontal className="size-4" aria-hidden />
           {L("فلاتر", "Filters")}
@@ -344,7 +362,7 @@ export default function Explore({ route }: { route: Route }) {
             </div>
           ) : view === "map" ? (
             <div className="relative">
-              <CairoMap points={points} selectedId={sel} onSelect={setSel} home={home} className="h-[min(72svh,720px)] min-h-[460px]" />
+              <SufraMap points={points} selectedId={sel} onSelect={setSel} fit={!sel} className="h-[calc(100svh-390px)] min-h-[380px] sm:h-[calc(100svh-260px)] lg:h-[min(76svh,760px)]" />
               <AnimatePresence>
                 {selected ? (
                   <motion.div
@@ -352,10 +370,13 @@ export default function Explore({ route }: { route: Route }) {
                     initial={reduced ? { opacity: 0 } : { opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 10 }}
-                    className="absolute inset-x-3 bottom-12 z-20 mx-auto max-w-lg"
+                    className="absolute inset-x-3 bottom-8 z-[700] mx-auto max-w-lg"
                   >
                     <div className="relative">
                       <RestaurantCard r={selected} now={now} layout="list" className="shadow-xl" />
+                      <div className="absolute bottom-2.5 end-2.5 flex gap-1.5">
+                        <MapDirections r={selected} />
+                      </div>
                       <button type="button" onClick={() => setSel(null)} className="absolute -top-3 end-3 grid size-8 place-items-center rounded-full border bg-card shadow" aria-label={L("اقفل", "Close")}>
                         <X className="size-4" aria-hidden />
                       </button>
@@ -363,7 +384,6 @@ export default function Explore({ route }: { route: Route }) {
                   </motion.div>
                 ) : null}
               </AnimatePresence>
-              <p className="mt-2 text-xs text-muted-foreground">{L("خريطة توضيحية مرسومة لسُفرة — المواقع تقريبية.", "Illustrated Sufra map — locations are approximate.")}</p>
             </div>
           ) : view === "list" ? (
             <div className="grid gap-3 xl:grid-cols-2">
@@ -437,5 +457,31 @@ function ActiveChip({ label, onClear }: { label: string; onClear: () => void }) 
       <X className="size-3.5" aria-hidden />
       <span className="sr-only">✕</span>
     </button>
+  );
+}
+
+/** "اتجاهات" from the user's real origin, with the estimated time. */
+function MapDirections({ r }: { r: Restaurant }) {
+  const { L, lang } = useLang();
+  const { home } = useHome();
+  const km = haversineKm(home, r);
+  const t = travel(km);
+  const walk = t.walk != null;
+  return (
+    <a
+      href={directionsUrl(home, r, walk ? "walking" : "driving")}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex h-8 items-center gap-1.5 rounded-full bg-primary px-3 text-[12px] font-semibold text-primary-foreground shadow"
+      aria-label={L(`اتجاهات لـ ${r.ar} — ${fmtKm(km, "ar")}`, `Directions to ${r.en} — ${fmtKm(km, "en")}`)}
+    >
+      <Navigation className="size-3.5" aria-hidden />
+      {L("اتجاهات", "Directions")}
+      <span className="num inline-flex items-center gap-0.5 opacity-90">
+        {walk ? <Footprints className="size-3" aria-hidden /> : <Car className="size-3" aria-hidden />}
+        {walk ? t.walk : t.car}
+        {lang === "ar" ? "د" : "m"}
+      </span>
+    </a>
   );
 }

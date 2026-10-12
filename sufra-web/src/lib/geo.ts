@@ -21,3 +21,10 @@ export function fmtKm(km: number, lang: "ar" | "en"): string {
   const v = km < 10 ? km.toFixed(1) : String(Math.round(km));
   return lang === "ar" ? `${v} كم` : `${v} km`;
 }
+
+/** Google Maps directions from the user's origin to a place (works with or without a Maps key). */
+export function directionsUrl(origin: LatLng | null, dest: LatLng, mode: "driving" | "walking" = "driving"): string {
+  const q = new URLSearchParams({ api: "1", destination: `${dest.lat.toFixed(6)},${dest.lng.toFixed(6)}`, travelmode: mode });
+  if (origin) q.set("origin", `${origin.lat.toFixed(6)},${origin.lng.toFixed(6)}`);
+  return `https://www.google.com/maps/dir/?${q.toString().replace(/%2C/g, ",")}`;
+}

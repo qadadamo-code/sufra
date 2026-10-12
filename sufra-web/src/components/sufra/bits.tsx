@@ -1,6 +1,6 @@
 import { Car, Footprints, Heart, Star, Tag } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
-import { areaName, cuisineName, type Restaurant } from "@/lib/data";
+import { areaName, cuisineName, hasGoogle, type Restaurant } from "@/lib/data";
 import { fmtKm, haversineKm, travel } from "@/lib/geo";
 import { fmtTime, openState } from "@/lib/hours";
 import { useLang } from "@/lib/i18n";
@@ -47,13 +47,15 @@ export function Ratings({ r, className }: { r: Restaurant; className?: string })
         <span className="num">{r.rating.toFixed(1)}</span>
         <span className="sr-only">{L("على سُفرة", "on Sufra")}</span>
       </span>
-      <span className="inline-flex items-center gap-1 text-muted-foreground" title={L("تقييم جوجل", "Google rating")}>
-        <span className="grid size-4 place-items-center rounded-full border text-[9px] font-bold" aria-hidden>
-          G
+      {hasGoogle(r) ? (
+        <span className="inline-flex items-center gap-1 text-muted-foreground" title={L("تقييم جوجل", "Google rating")}>
+          <span className="grid size-4 place-items-center rounded-full border text-[9px] font-bold" aria-hidden>
+            G
+          </span>
+          <span className="num">{r.google.toFixed(1)}</span>
+          <span className="sr-only">{L("على جوجل", "on Google")}</span>
         </span>
-        <span className="num">{r.google.toFixed(1)}</span>
-        <span className="sr-only">{L("على جوجل", "on Google")}</span>
-      </span>
+      ) : null}
     </span>
   );
 }

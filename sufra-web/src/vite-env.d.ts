@@ -11,3 +11,14 @@ declare module "*.module.css" {
   const classes: Record<string, string>;
   export default classes;
 }
+interface ImportMetaEnv {
+  /** Optional: Google Maps JavaScript API + Places API (New) browser key. Unset → OpenStreetMap map, no Google ratings. */
+  readonly VITE_GOOGLE_MAPS_KEY?: string;
+  /** Optional: a Google Cloud map ID (needed for advanced markers in production; "DEMO_MAP_ID" otherwise). */
+  readonly VITE_GOOGLE_MAP_ID?: string;
+  /** set by vite.config: "1" when /api/ask is deployed alongside the site */
+  readonly VITE_HAS_API?: string;
+}
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}

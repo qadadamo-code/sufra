@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, MapPin, Search, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, MapPin, Sparkles } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { TiltedGridHero } from "@/components/ui/tilted-grid-hero";
 import MorphOrb, { type Phase } from "@/components/ui/morph-orb";
@@ -9,18 +9,22 @@ import { ProgressBar } from "@/components/ui/progress-bar";
 import { BigTitle, ParallaxStrip, Reveal } from "@/components/sufra/Reveal";
 import { OpenBadge, RestaurantCard, SectionHead } from "@/components/sufra/bits";
 import { Photo } from "@/components/sufra/Photo";
-import { areaName, areas, cuisineName, cuisines, GROUPS, MOODS, restaurants, type CuisineGroup, type Mood, type Restaurant } from "@/lib/data";
+import { LocateButton } from "@/components/sufra/LocateButton";
+import { SmartSearch } from "@/components/sufra/SmartSearch";
+import { anyGoogle, areaName, areas, cuisineName, cuisines, GROUPS, MOODS, restaurants, type CuisineGroup, type Mood, type Restaurant } from "@/lib/data";
 import { haversineKm } from "@/lib/geo";
-import { isOpenNow } from "@/lib/hours";
-import { useMediaQuery, useNow } from "@/lib/hooks";
+import { isOpenNow, openState } from "@/lib/hours";
+import { askSufra, toolLabel } from "@/lib/ask";
+import { dayMoment, MOMENT } from "@/lib/taste";
+import { useMediaQuery, useNow, useTaste } from "@/lib/hooks";
 import { useLang } from "@/lib/i18n";
 import { allImages, imgUrl } from "@/lib/media";
-import { personalScore, recommend, type Answer } from "@/lib/recommend";
+import { personalScore, type Answer } from "@/lib/recommend";
 import { navigate } from "@/lib/router";
 import { setGuestArea, useAccount, useHome, useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
-function Rail({ title, kicker, items, now, more, empty }: { title: string; kicker?: string; items: Restaurant[]; now: Date; more?: string; empty?: string }) {
+function Rail({ title, kicker, items, now, more, empty, note }: { title: string; kicker?: string; items: Restaurant[]; now: Date; more?: string; empty?: string; note?: (r: Restaurant) => string | null }) {
   const { L, dir } = useLang();
   const Arrow = dir === "rtl" ? ArrowLeft : ArrowRight;
   return (
@@ -44,6 +48,12 @@ function Rail({ title, kicker, items, now, more, empty }: { title: string; kicke
           {items.map((r, i) => (
             <Reveal key={r.id} delay={Math.min(i, 5) * 0.05} y={18}>
               <RestaurantCard r={r} now={now} layout="rail" />
+              {note?.(r) ? (
+                <p className="mt-1.5 flex items-center gap-1.5 px-1 text-[12px] font-medium text-brass">
+                  <Sparkles className="size-3" aria-hidden />
+                  {note(r)}
+                </p>
+              ) : null}
             </Reveal>
           ))}
         </div>
@@ -58,7 +68,11 @@ export default function Home() {
   const { L, lang, dir } = useLang();
   const now = useNow();
   const acc = useAccount();
-  const { home, areaId, isUser } = useHome();
+  const { home, areaId, isUser, source, label: originLabel } = useHome();
+  const { affinity, because, taste } = useTaste(lang);
+  const recentIds = useStore((s) => s.recent);
+  const [live, setLive] = useState("");
+  const [answerSource, setAnswerSource] = useState<"claude" | "local" | null>(null);
   const guestArea = useStore((s) => s.guestArea);
   const [q, setQ] = useState("");
   const [mood, setMood] = useState<Mood>("work");
@@ -93,7 +107,21 @@ export default function Home() {
   const openNow = useMemo(() => withKm.filter((x) => isOpenNow(x.r, now)).sort((a, b) => a.km - b.km).slice(0, 12).map((x) => x.r), [withKm, now]);
   const nearest = useMemo(() => [...withKm].sort((a, b) => a.km - b.km).slice(0, 12).map((x) => x.r), [withKm]);
   const visited = useMemo(() => [...restaurants].sort((a, b) => b.visits - a.visits).slice(0, 12), []);
-  const google = useMemo(() => [...restaurants].sort((a, b) => b.google - a.google || b.googleCount - a.googleCount).slice(0, 12), []);
+  // only when the data carries real Google ratings (the OSM data doesn't)
+  const google = useMemo(() => (anyGoogle ? [...restaurants].filter((r) => r.google).sort((a, b) => (b.google ?? 0) - (a.google ?? 0) || (b.googleCount ?? 0) - (a.googleCount ?? 0)).slice(0, 12) : []), []);
+  // time-aware: breakfast in the morning, late-night after 11pm…
+  const moment = dayMoment(now);
+  const momentInfo = MOMENT[moment];
+  const forMoment = useMemo(() => {
+    const fits = (r: Restaurant) => r.moods.includes(momentInfo.mood) || momentInfo.cuisines.includes(r.cuisine);
+    return withKm
+      .filter((x) => fits(x.r) && (openState(x.r.hours, now).open || (openState(x.r.hours, now).in ?? 999) <= 60))
+      .map((x) => ({ r: x.r, s: affinity(x.r) + x.r.rating - Math.min(x.km, 25) * 0.12 }))
+      .sort((a, b) => b.s - a.s)
+      .slice(0, 12)
+      .map((x) => x.r);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [withKm, moment, affinity, now.getHours()]);
   const sufra = useMemo(() => [...restaurants].sort((a, b) => b.rating - a.rating || b.ratingCount - a.ratingCount).slice(0, 12), []);
   const offers = useMemo(() => restaurants.filter((r) => r.offers.length).sort((a, b) => b.offers[0].value - a.offers[0].value).slice(0, 12), []);
   const fresh = useMemo(() => restaurants.filter((r) => r.isNew), []);
@@ -106,12 +134,17 @@ export default function Home() {
   const suggested = useMemo(() => {
     if (!acc) return [];
     const favCuisines = [...acc.favourites, ...acc.orders.map((o) => o.rid)].map((id) => restaurants.find((r) => r.id === id)?.cuisine).filter(Boolean) as string[];
-    const ctx = { home, likedMoods: acc.profile.moods, favCuisines, favourites: acc.favourites };
+    const ctx = { home, likedMoods: acc.profile.moods, favCuisines, favourites: acc.favourites, affinity };
     return [...restaurants].sort((a, b) => personalScore(b, ctx) - personalScore(a, ctx)).slice(0, 12);
-  }, [acc, home]);
+  }, [acc, home, affinity]);
+  // editor's picks: the best-rated verified place per cuisine (works with any dataset, ids not hard-coded)
   const picks = useMemo(() => {
-    const ids = ["r003", "r008", "r012", "r021", "r030", "r042", "r055", "r067", "r079", "r090"];
-    return ids.map((id) => restaurants.find((r) => r.id === id)).filter(Boolean) as Restaurant[];
+    const seen = new Set<string>();
+    return [...restaurants]
+      .filter((r) => r.verified !== false)
+      .sort((a, b) => b.rating - a.rating || b.visits - a.visits)
+      .filter((r) => (seen.has(r.cuisine) ? false : (seen.add(r.cuisine), true)))
+      .slice(0, 10);
   }, []);
 
   const examples = [
@@ -121,10 +154,15 @@ export default function Home() {
     L("فطار مصري مفتوح دلوقتي قريب مني", "Egyptian breakfast open now near me"),
   ];
 
-  const onAsk = (text: string) => {
-    const a = recommend(text, { home, lang, now: new Date(), favourites: acc?.favourites, likedMoods: acc?.profile.moods });
+  const onAsk = async (text: string) => {
+    setLive("");
+    setAnswer(null);
+    const a = await askSufra(text, { home, lang, now: new Date(), favourites: acc?.favourites, likedMoods: acc?.profile.moods, affinity, because, originLabel, recent: recentIds }, (p) => setLive(p.text || toolLabel(p.tool, lang) || ""));
     setAnswer(a);
-    return a.text;
+    setAnswerSource(a.source);
+    // the orb's card is small: give it the first sentence or two; the full answer shows under it
+    const short = a.text.length > 190 ? a.text.slice(0, a.text.lastIndexOf(" ", 185)) + "…" : a.text;
+    return short;
   };
 
   return (
@@ -139,40 +177,43 @@ export default function Home() {
           </h1>
         </div>
         <div className="absolute inset-x-0 bottom-0 z-10 px-4 pb-8 sm:pb-12">
-          <form
-            role="search"
-            className="mx-auto flex w-full max-w-2xl items-center gap-2 rounded-full border bg-card/95 p-2 shadow-sf backdrop-blur"
-            onSubmit={(e) => {
-              e.preventDefault();
-              navigate(`/explore${q.trim() ? `?q=${encodeURIComponent(q.trim())}` : ""}`);
-            }}
-          >
-            <Search className="ms-3 size-5 shrink-0 text-muted-foreground" aria-hidden />
-            <label htmlFor="hero-q" className="sr-only">
-              {L("دوّر على مطعم أو أكلة أو منطقة", "Search a restaurant, dish or area")}
-            </label>
-            <input id="hero-q" value={q} onChange={(e) => setQ(e.target.value)} placeholder={L("مطعم، أكلة، أو منطقة…", "Restaurant, dish or area…")} className="h-12 min-w-0 flex-1 bg-transparent text-[16px] outline-none placeholder:text-muted-foreground" />
-            <button type="submit" className="sf-btn sf-btn-primary h-12 shrink-0 px-5 sm:px-7">
-              {L("دوّر", "Search")}
-            </button>
-          </form>
-          <div className="mx-auto mt-3 flex max-w-2xl items-center justify-center gap-2 text-sm text-muted-foreground">
+          <SmartSearch
+            id="hero-q"
+            value={q}
+            onChange={setQ}
+            onSubmit={(v) => navigate(`/explore${v ? `?q=${encodeURIComponent(v)}` : ""}`)}
+            submitLabel={L("دوّر", "Search")}
+            className="mx-auto w-full max-w-2xl rounded-full border bg-card/95 p-1.5 shadow-sf backdrop-blur"
+            inputClassName="h-12"
+          />
+          <div className="mx-auto mt-3 flex max-w-2xl flex-wrap items-center justify-center gap-x-2 gap-y-1.5 text-sm text-muted-foreground">
             <MapPin className="size-4 text-brass" aria-hidden />
-            {isUser ? (
-              <span>
-                {L("المسافات من بيتك في", "Distances from your home in")} <a href="#/account?tab=profile" className="font-semibold text-foreground underline-offset-4 hover:underline">{areaName(areaId, lang)}</a>
-              </span>
+            {source === "gps" ? (
+              <>
+                <span>{L("المسافات من مكانك:", "Distances from you:")}</span>
+                <LocateButton />
+              </>
             ) : (
-              <label className="inline-flex items-center gap-2">
-                {L("أنا في", "I'm in")}
-                <select value={guestArea} onChange={(e) => setGuestArea(e.target.value)} className="rounded-full border bg-card px-3 py-1 font-semibold text-foreground">
-                  {areas.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a[lang]}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <>
+                {isUser ? (
+                  <span>
+                    {L("المسافات من بيتك في", "Distances from your home in")} <a href="#/account?tab=profile" className="font-semibold text-foreground underline-offset-4 hover:underline">{areaName(areaId, lang)}</a>
+                  </span>
+                ) : (
+                  <label className="inline-flex items-center gap-2">
+                    {L("المسافات من", "Distances from")}
+                    <select value={guestArea} onChange={(e) => setGuestArea(e.target.value)} className="rounded-full border bg-card px-3 py-1 font-semibold text-foreground">
+                      {areas.map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {a[lang]}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+                <span aria-hidden>·</span>
+                <LocateButton />
+              </>
             )}
           </div>
         </div>
@@ -200,6 +241,7 @@ export default function Home() {
             if (p === "reset") setAnswer(null);
           }}
           seed={seed}
+          liveText={live}
           copy={{
             placeholder: L("مثلًا: كافيه هادي في الزمالك للشغل…", "e.g. a quiet café in Zamalek to work…"),
             labels: L("بفكّر|بدوّر|بقارن|بكتب", "Thinking|Searching|Comparing|Writing").split("|"),
@@ -220,9 +262,17 @@ export default function Home() {
               ))}
             </div>
           ) : null}
+          {answer && (phase === "answered" || phase === "unfold") ? (
+            <div className="mx-auto mt-2 max-w-3xl text-center">
+              {answer.text.length > 190 ? <p className="text-[15px]">{answer.text}</p> : null}
+              <p className="mt-1 text-xs text-muted-foreground">
+                {answerSource === "claude" ? L("إجابة بالذكاء الاصطناعي (Claude) من بيانات سُفرة — راجع التفاصيل قبل ما تروح.", "AI answer (Claude) from Sufra's data — double-check details before you go.") : L("ترشيحات من محرك سُفرة المحلي.", "Picks from Sufra's on-device recommender.")}
+              </p>
+            </div>
+          ) : null}
           <AnimatePresence>
             {answer && (phase === "answered" || phase === "unfold") ? (
-              <motion.ul className="mx-auto mt-6 grid max-w-5xl gap-3 md:grid-cols-3" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.5, delay: 0.3 }}>
+              <motion.ul className={cn("mx-auto mt-6 grid max-w-5xl gap-3", answer.picks.length >= 4 ? "md:grid-cols-2 xl:grid-cols-4" : "md:grid-cols-3")} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.5, delay: 0.3 }}>
                 {answer.picks.map((p, i) => (
                   <li key={p.r.id}>
                     <a href={`#/r/${p.r.slug}`} className="flex h-full gap-3 rounded-2xl border bg-card p-3 transition-shadow hover:shadow-sf">
@@ -250,6 +300,9 @@ export default function Home() {
           </AnimatePresence>
         </div>
       </section>
+
+      {/* ───────── time-aware ───────── */}
+      <Rail kicker={L(momentInfo.kickerAr, momentInfo.kickerEn)} title={L(momentInfo.ar, momentInfo.en)} items={forMoment} now={now} more={`#/explore?mood=${momentInfo.mood}&open=1`} empty={L("مفيش حاجة مناسبة مفتوحة دلوقتي.", "Nothing that fits is open right now.")} />
 
       {/* ───────── moods ───────── */}
       <section className="wrap gutter mt-20 sm:mt-28" aria-labelledby="mood-title">
@@ -300,7 +353,7 @@ export default function Home() {
       </section>
 
       <Rail kicker={L("الناس رايحة فين", "Where people go")} title={L("الأكثر زيارة", "Most visited")} items={visited} now={now} more="#/explore?sort=visits" />
-      <Rail kicker="Google" title={L("الأعلى تقييمًا على جوجل", "Top rated on Google")} items={google} now={now} more="#/explore?sort=google" />
+      {google.length ? <Rail kicker="Google" title={L("الأعلى تقييمًا على جوجل", "Top rated on Google")} items={google} now={now} more="#/explore?sort=google" /> : null}
       <Rail kicker={L("رأي مستخدمين سُفرة", "Sufra diners say")} title={L("الأعلى تقييمًا على سُفرة", "Top rated on Sufra")} items={sufra} now={now} more="#/explore?sort=rating" />
       {acc && !suggestReady ? (
         <section className="wrap gutter mt-16 sm:mt-24">
@@ -310,7 +363,7 @@ export default function Home() {
           </div>
         </section>
       ) : acc ? (
-        <Rail kicker={L("من ذوقك ومفضلتك", "From your taste")} title={L("مقترح ليك", "Suggested for you")} items={suggested} now={now} more="#/explore?sort=foryou" />
+        <Rail kicker={L("من ذوقك ومفضلتك", "From your taste")} title={L("مقترح ليك", "Suggested for you")} items={suggested} now={now} more="#/explore?sort=foryou" note={(r) => because(r)} />
       ) : (
         <section className="wrap gutter mt-16 sm:mt-24">
           <div className="sf-card flex flex-col items-start gap-4 p-6 sm:flex-row sm:items-center">

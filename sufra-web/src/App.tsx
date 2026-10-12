@@ -8,6 +8,9 @@ import { CartDrawer } from "@/components/sufra/CartDrawer";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import Gateway from "@/pages/Gateway";
 import Home from "@/pages/Home";
+import { matchExtraRoute } from "@/routes.extra";
+import { useSmartNotifications } from "@/lib/smart-notify";
+import { useLang } from "@/lib/i18n";
 
 const Explore = lazy(() => import("@/pages/Explore"));
 const RestaurantPage = lazy(() => import("@/pages/Restaurant"));
@@ -30,13 +33,24 @@ function Loading() {
 
 function Routes() {
   const route = useRoute();
-  useTheme(); // applies the stored theme + follows the OS
+  const { lang } = useLang();
   const { path, parts } = route;
+  // customer reminders only; business/supplier pages and the gateway stay quiet
+  useSmartNotifications(lang, !(path === "/" || path === "" || path.startsWith("/business") || path.startsWith("/suppliers")));
+  useTheme(); // applies the stored theme + follows the OS
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
   }, [path]);
 
   if (path === "/" || path === "") return <Gateway />;
+  // business / supplier pages register themselves in routes.extra.tsx and render their own chrome
+  const extra = matchExtraRoute(path);
+  if (extra)
+    return (
+      <Suspense fallback={<Loading />}>
+        <extra.Component route={route} />
+      </Suspense>
+    );
   if (path === "/business" || path === "/suppliers")
     return (
       <Suspense fallback={<Loading />}>

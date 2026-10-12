@@ -21,17 +21,46 @@ export interface Review { name: string; text: string; stars: number; daysAgo: nu
 export interface Restaurant {
   id: string; slug: string; ar: string; en: string; cuisine: string; area: string; addressAr: string; addressEn: string;
   lat: number; lng: number; price: 1 | 2 | 3 | 4; avg: number; hours: [number, number][];
-  rating: number; ratingCount: number; google: number; googleCount: number; visits: number;
+  rating: number; ratingCount: number;
+  /** Google rating — null for real (OSM) places; never shown unless it is real. */
+  google: number | null; googleCount: number | null; visits: number;
   moods: Mood[]; amenities: Amenity[]; delivery: { fee: number; eta: number; min: number } | null;
   cover: string; gallery: string[]; descAr: string; descEn: string; since: number; isNew: boolean; phone: string; instagram: string;
   offers: Offer[]; busy: number[]; reviews: Review[]; menu: MenuSection[];
   /** optional per-restaurant service charge (defaults below) */
   serviceRate?: number;
+  /* ── real-data (OpenStreetMap) fields; all optional so the demo data still type-checks ── */
+  source?: { kind: string; type?: string; id?: number | string; url?: string } | null;
+  verified?: boolean;
+  hoursSource?: "osm" | "estimated";
+  openingHoursRaw?: string | null;
+  /** which parts of the record are illustrative samples (menu, prices, ratings, offers…) */
+  sample?: Partial<Record<SampleKey, boolean>> | null;
+  brand?: string | null;
+  website?: string | null;
+  lastEdited?: string | null;
 }
+export type SampleKey = "menu" | "ratings" | "offers" | "reviews" | "photos" | "price" | "busy" | "moods" | "description" | "since" | "amenities" | "delivery";
+/** Is this part of the record illustrative? (demo data without flags counts as sample everywhere) */
+export const isSample = (r: Restaurant, k: SampleKey) => (r.sample ? !!r.sample[k] : true);
+export const hasGoogle = (r: Restaurant): r is Restaurant & { google: number; googleCount: number } => typeof r.google === "number" && r.google > 0;
 
 /** Latin digits everywhere, like Egyptian apps (the generator writes some Arabic-Indic digits). */
 const latin = (s: string) => s.replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
-const data = JSON.parse(latin(JSON.stringify(raw))) as { areas: Area[]; cuisines: Record<string, Cuisine>; restaurants: Restaurant[] };
+const data = JSON.parse(latin(JSON.stringify(raw))) as {
+  areas: Area[]; cuisines: Record<string, Cuisine>; restaurants: Restaurant[];
+  attribution?: { text?: string; url?: string; license?: string; fetchedAt?: string };
+};
+
+/** "© OpenStreetMap contributors" line for the footer/About (from the dataset when it carries one). */
+export const dataAttribution = {
+  text: data.attribution?.text ?? "Restaurant data © OpenStreetMap contributors (ODbL)",
+  url: data.attribution?.url ?? "https://www.openstreetmap.org/copyright",
+  fetchedAt: data.attribution?.fetchedAt ?? null,
+  real: data.restaurants.some((r) => r.source?.kind === "osm"),
+};
+/** True when no place in the dataset carries a real Google rating (then every Google-rating UI is hidden). */
+export const anyGoogle = data.restaurants.some((r) => typeof r.google === "number" && r.google > 0);
 
 export const areas: Area[] = data.areas;
 export const cuisines: Record<string, Cuisine> = data.cuisines;

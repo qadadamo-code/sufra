@@ -1,22 +1,27 @@
 // Builds data/restaurants.json: 120 fictional Cairo restaurants with menus,
 // hours, ratings, offers and reviews. Deterministic (seeded) so reruns match.
+// Fallback generator: the real-data pipeline is fetch-osm.mjs + build-real-data.mjs,
+// which imports the helpers below (see scripts/README.md).
 import { writeFileSync, mkdirSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { MENUS } from './menus.mjs'
 
 let seed = 20261012
-const rnd = () => {
+/** Reset the shared PRNG (used by build-real-data.mjs for per-place determinism). */
+export const setSeed = (n) => { seed = n | 0 }
+export const rnd = () => {
   seed |= 0
   seed = (seed + 0x6d2b79f5) | 0
   let t = Math.imul(seed ^ (seed >>> 15), 1 | seed)
   t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
   return ((t ^ (t >>> 14)) >>> 0) / 4294967296
 }
-const pick = (a) => a[Math.floor(rnd() * a.length)]
-const between = (lo, hi) => lo + rnd() * (hi - lo)
-const int = (lo, hi) => Math.floor(between(lo, hi + 1))
-const chance = (p) => rnd() < p
-const shuffle = (a) => a.map((x) => [rnd(), x]).sort((p, q) => p[0] - q[0]).map((x) => x[1])
-const round5 = (v) => Math.max(5, Math.round(v / 5) * 5)
+export const pick = (a) => a[Math.floor(rnd() * a.length)]
+export const between = (lo, hi) => lo + rnd() * (hi - lo)
+export const int = (lo, hi) => Math.floor(between(lo, hi + 1))
+export const chance = (p) => rnd() < p
+export const shuffle = (a) => a.map((x) => [rnd(), x]).sort((p, q) => p[0] - q[0]).map((x) => x[1])
+export const round5 = (v) => Math.max(5, Math.round(v / 5) * 5)
 
 export const AREAS = [
   { id: 'zamalek', ar: 'الزمالك', en: 'Zamalek', lat: 30.0626, lng: 31.2197, streets: ['شارع ٢٦ يوليو|26th of July St', 'شارع أبو الفدا|Abu El Feda St', 'شارع البرازيل|Brazil St', 'شارع المنصور محمد|El Mansour Mohamed St'] },
@@ -71,7 +76,7 @@ export const CUISINES = {
 }
 
 // What people come for; used by the "what's the plan?" picker.
-const MOODS_BY_CUISINE = {
+export const MOODS_BY_CUISINE = {
   cafe: ['work', 'drinks', 'friends', 'breakfast', 'date'],
   egyptian: ['eat', 'family', 'breakfast', 'quick', 'late'],
   levant: ['eat', 'family', 'friends', 'date'],
@@ -89,7 +94,7 @@ const MOODS_BY_CUISINE = {
   mexican: ['eat', 'friends', 'date'],
 }
 
-const AMENITY_ODDS = {
+export const AMENITY_ODDS = {
   wifi: { cafe: 0.98, bakery: 0.7, healthy: 0.8, shisha: 0.7, _: 0.45 },
   outlets: { cafe: 0.8, bakery: 0.5, healthy: 0.6, _: 0.15 },
   quiet: { cafe: 0.45, bakery: 0.4, healthy: 0.5, italian: 0.3, asian: 0.4, _: 0.12 },
@@ -105,7 +110,7 @@ const AMENITY_ODDS = {
   valet: { italian: 0.4, asian: 0.5, seafood: 0.3, _: 0.08 },
 }
 
-const REVIEW_POOL = [
+export const REVIEW_POOL = [
   ['الأكل جميل جداً والخدمة سريعة، هرجع تاني أكيد', 5],
   ['المكان هادي ومناسب للشغل، الواي فاي ممتاز', 5],
   ['الأسعار معقولة بالنسبة للكمية، بس الزحمة يوم الخميس كتير', 4],
@@ -121,9 +126,9 @@ const REVIEW_POOL = [
   ['الأكل كويس بس الانتظار طول شوية في الويك إند', 3],
   ['الموظفين ذوق جداً وساعدونا نختار', 5],
 ]
-const REVIEWERS = ['سارة م.', 'أحمد ع.', 'نور هـ.', 'محمد س.', 'يارا ك.', 'كريم ف.', 'مريم ح.', 'عمر ش.', 'هبة ر.', 'يوسف ن.', 'دينا أ.', 'مصطفى ج.', 'لينا ط.', 'زياد ب.']
+export const REVIEWERS = ['سارة م.', 'أحمد ع.', 'نور هـ.', 'محمد س.', 'يارا ك.', 'كريم ف.', 'مريم ح.', 'عمر ش.', 'هبة ر.', 'يوسف ن.', 'دينا أ.', 'مصطفى ج.', 'لينا ط.', 'زياد ب.']
 
-const HOURS = {
+export const HOURS = {
   cafe: [8 * 60, 25 * 60],
   bakery: [7 * 60, 23 * 60],
   healthy: [8 * 60, 23 * 60],
@@ -133,7 +138,7 @@ const HOURS = {
   _: [12 * 60, 25 * 60],
 }
 
-const DESC = {
+export const DESC = {
   cafe: ['قهوة مختصة محمصة طازة، وقعدة مريحة للشغل أو للدردشة.', 'Freshly roasted specialty coffee and a comfortable spot to work or catch up.'],
   egyptian: ['أكل بيتي مصري على أصوله، من الفول والطعمية للفتة والملوخية.', 'Proper home-style Egyptian food, from ful and taameya to fattah and molokhia.'],
   levant: ['مازة شامية ومشاوي على الفحم وخبز طازة من الفرن.', 'Levantine mezze, charcoal grills and bread fresh from the oven.'],
@@ -151,7 +156,7 @@ const DESC = {
   mexican: ['تاكوز وبوريتو وصوصات حارة بالمزاج.', 'Tacos, burritos and hot sauces to taste.'],
 }
 
-const VENUE_VARIANTS = {
+export const VENUE_VARIANTS = {
   cafe: ['venue-cafe-1', 'venue-cafe-2', 'venue-cafe-3', 'venue-cafe-4', 'venue-cafe-5', 'venue-coffee-1', 'venue-coffee-2', 'venue-coffee-3', 'venue-cowork-1', 'venue-cowork-2'],
   egyptian: ['venue-egyptian-1', 'venue-egyptian-2', 'venue-egyptian-3'],
   levant: ['venue-levant-1', 'venue-levant-2', 'venue-levant-3'],
@@ -168,17 +173,17 @@ const VENUE_VARIANTS = {
   indian: ['venue-indian-1', 'venue-indian-2'],
   mexican: ['venue-mexican-1', 'venue-mexican-2'],
 }
-const GENERIC_VENUE = ['venue-restaurant-1', 'venue-restaurant-2', 'venue-restaurant-3', 'venue-restaurant-4', 'venue-restaurant-5']
-const SCENIC = { rooftop: ['venue-rooftop-1', 'venue-rooftop-2', 'venue-rooftop-3'], nile: ['venue-nile-1', 'venue-nile-2'], outdoor: ['venue-outdoor-1', 'venue-outdoor-2', 'venue-outdoor-3'] }
-const EXTERIOR = ['venue-exterior-1', 'venue-exterior-2', 'venue-exterior-3', 'venue-exterior-4']
+export const GENERIC_VENUE = ['venue-restaurant-1', 'venue-restaurant-2', 'venue-restaurant-3', 'venue-restaurant-4', 'venue-restaurant-5']
+export const SCENIC = { rooftop: ['venue-rooftop-1', 'venue-rooftop-2', 'venue-rooftop-3'], nile: ['venue-nile-1', 'venue-nile-2'], outdoor: ['venue-outdoor-1', 'venue-outdoor-2', 'venue-outdoor-3'] }
+export const EXTERIOR = ['venue-exterior-1', 'venue-exterior-2', 'venue-exterior-3', 'venue-exterior-4']
 
-const PRICE_FACTOR = { 1: 0.72, 2: 1, 3: 1.4, 4: 1.9 }
+export const PRICE_FACTOR = { 1: 0.72, 2: 1, 3: 1.4, 4: 1.9 }
 
-function slugify(en) {
+export function slugify(en) {
   return en.toLowerCase().replace(/&/g, 'and').replace(/['.]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 }
 
-function popularTimes(cuisine) {
+export function popularTimes(cuisine) {
   // Relative busyness per hour 0..23 (0-100).
   const peaks = {
     cafe: [[10, 40], [13, 55], [19, 85], [22, 70]],
@@ -199,7 +204,7 @@ function popularTimes(cuisine) {
   })
 }
 
-function makeMenu(cuisine, level, rid) {
+export function makeMenu(cuisine, level, rid) {
   const f = PRICE_FACTOR[level] * between(0.92, 1.1)
   let n = 0
   return MENUS[cuisine].map(([ar, en, items]) => ({
@@ -221,7 +226,7 @@ function makeMenu(cuisine, level, rid) {
   }))
 }
 
-function makeOffer(r, i) {
+export function makeOffer(r, i) {
   const kinds = [
     () => ({ kind: 'percent', value: pick([10, 15, 20, 25, 30]), ar: 'خصم على الفاتورة كلها', en: 'Off the whole bill' }),
     () => ({ kind: 'happy-hour', value: pick([20, 25, 30]), from: 15 * 60, to: 18 * 60, ar: 'هابي أور من ٣ لـ ٦ العصر', en: 'Happy hour 3–6 PM' }),
@@ -325,6 +330,7 @@ function genRestaurants() {
   return out
 }
 
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
 const restaurants = genRestaurants()
 mkdirSync('data', { recursive: true })
 writeFileSync(
@@ -333,3 +339,4 @@ writeFileSync(
 )
 const items = restaurants.reduce((s, r) => s + r.menu.reduce((t, x) => t + x.items.length, 0), 0)
 console.log(`${restaurants.length} restaurants, ${items} menu items, ${restaurants.filter((r) => r.offers.length).length} with offers`)
+}

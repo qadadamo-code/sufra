@@ -2,6 +2,8 @@ import { ExternalLink } from "lucide-react";
 import { Reveal } from "@/components/sufra/Reveal";
 import { useLang } from "@/lib/i18n";
 import { imgUrl, photoCredits } from "@/lib/media";
+import { dataAttribution } from "@/lib/data";
+import { OSM_ATTRIBUTION } from "@/data/osm-attribution";
 
 const LICENSE_NAMES: Record<string, string> = { by: "CC BY", "by-sa": "CC BY-SA", "by-nd": "CC BY-ND", "by-nc": "CC BY-NC", "by-nc-sa": "CC BY-NC-SA", "by-nc-nd": "CC BY-NC-ND", cc0: "CC0", pdm: "Public Domain Mark" };
 
@@ -17,7 +19,9 @@ export default function About() {
           {L("سُفرة = الصينية اللي بتتفرد عليها الأكلة. إحنا بنجمعلك المطاعم والكافيهات: تكتشف، تحجز، وتطلب، والمطاعم بتدير كل ده من نفس المكان.", "Sufra is the tray a meal is spread on. We bring restaurants and cafés together: you discover, book and order, and restaurants run it all from one place.")}
         </p>
         <p className="mt-3 max-w-2xl rounded-2xl border border-brass/40 bg-brass-soft/60 p-4 text-sm">
-          {L("دي نسخة تجريبية: كل المطاعم والأسماء والتقييمات والعناوين وأرقام التليفونات خيالية. الصور حقيقية ومرخّصة برخص المشاع الإبداعي — وحقوقها تحت.", "This is a demo: every restaurant, name, rating, address and phone number is fictional. The photos are real and Creative Commons licensed — credited below.")}
+          {dataAttribution.real
+            ? L("أسماء المطاعم وأماكنها حقيقية من OpenStreetMap (والعلامة «موثّق على OSM» معناها إن البيانات متأكدين منها هناك). المنيو والأسعار والتقييمات والعروض وأوقات الزحمة تجريبية لحد ما كل مطعم ينضم، والمواعيد «التقريبية» متقدّرة. الصور مرخّصة برخص المشاع الإبداعي — وحقوقها تحت.", "Restaurant names and locations are real, from OpenStreetMap (“OSM-verified” means the record is confirmed there). Menus, prices, ratings, offers and busy times are samples until each restaurant joins, and “approximate” hours are estimates. Photos are Creative Commons licensed — credited below.")
+            : L("دي نسخة تجريبية: كل المطاعم والأسماء والتقييمات والعناوين وأرقام التليفونات خيالية. الصور حقيقية ومرخّصة برخص المشاع الإبداعي — وحقوقها تحت.", "This is a demo: every restaurant, name, rating, address and phone number is fictional. The photos are real and Creative Commons licensed — credited below.")}
         </p>
       </Reveal>
 
@@ -53,6 +57,10 @@ export default function About() {
       <section className="mt-12 grid gap-3 text-sm sm:grid-cols-2" aria-labelledby="other-h">
         <h2 id="other-h" className="col-span-full text-[22px] font-bold">{L("حقوق تانية", "Other credits")}</h2>
         <p className="sf-card p-4" dir="ltr" lang="en">Crowd illustrations: <a className="text-primary hover:underline" href="https://www.openpeeps.com/" target="_blank" rel="noopener noreferrer">Open Peeps</a> by Pablo Stanley (CC0). Crowd canvas adapted from Skiper UI “Skiper 39” by @gurvinder-singh02, inspired by Zadvorsky's CodePen.</p>
+        <p className="sf-card p-4">
+          <a className="text-primary hover:underline" href={OSM_ATTRIBUTION.url} target="_blank" rel="noopener noreferrer">{L(OSM_ATTRIBUTION.ar, OSM_ATTRIBUTION.en)}</a>
+          {L(" — مرخّصة بـ Open Database License. الخريطة: بلاطات OpenStreetMap عبر Leaflet، وعناوين «موقعي» من Photon (komoot) المبني على OSM.", " — licensed under the Open Database License. Map tiles © OpenStreetMap contributors via Leaflet; “my location” labels from Photon (komoot), built on OSM.")}
+        </p>
         <p className="sf-card p-4" dir="ltr" lang="en">Fonts: Reem Kufi, IBM Plex Sans Arabic and IBM Plex Mono (SIL Open Font License) via Google Fonts. Icons: Lucide (ISC). Avatars: blobatar.</p>
       </section>
     </div>
