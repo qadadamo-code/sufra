@@ -1,16 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, CalendarPlus, ChefHat, Copy, ExternalLink, Flame, Leaf, MapPin, Minus, Phone, Plus, Search, Share2, ShoppingBag, Sparkles, Star, Users, Wallet } from "lucide-react";
+import { ArrowLeft, ArrowRight, BadgeCheck, CalendarPlus, Car, ChefHat, Clock3, Copy, ExternalLink, Flame, Footprints, Globe, Leaf, MapPin, Minus, Navigation, Phone, Plus, Search, Share2, ShoppingBag, Sparkles, Star, Users, Wallet } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { LensZoomCarousel } from "@/components/ui/lens-zoom-carousel";
 import { ShinyButton } from "@/components/ui/shiny-button";
 import { VoxelStoryVideoCard } from "@/components/ui/voxel-story-video-card";
-import { CairoMap } from "@/components/sufra/CairoMap";
+import { SufraMap } from "@/components/sufra/map/SufraMap";
+import { LocateButton } from "@/components/sufra/LocateButton";
 import { BookingDialog } from "@/components/sufra/BookingDialog";
 import { Distance, FavButton, OpenBadge, PriceLevel, Ratings, RestaurantCard } from "@/components/sufra/bits";
 import { Photo } from "@/components/sufra/Photo";
 import { Reveal } from "@/components/sufra/Reveal";
-import { amenityById, areaName, bySlug, cuisineName, DAYS_AR, DAYS_EN, moodById, restaurants, serviceRateOf, TAGS, type ItemTag } from "@/lib/data";
-import { haversineKm } from "@/lib/geo";
+import { amenityById, areaName, bySlug, cuisineName, DAYS_AR, DAYS_EN, isSample, moodById, restaurants, serviceRateOf, TAGS, type ItemTag, type Restaurant } from "@/lib/data";
+import { directionsUrl, fmtKm, haversineKm, travel } from "@/lib/geo";
+import { useGoogleRating, hasGoogleKey } from "@/lib/google";
+import { busyHint, noteBusy } from "@/lib/smart-notify";
+import { fmtTime } from "@/lib/hours";
 import { fmtRange, openState } from "@/lib/hours";
 import { useNow } from "@/lib/hooks";
 import { useLang } from "@/lib/i18n";
@@ -37,7 +41,7 @@ export default function RestaurantPage({ slug, route }: { slug: string; route: R
   const r = bySlug[slug];
   const now = useNow();
   const acc = useAccount();
-  const { home } = useHome();
+  const { home, source } = useHome();
   const cart = useStore((s) => s.cart);
   const [bookOpen, setBookOpen] = useState(route.query.get("book") === "1");
   const [menuQ, setMenuQ] = useState("");
@@ -48,6 +52,12 @@ export default function RestaurantPage({ slug, route }: { slug: string; route: R
   useEffect(() => {
     if (r) pushRecent(r.id);
   }, [r]);
+  // "busy now — usually quieter at 5" (in-app, once per place per day)
+  useEffect(() => {
+    if (!r) return;
+    const t = window.setTimeout(() => noteBusy(r, lang), 1500);
+    return () => window.clearTimeout(t);
+  }, [r, lang]);
 
   // highlight the menu tab of the section in view
   useEffect(() => {
@@ -65,6 +75,7 @@ export default function RestaurantPage({ slug, route }: { slug: string; route: R
   }, [r, menuQ]);
 
   const similar = useMemo(() => (r ? restaurants.filter((x) => x.id !== r.id && (x.cuisine === r.cuisine || x.area === r.area)).sort((a, b) => b.rating - a.rating).slice(0, 8) : []), [r]);
+  const g = useGoogleRating(r ?? null, lang);
 
   if (!r) {
     return (
@@ -117,6 +128,7 @@ export default function RestaurantPage({ slug, route }: { slug: string; route: R
   const slides = r.gallery.map((k, i) => ({ image: imgUrl(k) ?? undefined, title: r[lang], caption: i === 0 ? `${cuisineName(r.cuisine, lang)} · ${areaName(r.area, lang)}` : r[lang === "ar" ? "descAr" : "descEn"] }));
   const hour = now.getHours();
   const busyNow = r.busy[hour];
+  const quiet = busyHint(r, now)?.quietAt ?? null;
   const busyLabel = busyNow > 75 ? L("زحمة جدًا", "Very busy") : busyNow > 45 ? L("زحمة متوسطة", "Moderately busy") : L("هادي", "Not busy");
   const dishVideo = videoUrl(allVideos.find((v) => v.includes(r.cuisine)) ?? allVideos[0]);
   const bestDish = r.menu.flatMap((s) => s.items).find((i) => i.tags.includes("best")) ?? r.menu[0]?.items[0];
@@ -155,14 +167,18 @@ export default function RestaurantPage({ slug, route }: { slug: string; route: R
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0">
               <p className="text-sm text-muted-foreground">
-                {cuisineName(r.cuisine, lang)} · {areaName(r.area, lang)} · {L(`من ${r.since}`, `since ${r.since}`)}
+                {cuisineName(r.cuisine, lang)} · {areaName(r.area, lang)}
+                {!isSample(r, "since") ? <> · {L(`من ${r.since}`, `since ${r.since}`)}</> : null}
               </p>
+              <DataBadges r={r} className="mt-2" />
               <h1 className="mt-1 text-[34px] font-bold leading-tight sm:text-[48px]">{r[lang]}</h1>
               <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
                 <Ratings r={r} className="text-[15px]" />
                 <span className="text-sm text-muted-foreground">
                   <span className="num">{r.ratingCount.toLocaleString("en-US")}</span> {L("تقييم", "reviews")}
+                  {isSample(r, "ratings") ? <span className="ms-1.5 rounded bg-muted px-1.5 py-0.5 text-[11px]">{L("تجريبي", "sample")}</span> : null}
                 </span>
+                {g.state === "ok" && g.data ? <GoogleBadge rating={g.data.rating} count={g.data.count} url={g.data.url} /> : null}
                 <PriceLevel level={r.price} />
                 <span className="text-sm text-muted-foreground">
                   ~<span className="num">{r.avg}</span> {L("ج.م للفرد", "EGP per person")}
@@ -172,6 +188,7 @@ export default function RestaurantPage({ slug, route }: { slug: string; route: R
                 <OpenBadge r={r} now={now} long />
                 <span className="text-sm text-muted-foreground">
                   {L("النهارده", "Today")}: <span className="num">{fmtRange(r.hours[today], lang)}</span>
+                  {r.hoursSource === "estimated" ? <EstimatedHours /> : null}
                 </span>
               </div>
             </div>
@@ -261,7 +278,8 @@ export default function RestaurantPage({ slug, route }: { slug: string; route: R
                   {L("دلوقتي:", "Now:")} {busyLabel}
                 </span>
               </div>
-              <PopularTimes busy={r.busy} hour={hour} />
+              {quiet != null ? <p className="mt-1 text-sm text-muted-foreground">{L(`زحمة دلوقتي — عادةً بيبقى أهدى الساعة ${fmtTime(quiet, "ar")}.`, `Busy right now — usually quieter at ${fmtTime(quiet, "en")}.`)}</p> : null}
+              <PopularTimes busy={r.busy} hour={hour} estimated={isSample(r, "busy")} />
             </div>
           </Reveal>
         </section>
@@ -289,6 +307,11 @@ export default function RestaurantPage({ slug, route }: { slug: string; route: R
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <h2 id="menu-title" className="text-[30px] font-bold sm:text-[38px]">{L("المنيو", "Menu")}</h2>
+              {isSample(r, "menu") ? (
+                <p className="mb-1 inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-0.5 text-[12px] font-medium text-muted-foreground" title={L("المنيو والأسعار أمثلة لحد ما المطعم ينضم لسُفرة ويرفع المنيو بتاعه.", "Menu and prices are examples until this restaurant joins Sufra and uploads its own.")}>
+                  {L("منيو تجريبي — الأسعار تقريبية", "Sample menu — indicative prices")}
+                </p>
+              ) : null}
               <p className="text-sm text-muted-foreground">{L("الأسعار قبل ضريبة القيمة المضافة 14٪ والخدمة.", "Prices exclude 14% VAT and service.")} {r.delivery ? L(`توصيل ${r.delivery.fee} ج.م · حوالي ${r.delivery.eta} دقيقة · أقل طلب ${r.delivery.min} ج.م`, `Delivery EGP ${r.delivery.fee} · ~${r.delivery.eta} min · min. order EGP ${r.delivery.min}`) : L("المطعم ده تيك أواي بس (مفيش توصيل).", "Pickup only (no delivery).")}</p>
             </div>
             <div className="relative w-full sm:w-72">
@@ -367,7 +390,7 @@ export default function RestaurantPage({ slug, route }: { slug: string; route: R
           <div className="mt-5 grid gap-6 lg:grid-cols-[320px_1fr]">
             <div className="grid content-start gap-3">
               <div className="rounded-2xl border bg-card p-5">
-                <p className="text-sm text-muted-foreground">{L("تقييم سُفرة", "Sufra score")}</p>
+                <p className="text-sm text-muted-foreground">{L("تقييم سُفرة", "Sufra score")}{isSample(r, "ratings") ? <span className="ms-1.5 rounded bg-muted px-1.5 py-0.5 text-[11px]">{L("تجريبي", "sample")}</span> : null}</p>
                 <p className="num mt-1 text-5xl font-semibold">{r.rating.toFixed(1)}</p>
                 <div className="mt-1 flex" aria-hidden>
                   {[1, 2, 3, 4, 5].map((i) => (
@@ -387,14 +410,14 @@ export default function RestaurantPage({ slug, route }: { slug: string; route: R
                   ))}
                 </ul>
               </div>
-              <div className="flex items-center gap-4 rounded-2xl border bg-card p-5">
-                <span className="grid size-12 place-items-center rounded-full border text-lg font-bold" aria-hidden>G</span>
-                <div>
-                  <p className="text-sm text-muted-foreground">{L("تقييم جوجل", "Google score")}</p>
-                  <p className="num text-2xl font-semibold">{(r.google ?? 0).toFixed(1)} <span className="text-sm font-normal text-muted-foreground">/ 5 · {(r.googleCount ?? 0).toLocaleString("en-US")}</span></p>
-                </div>
-              </div>
+              {hasGoogleKey ? <GoogleCard state={g.state} data={g.data} /> : null}
             </div>
+            <div className="grid content-start gap-3">
+            {isSample(r, "reviews") ? (
+              <p className="rounded-2xl border border-dashed bg-card/60 px-4 py-3 text-sm text-muted-foreground">
+                {L("دي تقييمات تجريبية لتوضيح الشكل بس — مش آراء زباين حقيقيين للمكان ده.", "These are sample reviews to show the layout — not real customer opinions of this place.")}
+              </p>
+            ) : null}
             <ul className="grid content-start gap-3 sm:grid-cols-2">
               {r.reviews.map((rv, i) => (
                 <li key={i} className="rounded-2xl border bg-card p-4">
@@ -411,6 +434,7 @@ export default function RestaurantPage({ slug, route }: { slug: string; route: R
                 </li>
               ))}
             </ul>
+            </div>
           </div>
         </section>
 
@@ -419,7 +443,7 @@ export default function RestaurantPage({ slug, route }: { slug: string; route: R
           <h2 id="loc-title" className="text-[30px] font-bold sm:text-[38px]">{L("المكان والمواعيد", "Location & hours")}</h2>
           <div className="mt-5 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
             <div>
-              <CairoMap points={[{ id: r.id, lat: r.lat, lng: r.lng, label: r[lang], tone: "open" }]} selectedId={r.id} home={home} center={{ lat: r.lat, lng: r.lng }} className="h-[340px]" />
+              <SufraMap points={[{ id: r.id, lat: r.lat, lng: r.lng, label: r[lang], tone: "open" }]} selectedId={r.id} fit legend={false} className="h-[340px]" ariaLabel={L(`خريطة ${r.ar}`, `Map of ${r.en}`)} />
               <div className="mt-3 flex flex-wrap items-start justify-between gap-3 rounded-2xl border bg-card p-4">
                 <div className="min-w-0">
                   <p className="flex items-center gap-2 font-semibold">
@@ -427,14 +451,19 @@ export default function RestaurantPage({ slug, route }: { slug: string; route: R
                     {lang === "ar" ? r.addressAr : r.addressEn}
                   </p>
                   <Distance r={r} className="mt-1" />
-                  <p className="mt-1 text-xs text-muted-foreground">{km < 2 ? L("قريب كفاية تتمشى.", "Close enough to walk.") : L("الوقت بالعربية تقديري حسب زحمة القاهرة.", "Car time is an estimate for Cairo traffic.")}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {source === "gps" ? L("من مكانك الحالي. ", "From where you are now. ") : L("من منطقتك — دوس «استخدم موقعي» لمسافة أدق. ", "From your area — tap “Use my location” for a precise distance. ")}
+                    {km < 2 ? L("قريب كفاية تتمشى.", "Close enough to walk.") : L("الوقت بالعربية تقديري حسب زحمة القاهرة.", "Car time is an estimate for Cairo traffic.")}
+                  </p>
+                  {source !== "gps" ? <LocateButton className="mt-2" /> : null}
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <a href={gmaps} target="_blank" rel="noopener noreferrer" className="sf-btn sf-btn-primary sf-btn-sm">
+                  <Directions r={r} />
+                  <a href={gmaps} target="_blank" rel="noopener noreferrer" className="sf-btn sf-btn-ghost sf-btn-sm bg-card">
                     <ExternalLink className="size-4" aria-hidden />
-                    {L("افتح في خرائط جوجل", "Open in Google Maps")}
+                    {L("افتح في الخرائط", "Open in Maps")}
                   </a>
-                  <a href={`tel:${r.phone}`} className="sf-btn sf-btn-ghost sf-btn-sm bg-card">
+                  {r.phone ? <a href={`tel:${r.phone}`} className="sf-btn sf-btn-ghost sf-btn-sm bg-card">
                     <Phone className="size-4" aria-hidden />
                     <span className="num" dir="ltr">{r.phone}</span>
                   </a>
