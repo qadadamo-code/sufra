@@ -391,7 +391,7 @@ export default function RestaurantPage({ slug, route }: { slug: string; route: R
                 <span className="grid size-12 place-items-center rounded-full border text-lg font-bold" aria-hidden>G</span>
                 <div>
                   <p className="text-sm text-muted-foreground">{L("تقييم جوجل", "Google score")}</p>
-                  <p className="num text-2xl font-semibold">{r.google.toFixed(1)} <span className="text-sm font-normal text-muted-foreground">/ 5 · {r.googleCount.toLocaleString("en-US")}</span></p>
+                  <p className="num text-2xl font-semibold">{(r.google ?? 0).toFixed(1)} <span className="text-sm font-normal text-muted-foreground">/ 5 · {(r.googleCount ?? 0).toLocaleString("en-US")}</span></p>
                 </div>
               </div>
             </div>

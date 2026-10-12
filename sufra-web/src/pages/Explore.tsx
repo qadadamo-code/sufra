@@ -141,7 +141,7 @@ export default function Explore({ route }: { route: Route }) {
       distance: (a, b) => a.km - b.km,
       visits: (a, b) => b.r.visits - a.r.visits,
       foryou: (a, b) => personalScore(b.r, ctx) - personalScore(a.r, ctx),
-      google: (a, b) => b.r.google - a.r.google || b.r.googleCount - a.r.googleCount,
+      google: (a, b) => (b.r.google ?? 0) - (a.r.google ?? 0) || (b.r.googleCount ?? 0) - (a.r.googleCount ?? 0),
       rating: (a, b) => b.r.rating - a.r.rating || b.r.ratingCount - a.r.ratingCount,
       "price-asc": (a, b) => a.r.avg - b.r.avg,
       "price-desc": (a, b) => b.r.avg - a.r.avg,

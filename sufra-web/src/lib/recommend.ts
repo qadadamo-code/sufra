@@ -195,7 +195,7 @@ export function recommend(q: string, ctx: { home: LatLng; lang: Lang; now?: Date
     const km = haversineKm(home, r);
     const st = openState(r.hours, now);
     const reasons: string[] = [];
-    let s = r.rating * 1.2 + r.google * 0.8 + Math.log10(r.visits + 10) * 0.6;
+    let s = r.rating * 1.2 + (r.google ?? r.rating) * 0.8 + Math.log10(r.visits + 10) * 0.6;
     const moodHits = it.moods.filter((m) => r.moods.includes(m));
     s += moodHits.length * 2.4;
     if (moodHits.length) reasons.push(moodHits.map((m) => moodById[m][lang]).join(L("، ", ", ")));
@@ -261,7 +261,7 @@ function explain(picks: Pick[], it: Intent, relaxed: boolean, lang: Lang): strin
 /** "Best for you" score for sorting and the "مقترح ليك" rail. */
 export function personalScore(r: Restaurant, ctx: { home: LatLng; likedMoods: Mood[]; favCuisines: string[]; favourites: string[] }): number {
   const km = haversineKm(ctx.home, r);
-  let s = r.rating * 1.5 + r.google * 0.5;
+  let s = r.rating * 1.5 + (r.google ?? r.rating) * 0.5;
   s += r.moods.filter((m) => ctx.likedMoods.includes(m)).length * 0.9;
   if (ctx.favCuisines.includes(r.cuisine)) s += 1.2;
   if (ctx.favourites.includes(r.id)) s -= 0.6; // you already know it; surface new ones

@@ -93,7 +93,7 @@ export default function Home() {
   const openNow = useMemo(() => withKm.filter((x) => isOpenNow(x.r, now)).sort((a, b) => a.km - b.km).slice(0, 12).map((x) => x.r), [withKm, now]);
   const nearest = useMemo(() => [...withKm].sort((a, b) => a.km - b.km).slice(0, 12).map((x) => x.r), [withKm]);
   const visited = useMemo(() => [...restaurants].sort((a, b) => b.visits - a.visits).slice(0, 12), []);
-  const google = useMemo(() => [...restaurants].sort((a, b) => b.google - a.google || b.googleCount - a.googleCount).slice(0, 12), []);
+  const google = useMemo(() => [...restaurants].sort((a, b) => (b.google ?? 0) - (a.google ?? 0) || (b.googleCount ?? 0) - (a.googleCount ?? 0)).slice(0, 12), []);
   const sufra = useMemo(() => [...restaurants].sort((a, b) => b.rating - a.rating || b.ratingCount - a.ratingCount).slice(0, 12), []);
   const offers = useMemo(() => restaurants.filter((r) => r.offers.length).sort((a, b) => b.offers[0].value - a.offers[0].value).slice(0, 12), []);
   const fresh = useMemo(() => restaurants.filter((r) => r.isNew), []);
