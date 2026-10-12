@@ -1,5 +1,5 @@
 import { allocate, applyRate, display, divRound, egp, format, removeRate, round } from './money'
-import { DEFAULT_PROFILE, priceBill, type TaxProfile } from './tax'
+import { DEFAULT_PROFILE, SERVICE_OUTSIDE_VAT, priceBill, type TaxProfile } from './tax'
 import { ACCOUNTS as A, Ledger, LedgerError } from './ledger'
 import { postCashMove, postDrawerCount, postPurchase, postReturn, postSale, settleVat, vatReturn } from './posting'
 
@@ -66,6 +66,14 @@ describe('pricing a bill', () => {
     const b = priceBill({ mode: 'dine-in', lines: [{ id: 'x', qty: 1, unitPrice: egp('99.99'), category: 'food' }] }, incl)
     expect(b.total).toBe(egp('99.99'))
     expect(b.lines[0].net + b.lines[0].service + b.lines[0].vat).toBe(egp('99.99'))
+  })
+
+  it('VAT-exempt outlets and service outside the VAT base', () => {
+    const exempt = priceBill({ mode: 'dine-in', lines: [kofta] }, { ...DEFAULT_PROFILE, vatRegistered: false })
+    expect(exempt.vat).toBe(0n)
+    expect(format(exempt.payable, 2)).toBe('414.40')
+    const outside = priceBill({ mode: 'dine-in', lines: [kofta] }, { ...DEFAULT_PROFILE, ...SERVICE_OUTSIDE_VAT })
+    expect(format(outside.vat, 2)).toBe('51.80') // 14% of 370 only
   })
 
   it('handles fractional quantities (fish by the kilo)', () => {

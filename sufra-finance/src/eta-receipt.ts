@@ -194,7 +194,7 @@ export function issueReceipt(cfg: EtaConfig, x: IssueInput, now: Date = new Date
       taxes.push({ taxType: profile.serviceCode.type, subType: profile.serviceCode.subType, rate: rateNum(profile.serviceRate), amount: money(l.service) })
       addTax(profile.serviceCode.type, l.service)
     }
-    if (!l.vatExempt) {
+    if (!l.vatExempt && profile.vatRegistered) {
       taxes.push({ taxType: profile.vatCode.type, subType: profile.vatCode.subType, rate: rateNum(profile.vatRate), amount: money(l.vat) })
       addTax(profile.vatCode.type, l.vat)
     }

@@ -6,6 +6,12 @@ import { allocate, applyRate, divRound, removeRate, round, sum, type Amount, typ
  * must be confirmed per restaurant before going live.
  */
 export interface TaxProfile {
+  /**
+   * Whether this outlet charges VAT. Non-tourist restaurants are exempt unless
+   * Decrees 82/2017 / 285/2021 apply (mall, chain/brand, app sales, service
+   * charge…) — eta-spec §3.2. The accountant decides per outlet.
+   */
+  vatRegistered: boolean
   /** VAT in basis points. Egypt standard rate: 14% = 1400. */
   vatRate: Rate
   /** ETA tax type / subtype used on receipts for VAT. */
@@ -29,6 +35,7 @@ export interface TaxProfile {
 export type OrderMode = 'dine-in' | 'takeaway' | 'delivery'
 
 export const DEFAULT_PROFILE: TaxProfile = {
+  vatRegistered: true,
   vatRate: 1400,
   vatCode: { type: 'T1', subType: 'V009' },
   serviceRate: 1200,
@@ -133,7 +140,7 @@ export function priceBill(input: BillInput, p: TaxProfile = DEFAULT_PROFILE): Bi
   const lines: BillLine[] = input.lines.map((l, i) => {
     const printedAfter = afterLineDiscount[i] - shares[i]
     const sRate = serviceOn ? p.serviceRate : 0
-    const vRate = l.vatExempt ? 0 : p.vatRate
+    const vRate = l.vatExempt || !p.vatRegistered ? 0 : p.vatRate
     let net: Amount
     let service: Amount
     let vat: Amount
@@ -160,7 +167,7 @@ export function priceBill(input: BillInput, p: TaxProfile = DEFAULT_PROFILE): Bi
   })
 
   const deliveryFee = input.mode === 'delivery' ? (input.deliveryFee ?? 0n) : 0n
-  const deliveryVat = p.vatOnDelivery ? applyRate(deliveryFee, p.vatRate, p.taxDecimals) : 0n
+  const deliveryVat = p.vatOnDelivery && p.vatRegistered ? applyRate(deliveryFee, p.vatRate, p.taxDecimals) : 0n
   const total = sum(lines.map((l) => l.total)) + deliveryFee + deliveryVat
   const payable = round(total, 2)
   return {
@@ -177,4 +184,10 @@ export function priceBill(input: BillInput, p: TaxProfile = DEFAULT_PROFILE): Bi
     payable,
     rounding: payable - total,
   }
+}
+
+/** Service charge reported outside the VAT base (ETA T17 / SC03), if the accountant rules VAT is not due on it. */
+export const SERVICE_OUTSIDE_VAT: Pick<TaxProfile, 'serviceCode' | 'vatOnService'> = {
+  serviceCode: { type: 'T17', subType: 'SC03' },
+  vatOnService: false,
 }
