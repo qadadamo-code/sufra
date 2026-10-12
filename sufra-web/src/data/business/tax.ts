@@ -48,3 +48,6 @@ export function previewBill(printed: number, mode: "dine-in" | "takeaway" | "del
   const base = printed - service - vat;
   return { base, service, vat, total: printed };
 }
+
+/** Egyptian Tax Registration Number (RIN): 9 digits (dashes/spaces ignored). */
+export const validRin = (v: string) => /^\d{9}$/.test(v.replace(/[-\s]/g, ""));

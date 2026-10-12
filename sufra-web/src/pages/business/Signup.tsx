@@ -12,6 +12,7 @@ import { BizPage, Field, Money, Segmented, Toggle, useArrow } from "@/components
 import { quotePlan } from "@/data/business/billing";
 import { PERIODS, PLANS, TRIAL_DAYS, type PeriodId, type PlanId } from "@/data/business/plans";
 import { ZONE_NAMES } from "@/data/business/suppliers";
+import { validRin } from "@/data/business/tax";
 
 interface Draft {
   name: string;
@@ -34,8 +35,6 @@ interface Draft {
 const EMPTY: Draft = { name: "", nameEn: "", kind: "restaurant", owner: "", phone: "", email: "", rin: "", vat: true, activity: "5610", branch: "", area: "zamalek", address: "", tables: 12, plan: "pro", period: "yearly", pay: "later" };
 const KEY = "sufra.biz.signup";
 
-/** Egyptian Tax Registration Number (RIN): 9 digits. */
-export const validRin = (v: string) => /^\d{9}$/.test(v.replace(/[-\s]/g, ""));
 const validPhone = (v: string) => /^01[0125]\d{8}$/.test(v.replace(/\s/g, ""));
 
 export default function Signup({ route }: { route: Route }) {

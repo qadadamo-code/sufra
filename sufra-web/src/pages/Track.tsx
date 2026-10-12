@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Bike, Receipt, RotateCcw } from "lucide-react";
 import { TaskSteps, type TaskStep } from "@/components/ui/task-steps";
 import { ProgressBar } from "@/components/ui/progress-bar";
-import { CairoMap } from "@/components/sufra/CairoMap";
+import { SufraMap } from "@/components/sufra/map/SufraMap";
 import { BreakdownTable } from "@/components/sufra/Breakdown";
 import { Photo } from "@/components/sufra/Photo";
 import { byId, itemIndex, serviceRateOf } from "@/lib/data";
@@ -92,15 +92,19 @@ export default function Track({ id }: { id: string }) {
           </section>
           {order.mode === "delivery" ? (
             <section aria-label={L("خريطة التوصيل", "Delivery map")}>
-              <CairoMap
+              <SufraMap
                 points={[
                   { id: "rest", lat: r.lat, lng: r.lng, label: r[lang], tone: "open" },
-                  ...(current >= 3 && !done ? [{ id: "courier", lat: courier.lat, lng: courier.lng, label: L("المندوب", "Courier"), tone: "offer" as const }] : []),
+                  ...(current >= 3 && !done ? [{ id: "courier", lat: courier.lat, lng: courier.lng, label: L("المندوب", "Courier"), tone: "courier" as const }] : []),
                 ]}
                 selectedId={current >= 3 && !done ? "courier" : "rest"}
-                home={home}
-                center={{ lat: (r.lat + home.lat) / 2, lng: (r.lng + home.lng) / 2 }}
+                origin={home}
+                user={null}
+                path={[{ lat: r.lat, lng: r.lng }, home]}
+                fit
+                legend={false}
                 className="h-[320px]"
+                ariaLabel={L("خريطة التوصيل", "Delivery map")}
               />
               <p className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
                 <Bike className="size-4 text-brass" aria-hidden />
