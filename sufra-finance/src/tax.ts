@@ -22,6 +22,8 @@ export interface TaxProfile {
   priceMode: 'exclusive' | 'inclusive'
   /** VAT on the delivery fee. */
   vatOnDelivery: boolean
+  /** Decimals tax amounts are rounded to, per line (ETA: 2). */
+  taxDecimals: number
 }
 
 export type OrderMode = 'dine-in' | 'takeaway' | 'delivery'
@@ -32,9 +34,11 @@ export const DEFAULT_PROFILE: TaxProfile = {
   serviceRate: 1200,
   serviceModes: ['dine-in'],
   vatOnService: true,
-  serviceCode: null,
+  // ETA FAQ: service charge is sent as T9 / SC01 and sits inside the VAT base (eta-spec §3.2).
+  serviceCode: { type: 'T9', subType: 'SC01' },
   priceMode: 'exclusive',
   vatOnDelivery: true,
+  taxDecimals: 2,
 }
 
 export interface BillLineInput {
@@ -121,10 +125,10 @@ export function priceBill(input: BillInput, p: TaxProfile = DEFAULT_PROFILE): Bi
   // Bill-level discount, spread over lines in proportion to their value.
   const base = sum(afterLineDiscount)
   let billDisc = 0n
-  if (input.discount?.kind === 'percent') billDisc = applyRate(base, input.discount.rate)
+  if (input.discount?.kind === 'percent') billDisc = applyRate(base, input.discount.rate, 2)
   if (input.discount?.kind === 'amount') billDisc = input.discount.value
   if (billDisc < 0n || billDisc > base) throw new Error('invalid bill discount')
-  const shares = billDisc ? allocate(billDisc, afterLineDiscount, 5) : afterLineDiscount.map(() => 0n)
+  const shares = billDisc ? allocate(round(billDisc, 2), afterLineDiscount, 2) : afterLineDiscount.map(() => 0n)
 
   const lines: BillLine[] = input.lines.map((l, i) => {
     const printedAfter = afterLineDiscount[i] - shares[i]
@@ -135,13 +139,13 @@ export function priceBill(input: BillInput, p: TaxProfile = DEFAULT_PROFILE): Bi
     let vat: Amount
     if (p.priceMode === 'exclusive') {
       net = printedAfter
-      service = applyRate(net, sRate)
-      vat = applyRate(p.vatOnService ? net + service : net, vRate)
+      service = applyRate(net, sRate, p.taxDecimals)
+      vat = applyRate(p.vatOnService ? net + service : net, vRate, p.taxDecimals)
     } else {
       // printedAfter = net + service + vat
       net = p.vatOnService ? removeRate(removeRate(printedAfter, vRate), sRate) : removeRate(printedAfter, sRate + vRate)
-      service = applyRate(net, sRate)
-      vat = applyRate(p.vatOnService ? net + service : net, vRate)
+      service = applyRate(net, sRate, p.taxDecimals)
+      vat = applyRate(p.vatOnService ? net + service : net, vRate, p.taxDecimals)
       net += printedAfter - (net + service + vat) // keep the printed price exact
     }
     return {
@@ -156,7 +160,7 @@ export function priceBill(input: BillInput, p: TaxProfile = DEFAULT_PROFILE): Bi
   })
 
   const deliveryFee = input.mode === 'delivery' ? (input.deliveryFee ?? 0n) : 0n
-  const deliveryVat = p.vatOnDelivery ? applyRate(deliveryFee, p.vatRate) : 0n
+  const deliveryVat = p.vatOnDelivery ? applyRate(deliveryFee, p.vatRate, p.taxDecimals) : 0n
   const total = sum(lines.map((l) => l.total)) + deliveryFee + deliveryVat
   const payable = round(total, 2)
   return {

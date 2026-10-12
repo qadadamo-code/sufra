@@ -56,8 +56,10 @@ export const toPiastreAmount = (a: Amount) => round(a, 2)
 /** Percentages are basis points: 14% = 1400. */
 export type Rate = number
 
-export function applyRate(a: Amount, bp: Rate): Amount {
-  return divRound(a * BigInt(bp), 10_000n)
+/** `a` × rate, rounded once (half away from zero) to `decimals` places. */
+export function applyRate(a: Amount, bp: Rate, decimals = 5): Amount {
+  const step = 10n ** BigInt(5 - decimals)
+  return divRound(a * BigInt(bp), 10_000n * step) * step
 }
 
 /** Base amount when `gross` already includes a rate (inclusive pricing). */
