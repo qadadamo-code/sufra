@@ -291,11 +291,11 @@ export default function RestaurantPage({ slug, route }: { slug: string; route: R
               badgeText={L("من المطبخ", "From the kitchen")}
               badgeIcon={ChefHat}
               title={bestDish ? L(`${bestDish.ar}: الطبق اللي الناس بترجع عشانه`, `${bestDish.en}: the dish people come back for`) : r[lang]}
-              description={L(`في ${r.ar} بيحضّروا كل حاجة طازة يوميًا من ${r.since}. ده اللي بيحصل ورا الباب.`, `At ${r.en} everything is made fresh daily since ${r.since}. Here's what happens behind the pass.`)}
-              tags={[L("خامات طازة كل يوم", "Fresh produce daily"), L("مطبخ مفتوح", "Open kitchen"), L("مراجعة نظافة سُفرة", "Sufra hygiene check")]}
+              description={isSample(r, "description") ? L(`فيديو توضيحي لأكل ${cuisineName(r.cuisine, "ar")} — مش متصوّر في مطبخ ${r.ar}.`, `An illustrative ${cuisineName(r.cuisine, "en")} video — not filmed in ${r.en}'s kitchen.`) : L(`في ${r.ar} بيحضّروا كل حاجة طازة يوميًا من ${r.since}. ده اللي بيحصل ورا الباب.`, `At ${r.en} everything is made fresh daily since ${r.since}. Here's what happens behind the pass.`)}
+              tags={isSample(r, "description") ? [cuisineName(r.cuisine, lang), L("فيديو توضيحي", "Illustrative")] : [L("خامات طازة كل يوم", "Fresh produce daily"), L("مطبخ مفتوح", "Open kitchen"), L("مراجعة نظافة سُفرة", "Sufra hygiene check")]}
               videoSrc={dishVideo}
               posterSrc={imgUrl(bestDish?.img) ?? imgUrl(r.cover)}
-              videoBadgeText={dishVideo ? L("لايف من المطبخ", "Live from the kitchen") : L("من المطبخ", "From the kitchen")}
+              videoBadgeText={isSample(r, "description") ? L("توضيحي", "Illustrative") : dishVideo ? L("لايف من المطبخ", "Live from the kitchen") : L("من المطبخ", "From the kitchen")}
               muteLabels={{ off: L("الصوت", "Audio"), on: L("شغّال", "Playing") }}
               fallback={<Photo k={r.cover} label={r[lang]} className="absolute inset-0" />}
             />
@@ -466,7 +466,13 @@ export default function RestaurantPage({ slug, route }: { slug: string; route: R
                   {r.phone ? <a href={`tel:${r.phone}`} className="sf-btn sf-btn-ghost sf-btn-sm bg-card">
                     <Phone className="size-4" aria-hidden />
                     <span className="num" dir="ltr">{r.phone}</span>
-                  </a>
+                  </a> : null}
+                  {r.website ? (
+                    <a href={r.website} target="_blank" rel="noopener noreferrer" className="sf-btn sf-btn-ghost sf-btn-sm bg-card">
+                      <Globe className="size-4" aria-hidden />
+                      {L("الموقع", "Website")}
+                    </a>
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -486,7 +492,14 @@ export default function RestaurantPage({ slug, route }: { slug: string; route: R
                   ))}
                 </tbody>
               </table>
-              <p className="mt-3 text-xs text-muted-foreground">{st.open ? L("مفتوح دلوقتي.", "Open now.") : L("مقفول دلوقتي.", "Closed now.")} {r.instagram}</p>
+              <p className="mt-3 text-xs text-muted-foreground">
+                {st.open ? L("مفتوح دلوقتي.", "Open now.") : L("مقفول دلوقتي.", "Closed now.")} {r.instagram}
+              </p>
+              {r.hoursSource === "estimated" ? (
+                <p className="mt-2 text-xs text-muted-foreground">{L("مواعيد تقريبية — المطعم ما نشرش مواعيده على OpenStreetMap، فقدّرناها من نوع المكان. اتصل قبل ما تروح.", "Approximate hours — this place hasn't published hours on OpenStreetMap, so we estimated them from its type. Call ahead.")}</p>
+              ) : r.hoursSource === "osm" ? (
+                <p className="mt-2 text-xs text-muted-foreground" dir="ltr">{L("المواعيد من OpenStreetMap", "Hours from OpenStreetMap")}{r.openingHoursRaw ? ` · ${r.openingHoursRaw}` : ""}</p>
+              ) : null}
             </div>
           </div>
         </section>
@@ -521,7 +534,7 @@ export default function RestaurantPage({ slug, route }: { slug: string; route: R
   );
 }
 
-function PopularTimes({ busy, hour }: { busy: number[]; hour: number }) {
+function PopularTimes({ busy, hour, estimated }: { busy: number[]; hour: number; estimated?: boolean }) {
   const { L, lang } = useLang();
   const hours = Array.from({ length: 20 }, (_, i) => (6 + i) % 24); // 6 AM → 1 AM
   const label = (h: number) => (lang === "ar" ? `${h % 12 || 12}${h < 12 ? "ص" : "م"}` : `${h % 12 || 12}${h < 12 ? "a" : "p"}`);
@@ -548,8 +561,111 @@ function PopularTimes({ busy, hour }: { busy: number[]; hour: number }) {
       </div>
       <figcaption className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-1"><i className="size-2 rounded-sm bg-brass" aria-hidden />{L("دلوقتي", "Now")}</span>
-        <span>{L("مبني على زيارات مستخدمين سُفرة في الأسابيع اللي فاتت.", "Based on Sufra visits over recent weeks.")}</span>
+        <span>{estimated ? L("تقدير حسب نوع المكان والمنطقة — لسه مفيش بيانات زيارات حقيقية.", "Estimated from the type of place and area — no real visit data yet.") : L("مبني على زيارات مستخدمين سُفرة في الأسابيع اللي فاتت.", "Based on Sufra visits over recent weeks.")}</span>
       </figcaption>
     </figure>
+  );
+}
+
+/** OSM-verified + source badges. */
+function DataBadges({ r, className }: { r: Restaurant; className?: string }) {
+  const { L } = useLang();
+  if (!r.source && !r.verified) return null;
+  return (
+    <div className={cn("flex flex-wrap items-center gap-1.5", className)}>
+      {r.verified ? (
+        <a href={r.source?.url ?? "https://www.openstreetmap.org"} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded-full bg-ok-soft px-2.5 py-0.5 text-[12px] font-semibold text-ok" title={L("الاسم والمكان متأكد منهم على OpenStreetMap", "Name and location confirmed on OpenStreetMap")}>
+          <BadgeCheck className="size-3.5" aria-hidden />
+          {L("موثّق على OSM", "OSM-verified")}
+        </a>
+      ) : r.source?.url ? (
+        <a href={r.source.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-[12px] font-medium text-muted-foreground">
+          {L("من OpenStreetMap", "From OpenStreetMap")}
+        </a>
+      ) : null}
+      {r.brand ? <span className="rounded-full bg-muted px-2.5 py-0.5 text-[12px] font-medium text-muted-foreground">{r.brand}</span> : null}
+    </div>
+  );
+}
+
+function EstimatedHours() {
+  const { L } = useLang();
+  return (
+    <span className="ms-2 inline-flex items-center gap-1 rounded-full bg-warn-soft px-2 py-0.5 text-[11px] font-semibold text-warn" title={L("المطعم ما نشرش مواعيده — دي تقديرية", "This place hasn't published its hours — these are estimates")}>
+      <Clock3 className="size-3" aria-hidden />
+      {L("مواعيد تقريبية", "Approx. hours")}
+    </span>
+  );
+}
+
+/** Google's rating is only ever shown live from the Places API, with Google attribution. */
+function GoogleBadge({ rating, count, url }: { rating: number; count: number; url: string | null }) {
+  const { L } = useLang();
+  const inner = (
+    <>
+      <Star className="size-3.5 fill-[#fbbc04] text-[#fbbc04]" aria-hidden />
+      <span className="num font-semibold text-foreground">{rating.toFixed(1)}</span>
+      <span className="num">({count.toLocaleString("en-US")})</span>
+      <span className="font-medium" lang="en">Google</span>
+    </>
+  );
+  const cls = "inline-flex items-center gap-1 text-sm text-muted-foreground";
+  return url ? (
+    <a href={url} target="_blank" rel="noopener noreferrer" className={cn(cls, "hover:underline")} title={L("تقييم Google (مباشر)", "Google rating (live)")}>
+      {inner}
+    </a>
+  ) : (
+    <span className={cls}>{inner}</span>
+  );
+}
+
+function GoogleCard({ state, data }: { state: "off" | "loading" | "ok" | "none"; data: { rating: number; count: number; url: string | null } | null }) {
+  const { L } = useLang();
+  if (state === "off" || state === "none") return null;
+  return (
+    <div className="rounded-2xl border bg-card p-5" aria-busy={state === "loading"}>
+      <p className="text-sm text-muted-foreground">{L("تقييم Google", "Google rating")}</p>
+      {state === "loading" || !data ? (
+        <div className="mt-2 h-8 w-32 animate-pulse rounded bg-muted" />
+      ) : (
+        <>
+          <p className="num mt-1 text-3xl font-semibold">
+            {data.rating.toFixed(1)} <span className="text-sm font-normal text-muted-foreground">/ 5 · {data.count.toLocaleString("en-US")}</span>
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {L("المصدر:", "Source:")} <span lang="en" className="font-semibold">Google</span>
+            {data.url ? (
+              <>
+                {" · "}
+                <a className="text-primary hover:underline" href={data.url} target="_blank" rel="noopener noreferrer">{L("شوف على Google Maps", "View on Google Maps")}</a>
+              </>
+            ) : null}
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
+/** "اتجاهات" — Google Maps directions from the user's real origin, with our time estimate. */
+function Directions({ r }: { r: Restaurant }) {
+  const { L, lang } = useLang();
+  const { home } = useHome();
+  const km = haversineKm(home, r);
+  const t = travel(km);
+  return (
+    <>
+      <a href={directionsUrl(home, r, "driving")} target="_blank" rel="noopener noreferrer" className="sf-btn sf-btn-primary sf-btn-sm" aria-label={L(`اتجاهات بالعربية — حوالي ${t.car} دقيقة`, `Driving directions — about ${t.car} min`)}>
+        <Navigation className="size-4" aria-hidden />
+        {L("اتجاهات", "Directions")}
+        <span className="num inline-flex items-center gap-1 opacity-90"><Car className="size-3.5" aria-hidden />{t.car}{lang === "ar" ? " د" : " min"}</span>
+      </a>
+      {t.walk ? (
+        <a href={directionsUrl(home, r, "walking")} target="_blank" rel="noopener noreferrer" className="sf-btn sf-btn-ghost sf-btn-sm bg-card" aria-label={L(`اتجاهات مشي — ${t.walk} دقيقة، ${fmtKm(km, "ar")}`, `Walking directions — ${t.walk} min, ${fmtKm(km, "en")}`)}>
+          <Footprints className="size-4" aria-hidden />
+          <span className="num">{t.walk}{lang === "ar" ? " د" : " min"}</span>
+        </a>
+      ) : null}
+    </>
   );
 }
