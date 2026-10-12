@@ -169,6 +169,8 @@ export function CairoMap({
     const el = box.current;
     if (!el) return;
     const onWheel = (e: WheelEvent) => {
+      // the page keeps scrolling under a plain wheel; Ctrl/⌘ + wheel (and trackpad pinch) zooms the map
+      if (!e.ctrlKey && !e.metaKey) return;
       e.preventDefault();
       const r = el.getBoundingClientRect();
       zoomAt(Math.exp(-e.deltaY * 0.0022), e.clientX - r.left, e.clientY - r.top);
@@ -216,7 +218,7 @@ export function CairoMap({
   return (
     <div
       ref={box}
-      className={cn("relative touch-none select-none overflow-hidden rounded-[24px] border bg-[var(--sf-land)] outline-none", onPick ? "cursor-crosshair" : "cursor-grab active:cursor-grabbing", className)}
+      className={cn("relative select-none overflow-hidden [touch-action:pan-y] rounded-[24px] border bg-[var(--sf-land)] outline-none", onPick ? "cursor-crosshair" : "cursor-grab active:cursor-grabbing", className)}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
@@ -225,7 +227,7 @@ export function CairoMap({
       tabIndex={0}
       role="application"
       aria-roledescription={L("خريطة", "map")}
-      aria-label={ariaLabel ?? L("خريطة القاهرة — اسحب للتحريك، والأسهم و+/− للتكبير", "Map of Cairo — drag to pan; arrows and +/− to zoom")}
+      aria-label={ariaLabel ?? L("خريطة القاهرة المبسّطة — اسحب للتحريك، والأسهم و+/− للتكبير", "Simplified map of Cairo — drag to pan; arrows and +/− to zoom")}
       dir="ltr"
     >
       <svg width={size.w} height={size.h} className="absolute inset-0" aria-hidden>

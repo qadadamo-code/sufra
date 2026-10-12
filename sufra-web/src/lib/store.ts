@@ -1,4 +1,5 @@
-import { useSyncExternalStore } from "react";
+import { useMemo, useSyncExternalStore } from "react";
+import { measureFromArea, nearestArea, useLocation } from "./location";
 import { areaById, byId, restaurants, type Mood } from "./data";
 import type { LatLng } from "./geo";
 import type { PriceBreakdown, PriceMode } from "./pricing";
@@ -242,13 +243,25 @@ export const selAccount = (s: State): Account | null => (s.current ? (s.accounts
 export function useAccount() {
   return useStore(selAccount);
 }
-/** Where distances are measured from: the user's home, or the guest's chosen area. */
-export function useHome(): { home: LatLng; areaId: string; isUser: boolean } {
+/**
+ * Where distances are measured from: the live/last GPS fix when the user chose "استخدم موقعي",
+ * otherwise the account's home, otherwise the guest's chosen area.
+ */
+export type OriginSource = "gps" | "home" | "area";
+export function useHome(): { home: LatLng; areaId: string; isUser: boolean; source: OriginSource; label: string | null; accuracy: number | null } {
   const acc = useAccount();
   const guestArea = useStore((s) => s.guestArea);
-  if (acc) return { home: acc.profile.home, areaId: acc.profile.homeArea, isUser: true };
-  const a = areaById[guestArea] ?? areaById.downtown;
-  return { home: { lat: a.lat, lng: a.lng }, areaId: a.id, isUser: false };
+  const loc = useLocation();
+  return useMemo(() => {
+    if (loc.active && loc.fix) {
+      const home = { lat: loc.fix.lat, lng: loc.fix.lng };
+      return { home, areaId: nearestArea(home).id, isUser: !!acc, source: "gps" as const, label: loc.fix.label, accuracy: loc.fix.accuracy };
+    }
+    if (acc) return { home: acc.profile.home, areaId: acc.profile.homeArea, isUser: true, source: "home" as const, label: null, accuracy: null };
+    const a = areaById[guestArea] ?? areaById.downtown;
+    return { home: { lat: a.lat, lng: a.lng }, areaId: a.id, isUser: false, source: "area" as const, label: null, accuracy: null };
+    // loc.fix changes identity on every accepted fix; acc on account edits
+  }, [loc.active, loc.fix, acc, guestArea]);
 }
 
 export function updateAccount(fn: (a: Account) => Account) {
@@ -265,6 +278,7 @@ export function toggleFavourite(rid: string): boolean | null {
   return on;
 }
 export function setGuestArea(id: string) {
+  measureFromArea(); // picking an area means "measure from there", not from GPS
   setState((s) => ({ ...s, guestArea: id }));
 }
 export function pushRecent(rid: string) {
