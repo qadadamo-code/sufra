@@ -58,7 +58,9 @@ const TEAL = 0x3db3a3;
 export function webglAvailable(): boolean {
   try {
     const c = document.createElement("canvas");
-    return !!(c.getContext("webgl2") || c.getContext("webgl"));
+    // software-only WebGL (no GPU) would drag the whole page down to a few fps: show the still poster instead
+    const attrs = { failIfMajorPerformanceCaveat: true };
+    return !!(c.getContext("webgl2", attrs) || c.getContext("webgl", attrs));
   } catch {
     return false;
   }
@@ -930,6 +932,8 @@ export function initMachine(root: HTMLElement, opts: MachineOptions): MachineHan
   let mode: MachineMode = "assembled";
   let cameraMode: "overview" | "station" = "overview";
   let playing = !reduceMotion;
+  let lowPower = false; // set when the device can't keep up: redraw only on demand
+  let autoPause = true; // pause by itself on devices that can't keep up, until the user presses play
   let simTime = reduceMotion ? 5.2 : 0;
   let spread = 0;
   let selected: StationId = "kitchen";
@@ -1020,6 +1024,9 @@ export function initMachine(root: HTMLElement, opts: MachineOptions): MachineHan
     cameraAnimating = true;
   }
   function play() {
+    // an explicit play wins over the low-power pause
+    lowPower = false;
+    autoPause = false;
     playing = true;
     opts.onPlaying?.(true);
   }
@@ -1122,7 +1129,8 @@ export function initMachine(root: HTMLElement, opts: MachineOptions): MachineHan
   let forceFrame = 2; // render a still frame even when paused (reduced motion)
   function animate(now: number) {
     rafId = requestAnimationFrame(animate);
-    const dt = Math.max(0, Math.min((now - lastFrame) / 1000, 0.045));
+    const realDt = Math.max(0, (now - lastFrame) / 1000);
+    const dt = Math.min(realDt, 0.045);
     lastFrame = now;
     if (!visible || contextLost) return;
     if (playing) simTime += dt;
@@ -1214,7 +1222,7 @@ export function initMachine(root: HTMLElement, opts: MachineOptions): MachineHan
       const speed = reduceMotion ? 1 : 1 - Math.exp(-dt * (mode === "order" ? 2.2 : 3));
       camera.position.lerp(desiredPosition, speed);
       controls.target.lerp(desiredTarget, speed);
-      if (mode !== "order" && camera.position.distanceTo(desiredPosition) < 0.015 && controls.target.distanceTo(desiredTarget) < 0.015) cameraAnimating = false;
+      if ((mode !== "order" || !playing) && camera.position.distanceTo(desiredPosition) < 0.015 && controls.target.distanceTo(desiredTarget) < 0.015) cameraAnimating = false;
     }
     controls.autoRotate = playing && !reduceMotion && !dragging && !cameraAnimating && mode !== "order" && cameraMode === "overview" && now - lastInteraction > 6500;
     controls.autoRotateSpeed = 0.24;
@@ -1233,7 +1241,8 @@ export function initMachine(root: HTMLElement, opts: MachineOptions): MachineHan
       y = THREE.MathUtils.clamp(y, 60, height - 120);
       s.label.style.transform = `translate(${x}px,${y}px)`;
     });
-    if (playing || cameraAnimating || dragging || forceFrame > 0 || controls.autoRotate || hovered || spread > 0.001) {
+    const wantsFrame = lowPower ? playing || dragging || forceFrame > 0 : playing || cameraAnimating || dragging || forceFrame > 0 || controls.autoRotate || hovered || spread > 0.001;
+    if (wantsFrame) {
       renderer.render(scene, camera);
       if (forceFrame > 0) forceFrame--;
     }
@@ -1243,9 +1252,15 @@ export function initMachine(root: HTMLElement, opts: MachineOptions): MachineHan
     }
     if (playing) {
       frameCount++;
-      measureTime += dt;
-      if (measureTime > 4) {
-        if (frameCount / measureTime < 43 && pixelRatio > 1) {
+      measureTime += Math.min(realDt, 0.5); // wall-clock time, so slow devices are measured honestly
+      if (measureTime > 2.5) {
+        const fps = frameCount / measureTime;
+        if (fps < 20 && autoPause) {
+          // far too slow (weak or GPU-less device): hold a still frame so the page stays usable (play resumes it)
+          pause();
+          lowPower = true;
+          forceFrame = 1;
+        } else if (fps < 43 && pixelRatio > 1) {
           pixelRatio = Math.max(1, pixelRatio - 0.25);
           renderer.setPixelRatio(pixelRatio);
           renderer.setSize(width, height, false);

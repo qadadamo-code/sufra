@@ -147,14 +147,15 @@ export function noteBusy(r: Restaurant, lang: "ar" | "en", now = new Date()) {
 }
 
 /** Mount once (App): checks now and every 10 minutes while the tab is open. */
-export function useSmartNotifications(lang: "ar" | "en") {
+export function useSmartNotifications(lang: "ar" | "en", enabled = true) {
   const acc = useAccount();
   useEffect(() => {
+    if (!enabled) return;
     const t0 = window.setTimeout(() => runSmartChecks(acc, lang), 2500); // let the page settle first
     const id = window.setInterval(() => runSmartChecks(acc, lang), 10 * 60 * 1000);
     return () => {
       window.clearTimeout(t0);
       window.clearInterval(id);
     };
-  }, [acc, lang]);
+  }, [acc, lang, enabled]);
 }

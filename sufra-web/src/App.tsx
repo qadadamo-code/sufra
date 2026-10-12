@@ -34,9 +34,10 @@ function Loading() {
 function Routes() {
   const route = useRoute();
   const { lang } = useLang();
-  useSmartNotifications(lang);
-  useTheme(); // applies the stored theme + follows the OS
   const { path, parts } = route;
+  // customer reminders only; business/supplier pages and the gateway stay quiet
+  useSmartNotifications(lang, !(path === "/" || path === "" || path.startsWith("/business") || path.startsWith("/suppliers")));
+  useTheme(); // applies the stored theme + follows the OS
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
   }, [path]);

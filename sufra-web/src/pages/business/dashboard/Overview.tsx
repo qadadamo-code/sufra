@@ -135,8 +135,7 @@ export default function Overview() {
               {RESERVATIONS_TODAY.slice(0, big ? 6 : 2).map((r) => (
                 <li key={r.time + r.name} className="flex items-center gap-2 text-[13px]">
                   <span className="num w-11 shrink-0 font-semibold">{r.time}</span>
-                  <span className="min-w-0 flex-1 truncate">{r.name}</span>
-                  <span className="inline-flex shrink-0 items-center gap-0.5 text-[11px] text-muted-foreground"><span className="num">{r.size}</span><Users className="size-3" aria-label={L("أشخاص", "guests")} /></span>
+                  <span className="min-w-0 flex-1 truncate" title={`${r.name} · ${r.size}`}>{r.name} <span className="num text-[11px] text-muted-foreground">({r.size})</span></span>
                   <Pill tone={r.status === "seated" ? "primary" : r.status === "confirmed" ? "ok" : r.status === "waitlist" ? "warn" : "brass"} className="shrink-0 px-1.5 text-[10.5px]">
                     {r.status === "seated" ? L("قاعدين", "Seated") : r.status === "confirmed" ? L("مؤكد", "Confirmed") : r.status === "waitlist" ? L("انتظار", "Waitlist") : L("منتظر", "Pending")}
                   </Pill>

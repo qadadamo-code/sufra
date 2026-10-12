@@ -1,14 +1,14 @@
 import { motion, useReducedMotion, useScroll, useTransform } from "motion/react";
 import { useRef, type ReactNode } from "react";
 
-/** Scroll-linked reveal: rises out of a soft blur once in view. */
+/** Scroll-linked reveal: fades and rises once in view (no blur filter: too costly on big blocks and low-end phones). */
 export function Reveal({ children, delay = 0, className, y = 28 }: { children: ReactNode; delay?: number; className?: string; y?: number }) {
   const reduced = useReducedMotion();
   return (
     <motion.div
       className={className}
-      initial={reduced ? false : { opacity: 0, y, filter: "blur(6px)" }}
-      whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+      initial={reduced ? false : { opacity: 0, y }}
+      whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "0px 0px -8% 0px" }}
       transition={{ duration: 0.8, delay, ease: [0.16, 1, 0.3, 1] }}
     >
