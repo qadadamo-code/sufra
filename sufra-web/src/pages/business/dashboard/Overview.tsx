@@ -88,7 +88,7 @@ export default function Overview() {
                 <Pill tone={delta >= 0 ? "ok" : "danger"}><span className="num" dir="ltr">{delta >= 0 ? "+" : ""}{delta}%</span></Pill>
               </div>
               <p className="text-[12px] text-muted-foreground">{L("مقارنة بنفس اليوم الأسبوع اللي فات · قبل الضريبة", "vs same day last week · before VAT")}</p>
-              <BarChart className="mt-auto" height={size === "sm" ? 40 : 64} ariaLabel={L("الطلبات بالساعة النهارده", "Orders by hour today")} data={HOURLY_TODAY.slice(8).map((v, i) => ({ key: String(i), label: `${i + 8}`, value: v, tip: `${String(i + 8).padStart(2, "0")}:00 · ${v} ${L("طلب", "orders")}` }))} />
+              <BarChart className="mt-auto pt-2" height={size === "sm" ? 40 : size === "wide" ? 72 : 150} ariaLabel={L("الطلبات بالساعة النهارده", "Orders by hour today")} data={HOURLY_TODAY.slice(8).map((v, i) => ({ key: String(i), label: `${i + 8}`, value: v, tip: `${String(i + 8).padStart(2, "0")}:00 · ${v} ${L("طلب", "orders")}` }))} />
             </div>
           </W>
         );
@@ -276,7 +276,8 @@ export default function Overview() {
         items={items}
         editable={editing}
         contentDir={dir}
-        cellSize={200}
+        maxColumns={6}
+        cellSize={215}
         gap={12}
         radius={22}
         hint={L("اسحب لإعادة الترتيب. على شاشات اللمس اضغط مطوّل الأول. بالكيبورد: Alt مع الأسهم.", "Drag to rearrange. On touch screens, press and hold first. With a keyboard, hold Alt and press the arrow keys.")}

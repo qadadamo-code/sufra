@@ -74,6 +74,7 @@ const LeafletEngine = forwardRef<EngineHandle, EngineProps>(function LeafletEngi
       errors++;
       if (errors >= 3 && !loads) fail("tiles-error");
     });
+    if (p.fit) fitAll(); // settle the view first so no tiles are requested for a view we leave at once
     if (typeof navigator !== "undefined" && navigator.onLine === false) fail("offline");
     else tiles.addTo(m);
     const timer = window.setTimeout(() => fail("tiles-timeout"), 9000);
@@ -102,7 +103,6 @@ const LeafletEngine = forwardRef<EngineHandle, EngineProps>(function LeafletEngi
       if (cb.onPick) cb.onPick({ lat: e.latlng.lat, lng: e.latlng.lng });
       else cb.onSelect?.(null);
     });
-    if (p.fit) fitAll();
     return () => {
       window.clearTimeout(timer);
       box.removeEventListener("wheel", onWheel);

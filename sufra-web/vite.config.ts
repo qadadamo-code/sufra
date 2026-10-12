@@ -1,4 +1,4 @@
-import { defineConfig, type Plugin } from "vite";
+import { defineConfig, loadEnv, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { fileURLToPath } from "node:url";
@@ -44,9 +44,52 @@ function mediaManifest(): Plugin {
   };
 }
 
+/**
+ * `npm run dev` serves /api/ask from api/ask.ts when ANTHROPIC_API_KEY is set (same code as on Vercel),
+ * so the Claude concierge can be tried locally. Without a key the site uses its local recommender.
+ */
+function devApi(): Plugin {
+  return {
+    name: "sufra-dev-api",
+    apply: "serve",
+    configureServer(server) {
+      server.middlewares.use("/api/ask", async (req, res) => {
+        try {
+          const mod = await server.ssrLoadModule("/api/ask.ts");
+          const chunks: Buffer[] = [];
+          for await (const c of req) chunks.push(c as Buffer);
+          const request = new Request("http://localhost/api/ask", { method: req.method, headers: { "content-type": "application/json" }, body: req.method === "POST" ? Buffer.concat(chunks) : undefined });
+          const out: Response = await mod.default(request);
+          res.statusCode = out.status;
+          out.headers.forEach((v, k) => res.setHeader(k, v));
+          if (!out.body) return res.end();
+          const reader = out.body.getReader();
+          for (;;) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            res.write(value);
+          }
+          res.end();
+        } catch (e) {
+          res.statusCode = 500;
+          res.end(String(e));
+        }
+      });
+    },
+  };
+}
+
+// .env.local → process.env for the dev API (server-only key; never exposed via import.meta.env)
+const fileEnv = loadEnv(process.env.NODE_ENV === "production" ? "production" : "development", root, "");
+if (!process.env.ANTHROPIC_API_KEY && fileEnv.ANTHROPIC_API_KEY) process.env.ANTHROPIC_API_KEY = fileEnv.ANTHROPIC_API_KEY;
+
+// The concierge endpoint exists on Vercel builds (VERCEL=1), or in dev when a key is present, or when forced.
+const hasApi = !!process.env.VERCEL || process.env.SUFRA_API === "1" || (process.argv.some((a) => a === "dev" || a.endsWith("vite")) && !!process.env.ANTHROPIC_API_KEY);
+
 export default defineConfig({
   base: "./",
-  plugins: [react(), tailwindcss(), mediaManifest()],
+  plugins: [react(), tailwindcss(), mediaManifest(), devApi()],
+  define: { "import.meta.env.VITE_HAS_API": JSON.stringify(hasApi ? "1" : "") },
   resolve: { alias: { "@": path.join(root, "src") } },
   build: { outDir: "dist", assetsDir: "assets", chunkSizeWarningLimit: 1500 },
 });

@@ -372,3 +372,23 @@
 .smo-root:not([data-phase="idle"]) .smo-bg::after { opacity: 0; scale: .6; }
 @keyframes smo-idle-spin { to { rotate: 360deg; } }
 @media (prefers-reduced-motion: reduce) { .smo-bg::after { animation: none; } }
+
+/* live streamed text under the orb while it thinks (Sufra: /api/ask) */
+.smo-stream {
+  position: absolute;
+  left: 50%;
+  top: calc(var(--mo-top) + 118px);
+  transform: translateX(-50%);
+  width: min(92%, 560px);
+  margin: 0;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--muted-foreground);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  animation: smo-stream-in 0.3s ease both;
+}
+@keyframes smo-stream-in { from { opacity: 0; } to { opacity: 1; } }

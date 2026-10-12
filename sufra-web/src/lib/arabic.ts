@@ -92,7 +92,7 @@ export function editDistance(a: string, b: string, max = 3): number {
 }
 
 /** Typo budget by word length: short words must match exactly. */
-export const typoBudget = (len: number) => (len <= 3 ? 0 : len <= 5 ? 1 : 2);
+export const typoBudget = (len: number) => (len <= 2 ? 0 : len <= 5 ? 1 : 2);
 
 /**
  * How well does query token `q` match candidate token `t`? 1 = exact, ~0.9 prefix, ~0.7 one typo, 0 = no match.
@@ -105,6 +105,8 @@ export function tokenScore(q: string, t: string): number {
   if (q.length >= 4 && t.includes(q)) return 0.7;
   const budget = typoBudget(Math.min(q.length, t.length));
   if (!budget) return 0;
+  // 3-letter words: only a single insertion/deletion with the same first letter ("abu" ~ "abou", not "bun" ~ "fun")
+  if (Math.min(q.length, t.length) === 3 && (q[0] !== t[0] || q.length === t.length)) return 0;
   // compare against the same-length prefix too, so a typo while still typing ("كشرر" → "كشري") matches
   const d = Math.min(editDistance(q, t, budget), t.length > q.length ? editDistance(q, t.slice(0, q.length), budget) + 0.5 : 99);
   return d <= budget ? 0.75 - d * 0.12 : 0;
@@ -148,7 +150,8 @@ export function hasPhrase(text: string, phrase: string): boolean {
   // typo-tolerant single-word fallback (e.g. "الزمالكك", "مهندسن")
   if (!w.includes(" ") && w.length >= 5) {
     const budget = typoBudget(w.length) > 1 ? 1 : typoBudget(w.length);
-    return text.split(" ").some((t) => Math.abs(stem(t).length - w.length) <= 1 && editDistance(stem(t), w, budget) <= budget);
+    const sw = stem(w);
+    return text.split(" ").some((t) => Math.abs(stem(t).length - sw.length) <= 1 && editDistance(stem(t), sw, budget) <= budget);
   }
   return false;
 }

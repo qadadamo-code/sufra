@@ -106,7 +106,7 @@ export function FloorMockup() {
   };
   return (
     <MockFrame title={L("محرر الصالة · الدور الأرضي", "Floor editor · Ground floor")}>
-      <svg viewBox="0 0 260 235" className="w-full" dir="ltr">
+      <svg viewBox="0 0 260 235" className="w-full" direction="ltr">
         <defs>
           <pattern id="fl-grid" width="10" height="10" patternUnits="userSpaceOnUse">
             <path d="M10 0H0V10" fill="none" stroke="currentColor" strokeOpacity=".07" />

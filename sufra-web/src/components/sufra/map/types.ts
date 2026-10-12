@@ -46,7 +46,7 @@ export const CAIRO: LatLng = { lat: 30.045, lng: 31.235 };
 
 /** Screen-independent clustering shared by both engines. */
 export function makeIndex(points: MapPoint[]) {
-  const sc = new Supercluster<{ id: string }, Record<string, never>>({ radius: 56, maxZoom: 16, minPoints: 3 });
+  const sc = new Supercluster<{ id: string }, Record<string, never>>({ radius: 72, maxZoom: 16, minPoints: 3 });
   sc.load(points.map((p) => ({ type: "Feature", properties: { id: p.id }, geometry: { type: "Point", coordinates: [p.lng, p.lat] } })));
   return sc;
 }

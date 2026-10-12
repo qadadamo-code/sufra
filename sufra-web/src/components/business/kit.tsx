@@ -16,7 +16,11 @@ export function useMoney() {
 /** EGP amount, mono, LTR-isolated so it reads correctly inside Arabic text. */
 export function Money({ v, className }: { v: number; className?: string }) {
   const { lang } = useLang();
-  return <span className={cn("num ltr whitespace-nowrap", className)}>{formatMoney(v, lang)}</span>;
+  return (
+    <span className={cn("num whitespace-nowrap [unicode-bidi:isolate]", className)} dir={lang === "ar" ? "rtl" : "ltr"}>
+      {formatMoney(v, lang)}
+    </span>
+  );
 }
 
 /** Number that rolls to its new value (respects reduced motion). */
@@ -40,7 +44,7 @@ export function AnimatedMoney({ v, className }: { v: number; className?: string 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [v, reduced]);
   return (
-    <span className={cn("num ltr whitespace-nowrap", className)} aria-live="polite">
+    <span className={cn("num whitespace-nowrap [unicode-bidi:isolate]", className)} dir={lang === "ar" ? "rtl" : "ltr"} aria-live="polite">
       {formatMoney(Math.round(shown / 100) * 100, lang)}
     </span>
   );
@@ -224,7 +228,7 @@ export function businessNav(L: (a: string, e: string) => string, path: string): 
 export function supplierNav(L: (a: string, e: string) => string, path: string): NavItem[] {
   return [
     { href: "#/suppliers", label: L("ليه سُفرة", "Why Sufra"), active: path === "/suppliers" },
-    { href: "#/suppliers#pricing", label: L("الأسعار", "Pricing") },
+    { href: "#/suppliers?s=pricing", label: L("الأسعار", "Pricing") },
     { href: "#/suppliers/portal", label: L("بوابة المورّد (تجربة)", "Supplier portal demo"), active: path.startsWith("/suppliers/portal") },
     { href: "#/business", label: L("للمطاعم", "For restaurants") },
   ];

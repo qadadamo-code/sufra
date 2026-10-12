@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Bell, Compass, Home, Languages, Map as MapIcon, Monitor, Moon, ShoppingBag, Sun, User } from "lucide-react";
 import { dataAttribution } from "@/lib/data";
+import { OSM_ATTRIBUTION } from "@/data/osm-attribution";
 import { clearInbox, markAllRead, useInbox } from "@/lib/smart-notify";
 import { LocateButton } from "./LocateButton";
 import { Blobatar } from "@blobatar/react";
@@ -150,9 +151,11 @@ export function Footer() {
               : L("نسخة تجريبية — كل المطاعم والبيانات خيالية.", "Demo build — all restaurants and data are fictional.")}
           </p>
           <p className="mt-2 text-xs text-muted-foreground">
-            <a className="underline-offset-2 hover:underline" href={dataAttribution.url} target="_blank" rel="noopener noreferrer" dir="ltr">
-              {dataAttribution.text}
+            <a className="underline-offset-2 hover:underline" href={OSM_ATTRIBUTION.url} target="_blank" rel="noopener noreferrer">
+              {L(OSM_ATTRIBUTION.ar, OSM_ATTRIBUTION.en)}
             </a>
+            {" · "}
+            {L("الخرائط: © مساهمو OpenStreetMap", "Maps © OpenStreetMap contributors")}
           </p>
         </div>
         <div className="grid content-start gap-2 text-sm">

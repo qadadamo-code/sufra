@@ -23,7 +23,7 @@ const TONES = {
 
 export function UserTable({ users, caption, headers, className, extraHeader }: { users: UserRow[]; caption: string; headers: { user: string; role: string; status: string; lastSeen: string }; className?: string; extraHeader?: string }) {
   return (
-    <div className={cn("overflow-x-auto rounded-xl border bg-card", className)}>
+    <div className={cn("relative overflow-x-auto rounded-xl border bg-card", className)}>
       <table className="w-full min-w-[34rem] text-[14px]">
         <caption className="sr-only">{caption}</caption>
         <thead>

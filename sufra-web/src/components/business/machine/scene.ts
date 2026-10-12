@@ -970,7 +970,7 @@ export function initMachine(root: HTMLElement, opts: MachineOptions): MachineHan
     const availableWidth = mobile ? 0.94 : embedded ? 0.55 : 0.8;
     const horizontalFit = 17.3 / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * aspect * availableWidth);
     const verticalFit = 11.5 / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * (embedded ? 0.85 : 0.62));
-    baseDistance = (Math.max(horizontalFit, verticalFit) * (mobile ? 0.97 : 1)) / (embedded ? (mobile ? 1.12 : 1.4) : 1);
+    baseDistance = (Math.max(horizontalFit, verticalFit) * (mobile ? 0.97 : 1)) / (embedded ? (mobile ? 1.15 : 1.22) : 1);
     controls.maxDistance = Math.max(55, baseDistance * 1.6);
     camera.updateProjectionMatrix();
     setCameraGoal();

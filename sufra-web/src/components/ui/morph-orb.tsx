@@ -29,6 +29,8 @@ export interface MorphOrbProps {
   className?: string;
   /** Sufra: put a suggested question into the pill (bump `n` to re-apply the same text). */
   seed?: { text: string; n: number };
+  /** streamed text shown under the orb while it is thinking (e.g. a live answer from the server) */
+  liveText?: string;
 }
 
 const PILL_H = 60, BALL_SMALL = 60, ORB_D = 132, ORB_R = 66, CANVAS = 220;
@@ -943,6 +945,9 @@ export default function MorphOrb(props: MorphOrbProps) {
         {lbl.prev !== null && <span key={"p" + lbl.n} className="smo-lab smo-out">{labelInner(lbl.prev)}</span>}
         <span key={"c" + lbl.n} className="smo-lab smo-in">{labelInner(lbl.cur)}</span>
       </div>
+      {props.liveText && (phase === "think" || phase === "assemble" || phase === "launch" || phase === "resolve") ? (
+        <p className="smo-stream" aria-hidden="true">{props.liveText}</p>
+      ) : null}
       <button type="button" className="smo-reset" onClick={onReset}>{COPY.reset}</button>
       <div className="smo-live" ref={liveRef} role="status" aria-live="polite" />
       {debug && (
