@@ -205,6 +205,15 @@
     min-width: 0;
   }
   /* fieldsets default to min-inline-size: min-content, which lets scrollers inside them blow out grids */
+  /* Horizontal scrollers must never become accidental VERTICAL scrollers: overflow-x:auto forces overflow-y to
+     compute to auto, and a few px of transformed/shadowed content then made each rail scroll vertically. Chrome
+     latches a touch/wheel gesture to the first scroller that can move, so a swipe starting on a rail moved the rail
+     by 12px and the page not at all ("can't scroll down on the customers page"). overflow-y:hidden is not
+     user-scrollable, so vertical gestures chain straight to the page. (Utilities like overflow-y-auto still win.) */
+  .overflow-x-auto,
+  .scroll-row {
+    overflow-y: hidden;
+  }
   fieldset {
     min-width: 0;
     margin: 0;
@@ -241,10 +250,13 @@
     display: flex;
     gap: 14px;
     overflow-x: auto;
+    overflow-y: hidden;
     overscroll-behavior-x: contain;
     scroll-snap-type: x mandatory;
     scrollbar-width: none;
-    padding-bottom: 6px;
+    /* room for the cards' hover lift/shadow now that y is clipped */
+    padding-top: 4px;
+    padding-bottom: 14px;
     scroll-padding-inline: 16px;
   }
   @media (min-width: 768px) {
