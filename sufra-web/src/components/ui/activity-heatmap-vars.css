@@ -1,0 +1,19 @@
+/* ActivityHeatmap variables — the owner's vars, with Sufra's brass as the accent instead of grey. */
+:root {
+  --hm-accent: var(--sf-brass);
+  --accent-hm: var(--sf-brass);
+  --surface: var(--card);
+  --text-secondary: var(--muted-foreground);
+  --text-muted: color-mix(in srgb, var(--muted-foreground) 80%, transparent);
+  --border-strong: color-mix(in srgb, var(--foreground) 30%, transparent);
+  --radius-control: 1.125rem;
+  --shadow-raised: 0 8px 24px -10px rgb(0 0 0 / 0.45);
+  --ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 160ms;
+  --hm-l0: color-mix(in srgb, var(--muted-foreground) 14%, transparent);
+  --hm-l1: color-mix(in srgb, var(--sf-brass) 30%, var(--card));
+  --hm-l2: color-mix(in srgb, var(--sf-brass) 55%, var(--card));
+  --hm-l3: color-mix(in srgb, var(--sf-brass) 80%, var(--card));
+  --hm-l4: var(--sf-brass);
+}
