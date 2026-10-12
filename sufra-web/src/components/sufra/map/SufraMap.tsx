@@ -25,7 +25,13 @@ const LeafletEngine = lazy(() => import("./LeafletEngine"));
 const GoogleEngine = lazy(() => import("./GoogleEngine"));
 
 /** Once tiles failed in this tab, don't retry on every page (no repeated network errors). */
-let tilesBroken = false;
+let tilesBroken = (() => {
+  try {
+    return sessionStorage.getItem("sufra.tiles.broken") === "1";
+  } catch {
+    return false;
+  }
+})();
 
 export function SufraMap({
   origin,

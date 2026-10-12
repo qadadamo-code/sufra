@@ -212,7 +212,7 @@ export default function Overview() {
         return (
           <W icon={PackageOpen} title={labels.stock} action={<a href="#/business/dashboard?tab=purchasing" className="text-[12px] font-semibold text-primary hover:underline">{L("اطلب من الموردين", "Order supplies")}</a>}>
             <ul className={cn("grid gap-1.5", size === "lg" || size === "wide" ? "sm:grid-cols-2" : "")}>
-              {LOW_STOCK.slice(0, size === "sm" ? 2 : 4).map((s) => (
+              {LOW_STOCK.slice(0, size === "sm" ? 2 : size === "wide" ? 3 : 4).map((s) => (
                 <li key={s.key} className="flex items-center gap-2 rounded-xl bg-surface-2 px-2 py-1.5 text-[13px]">
                   <AlertTriangle className="size-3.5 shrink-0 text-warn" aria-hidden />
                   <span className="min-w-0 flex-1 truncate">{lang === "ar" ? s.ar : s.en}</span>

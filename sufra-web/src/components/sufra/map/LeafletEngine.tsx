@@ -76,7 +76,22 @@ const LeafletEngine = forwardRef<EngineHandle, EngineProps>(function LeafletEngi
     });
     if (p.fit) fitAll(); // settle the view first so no tiles are requested for a view we leave at once
     if (typeof navigator !== "undefined" && navigator.onLine === false) fail("offline");
-    else tiles.addTo(m);
+    else {
+      // probe ONE tile first: if the host is blocked (static previews, strict networks) we fall back after a
+      // single failed request instead of a screenful of them
+      const probe = new Image();
+      probe.crossOrigin = "anonymous";
+      probe.onload = () => !failed && map.current === m && tiles.addTo(m);
+      probe.onerror = () => {
+        try {
+          sessionStorage.setItem("sufra.tiles.broken", "1");
+        } catch {
+          /* ignore */
+        }
+        fail("tiles-blocked");
+      };
+      probe.src = TILE_URL.replace("{z}", "10").replace("{x}", "611").replace("{y}", "422");
+    }
     const timer = window.setTimeout(() => fail("tiles-timeout"), 9000);
 
     layer.current = L.layerGroup().addTo(m);
@@ -103,7 +118,18 @@ const LeafletEngine = forwardRef<EngineHandle, EngineProps>(function LeafletEngi
       if (cb.onPick) cb.onPick({ lat: e.latlng.lat, lng: e.latlng.lng });
       else cb.onSelect?.(null);
     });
+    // Leaflet measures its box once; keep it in sync (and re-fit on the first real size)
+    let fitted = false;
+    const ro = new ResizeObserver(() => {
+      m.invalidateSize(); // keeps the centre when the box resizes
+      if (propsRef.current.fit && !fitted && box.clientHeight > 0) {
+        fitted = true;
+        fitAll();
+      }
+    });
+    ro.observe(box);
     return () => {
+      ro.disconnect();
       window.clearTimeout(timer);
       box.removeEventListener("wheel", onWheel);
       box.removeEventListener("touchmove", onTouchMove);

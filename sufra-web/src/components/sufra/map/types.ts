@@ -46,7 +46,7 @@ export const CAIRO: LatLng = { lat: 30.045, lng: 31.235 };
 
 /** Screen-independent clustering shared by both engines. */
 export function makeIndex(points: MapPoint[]) {
-  const sc = new Supercluster<{ id: string }, Record<string, never>>({ radius: 72, maxZoom: 16, minPoints: 3 });
+  const sc = new Supercluster<{ id: string }, Record<string, never>>({ radius: 80, maxZoom: 16, minPoints: 3 });
   sc.load(points.map((p) => ({ type: "Feature", properties: { id: p.id }, geometry: { type: "Point", coordinates: [p.lng, p.lat] } })));
   return sc;
 }
@@ -62,7 +62,7 @@ export function pinHtml(p: MapPoint, selected: boolean): string {
   return `<div class="sf-pin${selected ? " is-sel" : ""}" style="--s:${s}"><svg width="28" height="36" viewBox="0 0 28 36" aria-hidden="true"><path d="M14 35s11-11.2 11-20A11 11 0 0 0 3 15c0 8.8 11 20 11 20z" fill="${c}" stroke="var(--card)" stroke-width="2"/>${icon}</svg>${selected ? `<span class="sf-pin-label">${esc}</span>` : ""}</div>`;
 }
 export function clusterHtml(n: number): string {
-  const d = Math.round(Math.min(52, 30 + Math.sqrt(n) * 4));
+  const d = Math.round(Math.min(44, 26 + Math.sqrt(n) * 2.6));
   return `<div class="sf-cluster" style="width:${d}px;height:${d}px"><span>${n}</span></div>`;
 }
 export const userHtml = `<div class="sf-user"><i></i></div>`;

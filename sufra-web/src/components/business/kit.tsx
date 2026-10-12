@@ -13,12 +13,28 @@ export function useMoney() {
   return (p: number) => formatMoney(p, lang);
 }
 
-/** EGP amount, mono, LTR-isolated so it reads correctly inside Arabic text. */
+/** Splits "1,208 ج.م" / "EGP 1,208" so the digits use the mono face and the currency the text face, smaller. */
+function MoneyParts({ text, lang }: { text: string; lang: "ar" | "en" }) {
+  const cur = lang === "ar" ? "ج.م" : "EGP";
+  const num = text.replace(cur, "").trim();
+  const c = <span className="font-sans text-[0.72em] font-medium opacity-80">{cur}</span>;
+  return lang === "ar" ? (
+    <>
+      <span dir="ltr" className="[unicode-bidi:isolate]">{num}</span> {c}
+    </>
+  ) : (
+    <>
+      {c} <span dir="ltr" className="[unicode-bidi:isolate]">{num}</span>
+    </>
+  );
+}
+
+/** EGP amount: integer piastres, mono digits, isolated so it reads correctly inside either language. */
 export function Money({ v, className }: { v: number; className?: string }) {
   const { lang } = useLang();
   return (
     <span className={cn("num whitespace-nowrap [unicode-bidi:isolate]", className)} dir={lang === "ar" ? "rtl" : "ltr"}>
-      {formatMoney(v, lang)}
+      <MoneyParts text={formatMoney(v, lang)} lang={lang} />
     </span>
   );
 }
@@ -45,7 +61,7 @@ export function AnimatedMoney({ v, className }: { v: number; className?: string 
   }, [v, reduced]);
   return (
     <span className={cn("num whitespace-nowrap [unicode-bidi:isolate]", className)} dir={lang === "ar" ? "rtl" : "ltr"} aria-live="polite">
-      {formatMoney(Math.round(shown / 100) * 100, lang)}
+      <MoneyParts text={formatMoney(Math.round(shown / 100) * 100, lang)} lang={lang} />
     </span>
   );
 }
@@ -73,11 +89,11 @@ export function Pill({ tone = "muted", children, className }: { tone?: "muted" |
 }
 
 /** Segmented control (radio group) with a sliding thumb. */
-export function Segmented<T extends string>({ value, onChange, options, label, className, size = "md" }: { value: T; onChange: (v: T) => void; options: { id: T; label: ReactNode; badge?: ReactNode }[]; label: string; className?: string; size?: "sm" | "md" }) {
+export function Segmented<T extends string>({ value, onChange, options, label, className, size = "md", wrap = false }: { value: T; onChange: (v: T) => void; options: { id: T; label: ReactNode; badge?: ReactNode }[]; label: string; className?: string; size?: "sm" | "md"; wrap?: boolean }) {
   const reduced = useReducedMotion();
   const group = label.replace(/\W+/g, "");
   return (
-    <div role="radiogroup" aria-label={label} className={cn("inline-flex max-w-full gap-1 overflow-x-auto rounded-full border bg-card p-1 no-scrollbar", className)}>
+    <div role="radiogroup" aria-label={label} className={cn("inline-flex max-w-full gap-1 rounded-full border bg-card p-1", wrap ? "flex-wrap justify-center max-sm:rounded-[24px]" : "overflow-x-auto no-scrollbar", className)}>
       {options.map((o) => {
         const on = o.id === value;
         return (

@@ -177,7 +177,7 @@ function CartSummary({ supplierId, compact }: { supplierId: string; compact?: bo
             const p = productById[l.productId];
             return (
               <li key={l.productId} className="flex justify-between gap-2">
-                <span className="truncate"><span className="num">{l.qty}×</span> {lang === "ar" ? p.ar : p.en}</span>
+                <span className="truncate"><span className="num [unicode-bidi:isolate]" dir="ltr">{l.qty}×</span> {lang === "ar" ? p.ar : p.en}</span>
                 <Money v={l.price * l.qty} />
               </li>
             );
@@ -290,7 +290,7 @@ function MyOrders() {
           <article key={o.id} className="rounded-[22px] border bg-card p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="num text-[12px] text-muted-foreground">{o.id} · {new Date(o.createdAt).toLocaleDateString(lang === "ar" ? "ar-EG-u-nu-latn" : "en-GB")}</p>
+                <p className="text-[12px] text-muted-foreground"><bdi className="num">{o.id}</bdi> · <bdi className="num">{new Date(o.createdAt).toLocaleDateString(lang === "ar" ? "ar-EG-u-nu-latn" : "en-GB")}</bdi></p>
                 <h3 className="truncate text-[17px] font-bold">{lang === "ar" ? s.ar : s.en}</h3>
                 <p className="text-[13px] text-muted-foreground">{o.lines.length} {L("أصناف", "items")} · <Money v={t.gross} /></p>
               </div>

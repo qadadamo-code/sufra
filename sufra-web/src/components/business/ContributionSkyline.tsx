@@ -51,6 +51,12 @@ export function ContributionSkyline({ days, unit, className }: { days: SkylineDa
   const reduced = useReducedMotion();
   const canvas = useRef<HTMLCanvasElement>(null);
   const wrap = useRef<HTMLDivElement>(null);
+  const scroller = useRef<HTMLDivElement>(null);
+  // on narrow screens the year scrolls inside the card; start at the most recent weeks
+  useEffect(() => {
+    const el = scroller.current;
+    if (el) el.scrollLeft = el.scrollWidth;
+  }, []);
   const [mode, setMode] = useState<"2d" | "3d">("2d");
   const [iso, setIso] = useState<number | null>(null);
   const [tip, setTip] = useState<{ x: number; y: number; cell: Cell } | null>(null);
@@ -129,7 +135,7 @@ export function ContributionSkyline({ days, unit, className }: { days: SkylineDa
           last = mth;
         }
       }
-      return out.filter((m, i) => i > 0 || out.length < 2 || out[1].week - m.week > 2);
+      return out.filter((m, i) => (i > 0 || out.length < 2 || out[1].week - m.week > 2) && (i === out.length - 1 || out[i + 1].week - m.week > 2));
     })();
 
     type Quad = { pts: [number, number][]; cell: number };
@@ -312,7 +318,8 @@ export function ContributionSkyline({ days, unit, className }: { days: SkylineDa
         </dl>
         <Segmented size="sm" label={L("طريقة العرض", "View")} value={mode} onChange={setMode} options={[{ id: "2d", label: <span className="inline-flex items-center gap-1"><Grid2x2 className="size-3.5" aria-hidden />2D</span> }, { id: "3d", label: <span className="inline-flex items-center gap-1"><Box className="size-3.5" aria-hidden />3D</span> }]} />
       </div>
-      <div ref={wrap} className="relative mt-3" dir="ltr">
+      <div ref={scroller} className="mt-3 overflow-x-auto no-scrollbar" dir="ltr">
+      <div ref={wrap} className="relative min-w-[640px]">
         <canvas
           ref={canvas}
           className={cn("block w-full touch-pan-y", mode === "3d" ? "cursor-grab active:cursor-grabbing" : "cursor-crosshair")}
@@ -324,6 +331,7 @@ export function ContributionSkyline({ days, unit, className }: { days: SkylineDa
             <span className="num">{tip.cell.count}</span> {tip.cell.count === 1 ? unit.one : unit.other} · {fmtDate(tip.cell.date)}
           </div>
         ) : null}
+      </div>
       </div>
       <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[12px] text-muted-foreground">
         <span>{mode === "3d" ? L("اسحب للتدوير", "Drag to orbit") : L("مرّر على يوم لتفاصيله", "Hover a day for details")}</span>

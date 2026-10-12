@@ -362,7 +362,7 @@ export default function Explore({ route }: { route: Route }) {
             </div>
           ) : view === "map" ? (
             <div className="relative">
-              <SufraMap points={points} selectedId={sel} onSelect={setSel} fit={!sel} className="h-[calc(100svh-230px)] min-h-[420px] lg:h-[min(76svh,760px)]" />
+              <SufraMap points={points} selectedId={sel} onSelect={setSel} fit={!sel} className="h-[calc(100svh-390px)] min-h-[380px] sm:h-[calc(100svh-260px)] lg:h-[min(76svh,760px)]" />
               <AnimatePresence>
                 {selected ? (
                   <motion.div

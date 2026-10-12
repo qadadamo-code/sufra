@@ -120,12 +120,11 @@ export default function SupplierLanding({ route }: { route: Route }) {
                   {p.maxCommission ? <> · {L("بحد أقصى", "capped at")} <Money v={p.maxCommission} /></> : null}
                 </p>
                 <ul className="mt-5 grid gap-2 border-t pt-4">
-                  <li className="text-[14px] font-semibold">{p.products ? L(`لحد ${p.products} منتج`, `Up to ${p.products} products`) : L("منتجات بلا حدود", "Unlimited products")}</li>
                   {(lang === "ar" ? p.featuresAr : p.featuresEn).map((f) => (
                     <li key={f} className="flex items-start gap-2 text-[14px]"><Check className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />{f}</li>
                   ))}
                 </ul>
-                <a href={`#/suppliers/signup?plan=${p.id}`} className={cn("sf-btn mt-auto", p.highlight ? "sf-btn-primary" : "sf-btn-ghost")} style={{ marginTop: 24 }}>{L("اختار", "Choose")}</a>
+                <div className="mt-auto pt-6"><a href={`#/suppliers/signup?plan=${p.id}`} className={cn("sf-btn w-full", p.highlight ? "sf-btn-primary" : "sf-btn-ghost")}>{L("اختار", "Choose")}</a></div>
               </article>
             ))}
           </div>

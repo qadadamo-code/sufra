@@ -11,7 +11,7 @@ import { loadRaw, saveRaw } from "@/lib/storage";
 
 export function PeriodSwitch({ value, onChange }: { value: PeriodId; onChange: (p: PeriodId) => void }) {
   const { L, lang } = useLang();
-  return <Segmented label={L("مدة الدفع", "Billing period")} value={value} onChange={onChange} options={PERIODS.map((p) => ({ id: p.id, label: lang === "ar" ? p.ar : p.en, badge: p.badgeAr ? (lang === "ar" ? p.badgeAr : p.badgeEn) : undefined }))} />;
+  return <Segmented label={L("مدة الدفع", "Billing period")} value={value} onChange={onChange} wrap options={PERIODS.map((p) => ({ id: p.id, label: lang === "ar" ? p.ar : p.en, badge: p.badgeAr ? (lang === "ar" ? p.badgeAr : p.badgeEn) : undefined }))} />;
 }
 
 export default function Pricing({ route }: { route: Route }) {
@@ -44,7 +44,7 @@ export default function Pricing({ route }: { route: Route }) {
         <div className="mt-7 flex justify-center">
           <PeriodSwitch value={period} onChange={setPeriod} />
         </div>
-        <p className="mt-3 text-[13px] text-muted-foreground">{L(`كل الأسعار بالجنيه المصري قبل ضريبة القيمة المضافة ${VAT_RATE * 100}%`, `All prices in EGP, before ${VAT_RATE * 100}% VAT`)}</p>
+        <p className="mt-3 text-[13px] text-muted-foreground">{L(`كل الأسعار بالجنيه المصري قبل ضريبة القيمة المضافة ${Math.round(VAT_RATE * 100)}%`, `All prices in EGP, before ${Math.round(VAT_RATE * 100)}% VAT`)}</p>
       </section>
 
       <section className="wrap gutter">

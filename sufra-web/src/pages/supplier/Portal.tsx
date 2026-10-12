@@ -159,7 +159,7 @@ function OrderCard({ o, onChat }: { o: PurchaseOrder; onChat: () => void }) {
     <article className="rounded-[22px] border bg-card p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="num text-[12px] text-muted-foreground">{o.id} · {fmtDate(o.createdAt, lang)} · {L("توصيل", "deliver")} {fmtDate(o.deliverOn, lang)}</p>
+          <p className="text-[12px] text-muted-foreground"><bdi className="num">{o.id}</bdi> · <bdi>{fmtDate(o.createdAt, lang)}</bdi> · {L("توصيل", "deliver")} <bdi>{fmtDate(o.deliverOn, lang)}</bdi></p>
           <h3 className="truncate text-[17px] font-bold">{lang === "ar" ? o.restaurantAr : o.restaurantEn}</h3>
         </div>
         <Pill tone={statusTone(o.status)}>{statusLabel(o.status, L)}</Pill>
@@ -168,7 +168,7 @@ function OrderCard({ o, onChat }: { o: PurchaseOrder; onChat: () => void }) {
         {o.lines.map((l) => {
           const p = productById[l.productId];
           return (
-            <li key={l.productId} className="flex justify-between gap-2"><span className="truncate"><span className="num">{l.qty}×</span> {p ? (lang === "ar" ? p.ar : p.en) : l.productId}</span><Money v={l.price * l.qty} /></li>
+            <li key={l.productId} className="flex justify-between gap-2"><span className="truncate"><span className="num [unicode-bidi:isolate]" dir="ltr">{l.qty}×</span> {p ? (lang === "ar" ? p.ar : p.en) : l.productId}</span><Money v={l.price * l.qty} /></li>
           );
         })}
       </ul>

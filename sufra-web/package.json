@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "gen-data": "node scripts/gen-data.mjs"
+    "gen-data": "node scripts/gen-data.mjs",
+    "test:scroll": "node scripts/scroll-test.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.133.0",
