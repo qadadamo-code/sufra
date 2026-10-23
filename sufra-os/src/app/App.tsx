@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { createRepo } from "@/data";
 import type { Repo } from "@/data/repo";
@@ -24,7 +24,7 @@ function ModuleElement({ module, route }: { module: ModuleDef; route: ModuleRout
   const body = El ? <El /> : <ComingSoon />;
   return (
     <ModuleCtx.Provider value={{ module, route }}>
-      {route.layout === "guest" ? body : <RequirePermission permission={route.permission ?? module.permission}>{body}</RequirePermission>}
+      {route.layout === "guest" ? <Suspense fallback={<BootScreen />}>{body}</Suspense> : <RequirePermission permission={route.permission ?? module.permission}>{body}</RequirePermission>}
     </ModuleCtx.Provider>
   );
 }

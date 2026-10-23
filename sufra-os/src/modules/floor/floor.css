@@ -1,0 +1,153 @@
+/* Floor canvas — table-state palette and SVG styling (floor + reservations modules only).
+   Every state has a colour AND an icon AND a pattern, so it reads without colour too. */
+.fl-root {
+  --st-free: #1d8a4f; --st-free-fill: #e2f4e8;
+  --st-reserved: #c8372a; --st-reserved-fill: #fbe0db;
+  --st-dirty: #d4700c; --st-dirty-fill: #fde8cf;
+  --st-occupied: #0b6f8a; --st-occupied-fill: #c4e4ec;
+  --st-long: #b07f06; --st-long-fill: #f7eac2;
+  --st-bill: #7647c6; --st-bill-fill: #ebe1fb;
+  --st-blocked: #75837d; --st-blocked-fill: #e4e9e6;
+  --st-design: var(--sf-primary); --st-design-fill: var(--sf-surface);
+  --fl-room: var(--sf-surface);
+  --fl-room-edge: var(--sf-line-strong);
+  --fl-grid: color-mix(in srgb, var(--sf-ink) 7%, transparent);
+  --fl-grid-major: color-mix(in srgb, var(--sf-ink) 11%, transparent);
+  --fl-chair: var(--sf-surface-3);
+  --fl-chair-edge: var(--sf-line-strong);
+  --fl-guide: #e0398a;
+  --fl-merge: var(--sf-brass);
+}
+:root[data-theme="dark"] .fl-root {
+  --st-free: #4fd18a; --st-free-fill: #12301f;
+  --st-reserved: #ff7f6b; --st-reserved-fill: #3d1914;
+  --st-dirty: #ffa04a; --st-dirty-fill: #3d250e;
+  --st-occupied: #4cc3e0; --st-occupied-fill: #0d2f3a;
+  --st-long: #f0c54e; --st-long-fill: #352a0b;
+  --st-bill: #b99bff; --st-bill-fill: #2a1f47;
+  --st-blocked: #91a29a; --st-blocked-fill: #232c28;
+  --fl-room: #121b17;
+  --fl-chair: #26332d;
+  --fl-guide: #ff6fb0;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .fl-root {
+    --st-free: #4fd18a; --st-free-fill: #12301f;
+    --st-reserved: #ff7f6b; --st-reserved-fill: #3d1914;
+    --st-dirty: #ffa04a; --st-dirty-fill: #3d250e;
+    --st-occupied: #4cc3e0; --st-occupied-fill: #0d2f3a;
+    --st-long: #f0c54e; --st-long-fill: #352a0b;
+    --st-bill: #b99bff; --st-bill-fill: #2a1f47;
+    --st-blocked: #91a29a; --st-blocked-fill: #232c28;
+    --fl-room: #121b17;
+    --fl-chair: #26332d;
+    --fl-guide: #ff6fb0;
+  }
+}
+
+.fl-svg { touch-action: none; user-select: none; -webkit-user-select: none; direction: ltr; cursor: grab; }
+.fl-svg.panning { cursor: grabbing; }
+.fl-svg text { font-family: var(--font-sans); }
+.fl-svg .num { font-family: var(--font-mono); }
+
+.fl-room-bg { fill: var(--fl-room); stroke: var(--fl-room-edge); }
+.fl-grid-dot { fill: var(--fl-grid); }
+.fl-grid-line { stroke: var(--fl-grid-major); stroke-width: 1; }
+
+/* per-state colour hook: every table glyph sets --c/--f from its state */
+.fl-st-free { --c: var(--st-free); --f: var(--st-free-fill); }
+.fl-st-reserved { --c: var(--st-reserved); --f: var(--st-reserved-fill); }
+.fl-st-dirty { --c: var(--st-dirty); --f: var(--st-dirty-fill); }
+.fl-st-occupied { --c: var(--st-occupied); --f: var(--st-occupied-fill); }
+.fl-st-long { --c: var(--st-long); --f: var(--st-long-fill); }
+.fl-st-bill { --c: var(--st-bill); --f: var(--st-bill-fill); }
+.fl-st-blocked { --c: var(--st-blocked); --f: var(--st-blocked-fill); }
+.fl-st-design { --c: var(--st-design); --f: var(--st-design-fill); }
+
+.fl-table { cursor: pointer; }
+.fl-mode-live .fl-table:hover .fl-top { filter: brightness(0.98) saturate(1.1); }
+.fl-move { transition: transform 420ms var(--ease-sf); }
+.fl-dragging .fl-move { transition: none; }
+.fl-top { fill: var(--f); stroke: var(--c); stroke-width: 3; transition: fill 400ms ease, stroke 400ms ease; }
+.fl-top-pattern { pointer-events: none; }
+.fl-bench { fill: color-mix(in srgb, var(--c) 30%, var(--fl-room)); }
+.fl-chair rect { fill: var(--fl-chair); stroke: var(--fl-chair-edge); stroke-width: 1.5; transition: fill 300ms ease; }
+.fl-chair.taken rect { fill: color-mix(in srgb, var(--c) 55%, var(--fl-chair)); stroke: var(--c); }
+.fl-chair .back { fill: var(--fl-chair-edge); }
+.fl-chair.taken .back { fill: var(--c); }
+.fl-chair-enter { animation: fl-chair-in 260ms var(--ease-sf) both; transform-box: fill-box; transform-origin: center; }
+@keyframes fl-chair-in { from { opacity: 0; transform: scale(0.4); } to { opacity: 1; transform: scale(1); } }
+.fl-grab { fill: transparent; }
+
+.fl-sel-ring { fill: none; stroke: var(--sf-primary); stroke-width: 3; stroke-dasharray: 10 7; animation: fl-march 1.2s linear infinite; }
+.fl-multi-ring { fill: none; stroke: var(--sf-brass); stroke-width: 4; }
+@keyframes fl-march { to { stroke-dashoffset: -34; } }
+.fl-overlap .fl-top { stroke: var(--sf-danger); stroke-dasharray: 8 6; }
+
+.fl-label { fill: var(--sf-ink); font-weight: 700; }
+.fl-sub { fill: var(--sf-ink-2); font-weight: 600; }
+.fl-chip rect { fill: var(--c); }
+.fl-chip text { fill: #fff; font-weight: 700; }
+:root[data-theme="dark"] .fl-chip text { fill: #0b120f; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .fl-chip text { fill: #0b120f; } }
+.fl-money rect { fill: var(--sf-surface); stroke: var(--sf-line-strong); }
+.fl-money text { fill: var(--sf-ink); font-weight: 700; }
+.fl-waiter circle { stroke: var(--fl-room); stroke-width: 3; }
+.fl-waiter text { fill: #fff; font-weight: 700; }
+
+.fl-call circle.dot { fill: var(--sf-danger); stroke: var(--fl-room); stroke-width: 3; }
+.fl-call text { fill: #fff; font-weight: 800; }
+.fl-call circle.ring { fill: none; stroke: var(--sf-danger); stroke-width: 3; transform-box: fill-box; transform-origin: center; animation: fl-ping 1.6s ease-out infinite; }
+@keyframes fl-ping { 0% { transform: scale(1); opacity: 0.9; } 100% { transform: scale(2.4); opacity: 0; } }
+
+.fl-group { fill: color-mix(in srgb, var(--sf-primary) 6%, transparent); stroke: var(--sf-primary); stroke-width: 2.5; stroke-dasharray: 3 7; stroke-linecap: round; }
+.fl-group.merge-preview { stroke: var(--fl-merge); fill: color-mix(in srgb, var(--fl-merge) 12%, transparent); stroke-dasharray: none; stroke-width: 4; animation: fl-breathe 1s ease-in-out infinite alternate; }
+@keyframes fl-breathe { from { stroke-opacity: 0.5; } to { stroke-opacity: 1; } }
+.fl-link-line { stroke: var(--sf-primary); stroke-width: 4; stroke-dasharray: 2 10; stroke-linecap: round; fill: none; }
+.fl-group-chip rect { fill: var(--sf-primary); }
+.fl-group-chip text { fill: var(--sf-primary-ink); font-weight: 700; }
+.fl-group-chip.merge rect { fill: var(--fl-merge); }
+.fl-group-chip.merge text { fill: var(--sf-brass-ink); }
+
+.fl-decor-wall { fill: var(--sf-ink-2); }
+.fl-decor-pillar { fill: var(--sf-muted); }
+.fl-decor-counter { fill: color-mix(in srgb, var(--sf-brass) 30%, var(--fl-room)); stroke: var(--sf-brass); stroke-width: 2; }
+.fl-decor-window { fill: color-mix(in srgb, var(--sf-info) 25%, var(--fl-room)); stroke: var(--sf-info); stroke-width: 2; }
+.fl-decor-door .frame { fill: var(--fl-room); stroke: var(--sf-muted); stroke-width: 2; }
+.fl-decor-door .swing { fill: none; stroke: var(--sf-muted); stroke-width: 2; stroke-dasharray: 6 5; }
+.fl-decor-plant .pot { fill: color-mix(in srgb, var(--st-free) 30%, var(--fl-room)); }
+.fl-decor-plant .leaf { fill: var(--st-free); opacity: 0.75; }
+.fl-decor-label { fill: var(--sf-muted); font-weight: 600; }
+.fl-decor-sel { fill: none; stroke: var(--sf-primary); stroke-width: 2.5; stroke-dasharray: 8 6; }
+
+.fl-guide { stroke: var(--fl-guide); stroke-width: 1.5; stroke-dasharray: 6 4; }
+.fl-handle .hit { fill: transparent; }
+.fl-handle .dot { fill: var(--sf-surface); stroke: var(--sf-primary); }
+.fl-handle:hover .dot { fill: var(--sf-primary); }
+.fl-rot .stem { stroke: var(--sf-primary); }
+.fl-bubble rect { fill: var(--sf-ink); }
+.fl-bubble text { fill: var(--sf-surface); font-weight: 700; }
+
+.fl-suggest rect, .fl-suggest ellipse { fill: color-mix(in srgb, var(--sf-brass) 18%, transparent); stroke: var(--sf-brass); stroke-width: 3; stroke-dasharray: 10 6; }
+.fl-calib line { stroke: var(--fl-guide); stroke-width: 3; }
+.fl-calib circle { fill: var(--fl-guide); }
+.fl-ruler { fill: var(--sf-faint); font-weight: 600; }
+.fl-marquee { fill: color-mix(in srgb, var(--sf-primary) 10%, transparent); stroke: var(--sf-primary); stroke-dasharray: 6 4; }
+
+/* legend swatches outside the svg */
+.fl-swatch { background: var(--f); border: 2px solid var(--c); color: var(--c); }
+.fl-dot { background: var(--c); }
+.fl-text { color: var(--c); }
+.fl-soft { background: var(--f); }
+
+/* reservations timeline */
+.rs-grid-line { border-color: color-mix(in srgb, var(--sf-ink) 8%, transparent); }
+.fl-chip .fl-chip-icon { color: #fff; }
+:root[data-theme="dark"] .fl-chip .fl-chip-icon { color: #0b120f; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .fl-chip .fl-chip-icon { color: #0b120f; } }
+.fl-money .fl-chip-icon { color: var(--sf-ink); }
+
+.fl-state-badge circle { fill: var(--c); stroke: var(--fl-room); }
+.fl-state-badge svg { color: #fff; }
+:root[data-theme="dark"] .fl-state-badge svg { color: #0b120f; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .fl-state-badge svg { color: #0b120f; } }

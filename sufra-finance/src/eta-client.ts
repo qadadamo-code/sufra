@@ -1,5 +1,5 @@
-import type { IssuedReceipt } from './eta-receipt'
-import { submissionDeadline } from './eta-receipt'
+import type { IssuedReceipt } from './eta-receipt-core'
+import { submissionDeadline } from './eta-receipt-core'
 
 /**
  * Talks to ETA for one POS: token, batch submission, status. Network access is

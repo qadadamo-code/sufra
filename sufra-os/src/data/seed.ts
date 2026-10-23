@@ -478,6 +478,7 @@ export function buildSeed(now: Date = new Date()): Seed {
     menuCategories, menuItems, modifierGroups: groups, modifiers, orders, orderItems, checks, payments, serviceCalls, reservations, customers, settings, auditLog: [
       { ...base("audit:1"), createdAt: T(74), updatedAt: T(74), branchId: B, actorId: S("waiter1"), action: "check.discount", entity: "checks", entityId: id("check:t7"), data: { pct: 10, reason: "عميل دائم" }, approvedBy: S("manager") },
     ],
+    shifts: [], cashMovements: [], receipts: [], ledgerEntries: [],
   };
   return { data, users, pins, pinHashes };
 }

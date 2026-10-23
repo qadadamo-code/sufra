@@ -23,9 +23,12 @@ describe("module registry", () => {
     expect(k).not.toContain("pos");
     expect(k).not.toContain("settings");
   });
-  it("guest routes are public", () => {
+  it("guest routes are public (the staff QR page is not)", () => {
     const g = modules.find((m) => m.id === "guest")!;
-    expect(g.routes.every((r) => r.layout === "guest")).toBe(true);
-    expect(g.routes.map((r) => r.path)).toEqual(["/r/:restaurantSlug/t/:tableCode", "/r/:restaurantSlug"]);
+    const pub = g.routes.filter((r) => r.path.startsWith("/r/"));
+    expect(pub.every((r) => r.layout === "guest")).toBe(true);
+    expect(pub.map((r) => r.path)).toEqual(expect.arrayContaining(["/r/:restaurantSlug/t/:tableCode", "/r/:restaurantSlug", "/r/:restaurantSlug/o/:orderId"]));
+    const staff = g.routes.filter((r) => !r.path.startsWith("/r/"));
+    expect(staff.every((r) => (r.layout ?? "shell") === "shell" && !!r.permission)).toBe(true);
   });
 });

@@ -90,6 +90,26 @@ export interface Zone extends TenantRow {
   width: number; // cm
   height: number; // cm
   sort: number;
+  /** architectural drawing traced under the floor (floor module; 0003_floor.sql) */
+  background?: ZoneBackground | null;
+}
+
+/** A locked image layer under a zone: the uploaded plan, scaled so `cmPerPx` image pixels match the floor. */
+export interface ZoneBackground {
+  /** data: URL (small JPEG/PNG) or a storage URL */
+  src: string;
+  /** natural size of the image in px */
+  pxW: number;
+  pxH: number;
+  /** calibration: centimetres per image pixel */
+  cmPerPx: number;
+  /** top-left of the image on the floor, cm */
+  x: number;
+  y: number;
+  opacity: number;
+  visible: boolean;
+  locked: boolean;
+  fileName: string | null;
 }
 
 export type TableShape = "square" | "rect" | "round" | "oval" | "booth" | "bar";
@@ -112,6 +132,8 @@ export interface DiningTable extends TenantRow {
   status: TableStatus;
   statusSince: string | null;
   active: boolean;
+  /** waiter whose section this table is in (service calls route to them first). Optional: 0004_kitchen_waiter.sql */
+  waiterId?: string | null;
 }
 
 export type DecorKind = "wall" | "pillar" | "door" | "counter" | "plant" | "window";
@@ -234,9 +256,14 @@ export interface Order extends TenantRow {
   deliveryStatus: DeliveryStatus | null;
   driverId: string | null;
   deliveryFee: Units;
+  /** pickup (pre-order) time for takeaway orders. Optional: 0002_pos.sql */
+  pickupAt?: string | null;
   openedAt: string;
   closedAt: string | null;
+  /** kitchen priority flag (rush / VIP). Optional: 0004_kitchen_waiter.sql */
+  priority?: OrderPriority;
 }
+export type OrderPriority = "normal" | "rush" | "vip";
 
 export type OrderItemStatus = "new" | "sent" | "preparing" | "ready" | "served" | "void";
 
@@ -284,6 +311,10 @@ export interface Check extends TenantRow {
   customerId: string | null;
   discount: Discount | null;
   discountApprovedBy: string | null;
+  /** why the bill discount was given (reason code / free text). Optional: 0002_pos.sql */
+  discountReason?: string | null;
+  /** set on checks created by splitting another check. Optional: 0002_pos.sql */
+  splitFrom?: string | null;
   /** cached totals (recomputed with @finance/tax priceBill on every change) */
   subtotal: Units;
   discountTotal: Units;
@@ -319,7 +350,7 @@ export interface Payment extends TenantRow {
 
 /* ───────────── Service ───────────── */
 
-export type ServiceCallType = "napkins" | "water" | "coffee" | "tea" | "clean_table" | "bill" | "help" | "other";
+export type ServiceCallType = "napkins" | "water" | "coffee" | "tea" | "clean_table" | "bill" | "help" | "other" | "waiter" | "item" | "complaint" | "pickup";
 export type ServiceCallStatus = "open" | "ack" | "done" | "cancelled";
 
 export interface ServiceCall extends TenantRow {
@@ -328,13 +359,20 @@ export interface ServiceCall extends TenantRow {
   type: ServiceCallType;
   text: string;
   status: ServiceCallStatus;
-  source: "qr" | "waiter" | "pos";
+  source: "qr" | "waiter" | "pos" | "kitchen";
   ackBy: string | null;
   ackAt: string | null;
   doneAt: string | null;
+  /** type "item": the menu item the guest asked for. Optional: 0004_kitchen_waiter.sql */
+  itemId?: string | null;
+  /** type "pickup" (kitchen pinged the waiter): the order whose food is ready */
+  orderId?: string | null;
+  /** set once when the call crossed the manager-escalation threshold (first client to notice writes it) */
+  escalatedAt?: string | null;
 }
 
-export type ReservationStatus = "pending" | "confirmed" | "seated" | "done" | "no_show" | "cancelled";
+/** "waiting" = a walk-in on the waitlist (no time/table yet). */
+export type ReservationStatus = "pending" | "confirmed" | "seated" | "done" | "no_show" | "cancelled" | "waiting";
 export type ReservationTag = "birthday" | "vip" | "kids" | "smoking" | "quiet";
 
 export interface Reservation extends TenantRow {
@@ -350,6 +388,14 @@ export interface Reservation extends TenantRow {
   note: string;
   tags: ReservationTag[];
   source: "phone" | "walk_in" | "online" | "app";
+  /* floor/reservations module (0003_floor.sql) — optional so older rows stay valid */
+  /** deposit asked for this booking (0 = none) */
+  deposit?: Units;
+  depositPaid?: boolean;
+  /** waitlist: minutes quoted to the guest when they were added */
+  quotedWaitMin?: number | null;
+  arrivedAt?: string | null;
+  seatedAt?: string | null;
 }
 
 export interface Customer extends TenantRow {
@@ -395,6 +441,51 @@ export interface InvoiceTemplate {
   showWaiter: boolean;
   language: "ar" | "en" | "both";
   paperWidth: 58 | 80;
+  /** receipt designer (src/modules/settings/invoice). Optional: older rows fall back to DEFAULT_DESIGN in src/lib/receipt. */
+  design?: InvoiceDesign;
+}
+
+export interface InvoiceDesign {
+  paper: "58" | "80" | "a4";
+  /** PNG/JPEG/SVG data URL (kept small: the designer downsizes uploads) */
+  logoDataUrl: string | null;
+  accent: string;
+  /** base font size in px for thermal paper (A4 scales up) */
+  fontSize: number;
+  fields: {
+    branch: boolean;
+    address: boolean;
+    phone: boolean;
+    taxId: boolean;
+    activityCode: boolean;
+    cashier: boolean;
+    table: boolean;
+    guests: boolean;
+    orderType: boolean;
+    customer: boolean;
+    modifiers: boolean;
+    itemNotes: boolean;
+    serviceVatLines: boolean;
+    payments: boolean;
+    etaUuid: boolean;
+  };
+}
+
+/** Egyptian Tax Authority e-receipt settings. Client id/secret are NOT here: they are server-side secrets (see README → ETA). */
+export interface EtaSettings {
+  enabled: boolean;
+  environment: "preprod" | "prod";
+  /** registered POS serial (deviceSerialNumber on the receipt) */
+  posSerial: string;
+  /** company trade name as registered with ETA */
+  tradeName: string;
+  branchAddress: { governate: string; regionCity: string; street: string; buildingNumber: string; postalCode: string };
+  /** how split tender is reported (one paymentMethod per receipt) */
+  splitTender: "dominant" | "others";
+  /** EGS item code prefix; item codes default to `${prefix}${sku}` (e.g. EG-<RIN>-) */
+  itemCodePrefix: string;
+  /** true once a server function holds the client id/secret for this POS (never the secret itself) */
+  credentialsConfigured: boolean;
 }
 
 export interface Settings extends TenantRow {
@@ -406,7 +497,13 @@ export interface Settings extends TenantRow {
   autoLockMinutes: number;
   tipsEnabled: boolean;
   qrOrdering: { enabled: boolean; requireWaiterConfirm: boolean; allowServiceCalls: boolean };
+  /** service-call SLA thresholds (seconds). Optional: defaults in src/lib/service-calls. 0004_kitchen_waiter.sql */
+  serviceCalls?: { warnSec: number; escalateSec: number; criticalSec: number };
+  /** KDS ticket aging (minutes) + sound. Optional: defaults in src/modules/kitchen/kds.ts. 0004_kitchen_waiter.sql */
+  kitchen?: { amberMin: number; redMin: number; sound: boolean };
   locale: { defaultLang: "ar" | "en"; currency: Currency; timezone: string };
+  /** ETA e-receipts. Optional: 0002_pos.sql (defaults in src/lib/receipt/eta.ts) */
+  eta?: EtaSettings;
 }
 
 export interface AuditEntry extends TenantRow {
@@ -418,6 +515,113 @@ export interface AuditEntry extends TenantRow {
   entityId: string | null;
   data: Record<string, unknown>;
   approvedBy: string | null;
+}
+
+/* ───────────── POS: shifts, drawer, receipts, ledger (0002_pos.sql) ───────────── */
+
+/** A cashier's till session on one POS device. */
+export interface Shift extends TenantRow {
+  branchId: string;
+  /** POS device code (receipt prefix), e.g. "POS-1" */
+  device: string;
+  openedBy: string | null;
+  closedBy: string | null;
+  status: "open" | "closed";
+  openingFloat: Units;
+  openedAt: string;
+  closedAt: string | null;
+  /** blind count entered at close */
+  countedCash: Units | null;
+  expectedCash: Units | null;
+  /** counted − expected (over > 0, short < 0) */
+  difference: Units | null;
+  /** sequential Z number per device */
+  zNumber: number | null;
+  /** frozen Z report (amounts as Units) */
+  zReport: Record<string, unknown> | null;
+}
+
+export type CashMoveKind = "in" | "out" | "no_sale";
+export interface CashMovement extends TenantRow {
+  branchId: string;
+  shiftId: string;
+  kind: CashMoveKind;
+  amount: Units;
+  reason: string;
+  actorId: string | null;
+  approvedBy: string | null;
+}
+
+export type ReceiptKind = "SC" | "RC";
+export type EtaStatus = "not_required" | "pending" | "submitted" | "valid" | "invalid" | "late";
+
+/** Line of a frozen bill (Units), enough to rebuild the finance Bill for Z reports and returns. */
+export interface ReceiptBillLine {
+  id: string;
+  itemId: string | null;
+  name: Localized;
+  modifiers: Localized[];
+  notes: string;
+  qty: number;
+  unitPrice: Units;
+  category: string;
+  vatExempt: boolean;
+  gross: Units;
+  discountTotal: Units;
+  net: Units;
+  service: Units;
+  vat: Units;
+  total: Units;
+}
+export interface ReceiptBill {
+  mode: "dine-in" | "takeaway" | "delivery";
+  lines: ReceiptBillLine[];
+  gross: Units;
+  discount: Units;
+  net: Units;
+  service: Units;
+  vat: Units;
+  deliveryFee: Units;
+  deliveryVat: Units;
+  total: Units;
+  payable: Units;
+  rounding: Units;
+}
+
+/** One issued sale (SC) or return (RC) document — the legal receipt, with its ETA e-receipt. */
+export interface Receipt extends TenantRow {
+  branchId: string;
+  checkId: string;
+  shiftId: string | null;
+  device: string;
+  kind: ReceiptKind;
+  /** continuous per device */
+  seq: number;
+  receiptNo: string;
+  issuedAt: string;
+  issuedBy: string | null;
+  bill: ReceiptBill;
+  payments: { method: PaymentMethod; amount: Units; tip: Units }[];
+  /** RC: the original sale */
+  refundOf: string | null;
+  etaUuid: string | null;
+  etaPreviousUuid: string | null;
+  /** exact JSON submitted to ETA (verbatim) */
+  etaJson: string | null;
+  etaQr: string | null;
+  etaStatus: EtaStatus;
+  etaSubmissionUuid: string | null;
+  etaErrors: string[];
+}
+
+/** Journal entry posted by sufra-finance rules (postSale / postReturn / postCashMove / postDrawerCount). Amounts in Units. */
+export interface LedgerEntry extends TenantRow {
+  branchId: string | null;
+  date: string;
+  sourceType: string;
+  sourceId: string;
+  memo: string;
+  lines: { account: string; debit: Units; credit: Units; dims?: Record<string, string> }[];
 }
 
 /* ───────────── Collections ───────────── */
@@ -446,6 +650,10 @@ export interface Collections {
   customers: Customer;
   settings: Settings;
   auditLog: AuditEntry;
+  shifts: Shift;
+  cashMovements: CashMovement;
+  receipts: Receipt;
+  ledgerEntries: LedgerEntry;
 }
 export type CollectionName = keyof Collections;
 export type RowOf<C extends CollectionName> = Collections[C];
@@ -475,5 +683,9 @@ export const TABLE_NAMES: { [C in CollectionName]: string } = {
   customers: "customers",
   settings: "settings",
   auditLog: "audit_log",
+  shifts: "shifts",
+  cashMovements: "cash_movements",
+  receipts: "receipts",
+  ledgerEntries: "ledger_entries",
 };
 export const COLLECTIONS = Object.keys(TABLE_NAMES) as CollectionName[];

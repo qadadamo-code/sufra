@@ -9,6 +9,7 @@ import { useT, type TKey } from "@/i18n/i18n";
 import { ago } from "@/lib/time";
 import { cn } from "@/lib/cn";
 import { Button, EmptyState, IconButton, Popover, useToast } from "@/ui";
+import { CallIcon, needsManager, useCallAlerts, useNow, useSla } from "@/lib/service-calls";
 
 /** Live feed of what needs a human: guest calls, food ready to serve, QR orders waiting for confirmation. */
 export function useNotifications() {
@@ -37,6 +38,9 @@ export function useNotifications() {
 
 export function NotificationsBell() {
   const n = useNotifications();
+  useCallAlerts(); // toasts + sounds for new/escalated guest calls and ready food (src/lib/service-calls)
+  const sla = useSla();
+  const now = useNow(5000);
   const db = useDb();
   const { t, lang } = useT();
   const { toast } = useToast();
@@ -62,7 +66,12 @@ export function NotificationsBell() {
             {n.calls.map((c) => (
               <motion.div key={c.id} layout initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
                 <div className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-surface-2">
-                  <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brass-soft font-mono text-[15px] font-semibold text-brass-text">{c.table}</span>
+                  <span className={cn("relative grid size-10 shrink-0 place-items-center rounded-xl font-mono text-[15px] font-semibold", needsManager(c, now, sla) ? "bg-danger text-white" : "bg-brass-soft text-brass-text")}>
+                    {c.table}
+                    <span className="absolute -bottom-1 -end-1 grid size-5 place-items-center rounded-full bg-surface text-ink-2 shadow-sf-sm [&_svg]:size-3">
+                      <CallIcon type={c.type} />
+                    </span>
+                  </span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[14px] font-semibold">
                       {t(`call.${c.type}` as TKey)}
