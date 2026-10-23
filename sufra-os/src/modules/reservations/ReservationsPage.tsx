@@ -92,6 +92,19 @@ export default function ReservationsPage() {
     deposits: live.filter((x) => x.deposit).length,
   };
 
+  const headerActions = (
+    <>
+      <Button variant="secondary" icon={<Link2 />} onClick={copyLink}>
+        {r("res.publicLink")}
+      </Button>
+      {canManage ? (
+        <Button icon={<Plus />} onClick={() => setDialog({ editing: null, init: { date } })}>
+          {r("res.new")}
+        </Button>
+      ) : null}
+    </>
+  );
+
   const listed = (filter === "all" ? day : day.filter((x) => x.status === filter)).slice().sort((a, b) => a.startsAt.localeCompare(b.startsAt));
 
   return (
@@ -100,19 +113,10 @@ export default function ReservationsPage() {
         icon={<CalendarClock />}
         title={r("res.title")}
         subtitle={r("res.subtitle")}
-        actions={
-          <>
-            <Button variant="secondary" icon={<Link2 />} onClick={copyLink}>
-              {r("res.publicLink")}
-            </Button>
-            {canManage ? (
-              <Button icon={<Plus />} onClick={() => setDialog({ editing: null, init: { date } })}>
-                {r("res.new")}
-              </Button>
-            ) : null}
-          </>
-        }
+        actions={isMobile ? null : headerActions}
       />
+
+      {isMobile ? <div className="grid grid-cols-2 gap-2 [&>*]:w-full">{headerActions}</div> : null}
 
       <Card className="space-y-3 p-3 sm:p-4">
         <div className="flex flex-wrap items-center gap-2">

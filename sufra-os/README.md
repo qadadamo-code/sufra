@@ -134,8 +134,52 @@ Money is `Units` everywhere: integer 0.00001 EGP (1 EGP = 100 000) — exactly s
 (`toAmount()` / `fromAmount()` in `src/lib/money.ts`), and the unit of every money column in Postgres.
 Check totals are always computed by `@finance/tax` via `src/data/pricing.ts` (14% VAT T1/V009, 12% service T9/SC01 on dine-in by default).
 
-`@finance/*` resolves to `../sufra-finance/src/*` (tsconfig `paths` + Vite alias). Note: `eta-receipt.ts` imports `node:crypto`,
-so it must run server-side (or get a WebCrypto port) — the browser app imports `money`, `tax`, `ledger`, `posting`, `shift` freely.
+`@finance/*` resolves to `../sufra-finance/src/*` (tsconfig `paths` + Vite alias). `eta-receipt.ts` imports `node:crypto` (server
+side); the browser imports `eta-receipt-core.ts` (WebCrypto wrapper in `src/lib/receipt/eta.ts`) and `money`, `tax`, `ledger`,
+`posting`, `shift`, `eta-client` freely.
+
+## POS, receipts & ETA (`src/modules/pos`, `src/modules/orders`, `src/lib/receipt`)
+
+- **Register** (`/pos`): category rail + search (Arabic-normalised, Enter adds the first hit), tap to add / long-press for the
+  modifiers sheet (required/optional groups with min/max, notes, seat, course, qty). Dine-in (mini floor map), takeaway, pickup
+  (ready-in time), delivery (customer by phone, address, fee). Courses: course 1 goes with **Send**, later courses are held until
+  **Fire**; sent lines carry `stationId`, so kitchen displays pick them up live. Item/bill discounts (% or amount, reason; manager
+  PIN above `settings.discountApprovalPct`), void (free before send, manager PIN after), transfer lines / table, merge, split by
+  item · seat (new checks) or evenly · by amount (payment shares; `splitEvenly` uses finance `allocate`, so shares always add up).
+  Keys: `S` search · `N` new · `K` send · `H` hold · `P` pay · `D` discount · `X` split · `T` transfer · `O` open checks.
+- **Payments**: cash (quick notes, change), card, wallet, InstaPay, pay-link placeholder, split tender, tips on non-cash. When the
+  tenders cover the total the check closes: the bill is frozen (`receipts.bill`), a **receipt** with a continuous number per POS
+  device is issued (`POS1-000001`), the **ETA e-receipt** is built and chained (`previousUUID` = the device's previous receipt), and
+  the sale is posted with sufra-finance `postSale` into `ledgerEntries`. Returns (Orders → refund, manager PIN) are RC receipts in
+  the same chain referencing the sale, posted with `postReturn`.
+- **Shift & drawer** (`/pos/shift`): open with a float, paid in/out (posted with `postCashMove`), no-sale (manager PIN, logged),
+  X report, blind count → **Z report** (sufra-finance `zReport`, frozen on the shift row) with over/short (`postDrawerCount`).
+  The device code (`POS1`) is per tablet (localStorage `sufra-os.pos.device`).
+- **Receipts**: `src/lib/receipt` — `buildReceiptModel` (pure) + `ReceiptView` (58 mm / 80 mm / A4, AR/EN/bilingual, logo, RIN,
+  activity code, service/VAT lines, payments, change, ETA QR + UUID) + `printNode` (`window.print()` with a page-size print sheet).
+  QR codes are encoded in the browser (`qrcode-generator`). Designer: `/settings/invoice`; tax profile + ETA setup: `/settings/tax`.
+- Schema: `supabase/migrations/0002_pos.sql` (`shifts`, `cash_movements`, `receipts` — immutable except ETA status fields —,
+  `ledger_entries`, `orders.pickup_at`, `checks.discount_reason/split_from`, `settings.eta`).
+
+### ETA in the browser, submission on the server
+
+sufra-finance's `eta-receipt.ts` hashes with `node:crypto`; its crypto-free core `eta-receipt-core.ts` (same serializer/document)
+takes an async hash, and `src/lib/receipt/eta.ts` passes WebCrypto (`crypto.subtle.digest`). `eta.test.ts` proves the browser uuid
+and JSON equal the node implementation for sales, chained receipts and returns. The ETA queue (`/pos/eta`) shows
+pending/submitted/valid/rejected with sufra-finance `triage()` (24 h deadline, 30-day late-request limit) and can re-verify any uuid.
+
+**Submitting needs the POS client id/secret — server-side secrets, never in the browser or in rows a tablet can read.** The
+"Submit" button stays disabled until a server function exists. Design for `api/eta-submit.ts` (Vercel function, not built yet):
+
+```ts
+// api/eta-submit.ts — runs every minute (Vercel cron) and on demand; env: ETA_CLIENT_ID, ETA_CLIENT_SECRET, ETA_POS_SERIAL,
+// ETA_POS_OS_VERSION, ETA_ENV (preprod|prod), SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY.
+// 1. select receipts where eta_status = 'pending' order by device, seq (chain order) — service role, per restaurant
+// 2. new EtaClient(creds, endpoints, fetch).submit(batch) for PosChain.batches(json[]) (≤500 receipts / ≤1.5 MB, in order)
+// 3. accepted → eta_status 'submitted' + eta_submission_uuid; rejected → 'invalid' + eta_errors
+// 4. later: EtaClient.details(submissionUuid) → 'valid' / 'invalid'; triage() → alert the owner about overdue receipts
+// Only eta_status / eta_submission_uuid / eta_errors may change (receipts_immutable trigger in 0002_pos.sql).
+```
 
 ## Design system (`src/ui`)
 

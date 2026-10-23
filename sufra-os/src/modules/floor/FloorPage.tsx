@@ -496,15 +496,16 @@ export default function FloorPage() {
             {data.branch ? loc(data.branch.name) : ""} · {L("بيتحدّث لحظة بلحظة", "Updating live")}
           </span>
         }
-        actions={modeOptions.length > 1 ? <Segmented label={f("floor.mode")} value={mode} onChange={setMode} options={modeOptions} /> : null}
+        actions={!isMobile && modeOptions.length > 1 ? <Segmented label={f("floor.mode")} value={mode} onChange={setMode} options={modeOptions} /> : null}
       />
+      {isMobile && modeOptions.length > 1 ? <Segmented block label={f("floor.mode")} value={mode} onChange={setMode} options={modeOptions} /> : null}
 
       {mode !== "design" ? <FloorStats data={data} fmtElapsed={fmtElapsed} /> : null}
 
       {!zone ? (
         <EmptyState icon={<LayoutGrid />} title={f("floor.noZones")} action={canDesign ? <Button onClick={addZone}>{f("design.addZone")}</Button> : undefined} />
       ) : (
-        <div className={cn("grid gap-4", mode === "design" && "lg:grid-cols-[minmax(0,1fr)_21rem]")}>
+        <div className={cn("grid gap-4", mode === "design" && "xl:grid-cols-[minmax(0,1fr)_21rem]")}>
           <Card className="overflow-hidden p-0">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-line px-2 sm:px-3">
               <Tabs
@@ -602,7 +603,7 @@ export default function FloorPage() {
           </Card>
 
           {mode === "design" ? (
-            <Card className="overflow-hidden p-0 lg:max-h-[calc(100dvh-10rem)]">
+            <Card className="overflow-hidden p-0 xl:max-h-[calc(100dvh-10rem)]">
               <Inspector
                 tab={tab}
                 onTab={setTab}
@@ -702,7 +703,7 @@ function FloorStats({ data, fmtElapsed }: { data: ReturnType<typeof useFloorData
   }, [data]);
   const pct = stats.tables ? Math.round((stats.busy / stats.tables) * 100) : 0;
   return (
-    <div className="-mx-4 flex gap-2.5 overflow-x-auto px-4 pb-1 no-scrollbar sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 lg:grid-cols-5">
+    <div className="-mx-4 flex gap-2.5 overflow-x-auto px-4 pb-1 no-scrollbar md:mx-0 md:px-0">
       <Kpi icon={<Hourglass />} label={f("kpi.turn")} value={stats.turns.avgTurn ? fmtElapsed(stats.turns.avgTurn) : "—"} sub={f("kpi.turnSub", { n: stats.turns.count })} tone="long" />
       <Kpi icon={<Users />} label={f("kpi.covers")} value={<AnimatedNumber value={stats.covers} />} sub={f("kpi.coversSub", { n: stats.seats })} tone="occupied" />
       <Kpi icon={<Gauge />} label={f("kpi.occupancy")} value={<span className="num">{pct}%</span>} sub={f("kpi.occupancySub", { busy: stats.busy, all: stats.tables })} tone="free" meter={pct} />
@@ -714,7 +715,7 @@ function FloorStats({ data, fmtElapsed }: { data: ReturnType<typeof useFloorData
 
 function Kpi({ icon, label, value, sub, tone, meter }: { icon: React.ReactNode; label: string; value: React.ReactNode; sub?: string; tone: FloorState; meter?: number }) {
   return (
-    <div className={cn("relative flex min-w-[11.5rem] shrink-0 items-center gap-3 overflow-hidden rounded-[18px] border border-line bg-surface px-3 py-2.5 shadow-sf-sm", `fl-st-${tone}`)}>
+    <div className={cn("relative flex min-w-[12rem] flex-1 shrink-0 items-center gap-3 overflow-hidden rounded-[18px] border border-line bg-surface px-3 py-2.5 shadow-sf-sm", `fl-st-${tone}`)}>
       <span className="fl-soft fl-text grid size-10 shrink-0 place-items-center rounded-xl [&_svg]:size-[18px]">{icon}</span>
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline justify-between gap-2">

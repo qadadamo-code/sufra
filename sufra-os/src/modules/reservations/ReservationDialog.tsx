@@ -257,7 +257,7 @@ export function ReservationDialog({ open, onClose, editing, init, layout, tables
             <p className="rounded-xl bg-warn-soft px-3 py-2 text-[13px] font-semibold text-warn">{r("form.noSuggest")}</p>
           )}
           <div className="flex max-h-28 flex-wrap gap-1 overflow-y-auto thin-scrollbar">
-            {tables.map((tb) => {
+            {[...tables].sort((a, b) => a.label.localeCompare(b.label, "en", { numeric: true })).map((tb) => {
               const on = tableIds.includes(tb.id);
               return (
                 <button key={tb.id} type="button" aria-pressed={on} onClick={() => setTableIds((xs) => (on ? xs.filter((x) => x !== tb.id) : [...xs, tb.id]))} className={cn("num h-9 min-w-10 rounded-lg border px-2 text-[13.5px] font-bold transition-colors", on ? "border-primary bg-primary text-primary-ink" : "border-line text-ink-2 hover:border-line-strong")}>
@@ -290,7 +290,9 @@ export function ReservationDialog({ open, onClose, editing, init, layout, tables
           </div>
         </div>
 
-        <Textarea label={r("form.note")} value={note} onChange={(e) => setNote(e.target.value)} rows={2} className="sm:col-span-2" />
+        <div className="sm:col-span-2">
+          <Textarea label={r("form.note")} value={note} onChange={(e) => setNote(e.target.value)} rows={2} />
+        </div>
 
         <div className="space-y-2 rounded-2xl border border-line p-3 sm:col-span-2">
           <div className="grid items-end gap-3 sm:grid-cols-2">

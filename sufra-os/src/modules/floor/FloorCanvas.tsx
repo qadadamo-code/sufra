@@ -151,7 +151,9 @@ export function FloorCanvas(p: FloorCanvasProps) {
     const r = el.getBoundingClientRect();
     if (r.width < 10 || r.height < 10) return;
     const pad = r.width < 500 ? 18 : 36;
-    const k = Math.min((r.width - pad * 2) / zone.width, (r.height - pad * 2 - 24) / zone.height);
+    let k = Math.min((r.width - pad * 2) / zone.width, (r.height - pad * 2 - 24) / zone.height);
+    // phones: a whole hall in 350px makes tables unreadable — fit the height instead and let people pan
+    if (r.width < 600) k = Math.max(k, Math.min((r.height - pad * 2 - 24) / zone.height, 0.42));
     setView({ k, tx: (r.width - zone.width * k) / 2, ty: (r.height - zone.height * k) / 2 - 6 });
   }, [zone.width, zone.height]);
   useLayoutEffect(fit, [fit, zone.id, p.fitSignal]);
@@ -560,20 +562,21 @@ export function FloorCanvas(p: FloorCanvasProps) {
               height={bg.pxH * bg.cmPerPx}
               opacity={bg.opacity}
               preserveAspectRatio="none"
+              className="fl-plan"
               data-hit={designing && !bg.locked ? "1" : undefined}
               data-bg={designing && !bg.locked ? "1" : undefined}
               style={{ cursor: designing && !bg.locked ? "move" : undefined }}
             />
           ) : null}
           <rect x={0} y={0} width={zone.width} height={zone.height} fill="url(#fl-grid)" pointerEvents="none" opacity={bg?.visible ? 0.5 : 1} />
-          <RoomRuler zone={zone} k={k} />
+          {designing ? <RoomRuler zone={zone} k={k} /> : null}
 
           {decor.map((d) => (
             <DecorGlyph key={d.id} d={d} selected={selected.has(d.id)} designing={designing} />
           ))}
 
           {groups.map((g) => (
-            <GroupMark key={g.id} ids={g.tableIds} tables={tables} physical={g.physical} merging={newEdges.some((e) => e.split("|").every((x) => g.tableIds.includes(x))) && g.tableIds.some((id) => views.get(id)?.check)} k={k} capacity={g.tableIds.reduce((s, id) => s + (geo.get(id)?.capacity ?? 0), 0)} />
+            <GroupMark key={g.id} ids={g.tableIds} tables={tables} physical={g.physical} chip={mode !== "live" || !g.tableIds.some((id) => views.get(id)?.check)} merging={newEdges.some((e) => e.split("|").every((x) => g.tableIds.includes(x))) && g.tableIds.some((id) => views.get(id)?.check)} k={k} capacity={g.tableIds.reduce((s, id) => s + (geo.get(id)?.capacity ?? 0), 0)} />
           ))}
 
           {tables.map((t) => {
@@ -653,7 +656,7 @@ function ZoomBtn({ label, onClick, children }: { label: string; onClick: () => v
 function RoomRuler({ zone, k }: { zone: Zone; k: number }) {
   const m = (v: number) => (v / 100).toLocaleString("en-US", { maximumFractionDigits: 1 });
   return (
-    <text x={zone.width - 6} y={zone.height + 20 / k} className="fl-ruler" fontSize={11 / k} textAnchor="end">
+    <text x={6} y={zone.height + 20 / k} className="fl-ruler" fontSize={11 / k} textAnchor="start">
       {`${m(zone.width)} × ${m(zone.height)} m`}
     </text>
   );
@@ -811,7 +814,7 @@ function Chip({ x, y, fs, k, className, icon: Icon, children }: { x: number; y: 
   );
 }
 
-function GroupMark({ ids, tables, physical, merging, k, capacity }: { ids: string[]; tables: DiningTable[]; physical: boolean; merging: boolean; k: number; capacity: number }) {
+function GroupMark({ ids, tables, physical, merging, k, capacity, chip }: { ids: string[]; tables: DiningTable[]; physical: boolean; merging: boolean; k: number; capacity: number; chip: boolean }) {
   const ts = ids.map((id) => tables.find((t) => t.id === id)).filter(Boolean) as DiningTable[];
   if (ts.length < 2) return null;
   const bs = ts.map((t) => bbox(t));
@@ -827,12 +830,14 @@ function GroupMark({ ids, tables, physical, merging, k, capacity }: { ids: strin
       ) : (
         ts.slice(1).map((t, i) => <line key={t.id} x1={ts[i].x} y1={ts[i].y} x2={t.x} y2={t.y} className="fl-link-line" strokeWidth={4 / Math.max(k, 0.6)} />)
       )}
-      <g className={cn("fl-group-chip", merging && "merge")} transform={`translate(${(b.x1 + b.x2) / 2} ${b.y2 + pad})`}>
-        <rect x={-w / 2} y={-fs} width={w} height={fs * 2} rx={fs} />
-        <text y={fs * 0.36} fontSize={fs} textAnchor="middle" className="num" direction="ltr">
-          {text}
-        </text>
-      </g>
+      {chip || merging ? (
+        <g className={cn("fl-group-chip", merging && "merge")} transform={`translate(${(b.x1 + b.x2) / 2} ${b.y2 + pad})`}>
+          <rect x={-w / 2} y={-fs} width={w} height={fs * 2} rx={fs} />
+          <text y={fs * 0.36} fontSize={fs} textAnchor="middle" className="num" direction="ltr">
+            {text}
+          </text>
+        </g>
+      ) : null}
     </g>
   );
 }

@@ -1,5 +1,5 @@
 /** The current check: lines by course, live totals (@finance/tax), and the actions that move it along. */
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { ArrowLeftRight, BadgePercent, ChefHat, Flame, Minus, MoreHorizontal, PauseCircle, Plus, Printer, ReceiptText, Scissors, Send, ShoppingBag, Trash2, Users, Wallet } from "lucide-react";
 import type { Check, Order, OrderItem, OrderItemStatus } from "@/data/types";
@@ -7,7 +7,7 @@ import { useT } from "@/i18n/i18n";
 import { cn } from "@/lib/cn";
 import { formatMoney } from "@/lib/money";
 import { lineUnitPrice } from "@/data/pricing";
-import { AnimatedMoney, Badge, Button, IconButton, Kbd, MenuItem, MenuSeparator, Popover, spring, useReduced, type Tone } from "@/ui";
+import { AnimatedMoney, Badge, Button, Dialog, IconButton, Kbd, spring, useReduced, type Tone } from "@/ui";
 import { courseStates, sendableItems } from "../math";
 
 const STATUS_TONE: Record<OrderItemStatus, Tone> = { new: "neutral", sent: "info", preparing: "warn", ready: "ok", served: "primary", void: "danger" };
@@ -40,6 +40,7 @@ export interface TicketActions {
 export function TicketPanel({ check, orders, items, header, busy, className, ...a }: { check: Check | null; orders: Order[]; items: OrderItem[]; header: React.ReactNode; busy?: boolean; className?: string } & TicketActions) {
   const { L, loc, lang } = useT();
   const reduced = useReduced();
+  const [more, setMore] = useState(false);
   const courses = useMemo(() => courseStates(items), [items]);
   const sendable = useMemo(() => sendableItems(items).length, [items]);
   const live = items.filter((i) => i.status !== "void");
@@ -130,7 +131,7 @@ export function TicketPanel({ check, orders, items, header, busy, className, ...
                             </span>
                           </button>
                           {isNew ? (
-                            <span className="flex shrink-0 flex-col gap-1 opacity-100 @md:opacity-0 @md:group-hover:opacity-100 @md:group-focus-within:opacity-100">
+                            <span className="flex shrink-0 flex-col gap-1">
                               <button type="button" className="grid size-8 place-items-center rounded-lg border border-line bg-surface hover:bg-surface-3" onClick={() => a.onQty(it, it.qty + 1)} aria-label={L("زوّد", "Add one")}>
                                 <Plus className="size-4" />
                               </button>
@@ -166,45 +167,9 @@ export function TicketPanel({ check, orders, items, header, busy, className, ...
           <AnimatedMoney value={check ? (check.paid ? due : check.total) : 0} className="text-[30px] font-semibold leading-none tracking-tight" />
         </div>
         <div className="mt-3 grid grid-cols-[auto_1fr_1.25fr] gap-2">
-          <Popover
-            side="top"
-            align="start"
-            width="w-64"
-            trigger={({ props }) => (
-              <IconButton label={L("أكتر", "More")} variant="secondary" size="lg" {...props} disabled={!check}>
-                <MoreHorizontal />
-              </IconButton>
-            )}
-          >
-            {(close) => (
-              <div className="grid gap-0.5 p-1.5">
-                <MenuItem icon={<BadgePercent />} onClick={() => (close(), a.onDiscount())} end={<Kbd>D</Kbd>}>
-                  {L("خصم", "Discount")}
-                </MenuItem>
-                <MenuItem icon={<Scissors />} onClick={() => (close(), a.onSplit())} end={<Kbd>X</Kbd>}>
-                  {L("تقسيم الشيك", "Split check")}
-                </MenuItem>
-                <MenuItem icon={<ArrowLeftRight />} onClick={() => (close(), a.onTransfer())} end={<Kbd>T</Kbd>}>
-                  {L("نقل أصناف / ترابيزة", "Transfer items / table")}
-                </MenuItem>
-                <MenuItem icon={<ReceiptText />} onClick={() => (close(), a.onMerge())}>
-                  {L("دمج مع شيك تاني", "Merge with another check")}
-                </MenuItem>
-                <MenuItem icon={<Printer />} onClick={() => (close(), a.onPrebill())}>
-                  {L("اطبع شيك مبدئي", "Print pre-bill")}
-                </MenuItem>
-                {order?.mode === "dine_in" ? (
-                  <MenuItem icon={<Users />} onClick={() => (close(), a.onGuests(-1))}>
-                    {L("عدد الأفراد", "Guests")} · <span className="num">{check?.guests}</span>
-                  </MenuItem>
-                ) : null}
-                <MenuSeparator />
-                <MenuItem icon={<Trash2 />} danger onClick={() => (close(), a.onDiscard())} disabled={anySent}>
-                  {L("إلغاء الشيك", "Discard check")}
-                </MenuItem>
-              </div>
-            )}
-          </Popover>
+          <IconButton label={L("أكتر", "More")} variant="secondary" size="lg" onClick={() => setMore(true)} disabled={!check}>
+            <MoreHorizontal />
+          </IconButton>
           <Button size="lg" variant={sendable ? "primary" : "secondary"} icon={sendable ? <Send className="size-5 flip-rtl" /> : <PauseCircle className="size-5" />} onClick={sendable ? a.onSend : a.onHold} disabled={busy || !check} className="px-3">
             {sendable ? (
               <>
@@ -219,6 +184,27 @@ export function TicketPanel({ check, orders, items, header, busy, className, ...
           </Button>
         </div>
       </div>
+      <Dialog open={more} onClose={() => setMore(false)} size="sm" title={L("إجراءات الشيك", "Check actions")}>
+        <div className="grid grid-cols-2 gap-2 pb-1">
+          {[
+            { icon: <BadgePercent />, label: L("خصم", "Discount"), key: "D", run: a.onDiscount },
+            { icon: <Scissors />, label: L("تقسيم", "Split"), key: "X", run: a.onSplit },
+            { icon: <ArrowLeftRight />, label: L("نقل", "Transfer"), key: "T", run: a.onTransfer },
+            { icon: <ReceiptText />, label: L("دمج", "Merge"), run: a.onMerge },
+            { icon: <Printer />, label: L("شيك مبدئي", "Pre-bill"), run: a.onPrebill },
+            ...(order?.mode === "dine_in" ? [{ icon: <Users />, label: `${L("الأفراد", "Guests")} · ${check?.guests ?? ""}`, run: () => a.onGuests(-1) }] : []),
+          ].map((x) => (
+            <button key={x.label} type="button" onClick={() => (setMore(false), x.run())} className="flex min-h-16 items-center gap-3 rounded-2xl border border-line bg-surface px-3.5 text-start font-semibold hover:bg-surface-2 [&_svg]:size-5 [&_svg]:text-primary">
+              {x.icon}
+              <span className="flex-1">{x.label}</span>
+              {x.key ? <Kbd>{x.key}</Kbd> : null}
+            </button>
+          ))}
+          <button type="button" disabled={anySent} onClick={() => (setMore(false), a.onDiscard())} className="col-span-2 flex min-h-14 items-center justify-center gap-2 rounded-2xl border border-danger/30 bg-danger-soft font-semibold text-danger disabled:opacity-40">
+            <Trash2 className="size-5" /> {anySent ? L("فيه أصناف اتبعتت — ألغيها الأول", "Lines were sent — void them first") : L("إلغاء الشيك", "Discard check")}
+          </button>
+        </div>
+      </Dialog>
     </section>
   );
 }

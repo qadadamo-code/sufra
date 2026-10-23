@@ -1,3 +1,4 @@
+import { lazy } from "react";
 import { Settings } from "lucide-react";
 import { defineModule } from "../types";
 
@@ -12,8 +13,8 @@ export default defineModule({
   nav: { path: "/settings", group: "admin", order: 10 },
   routes: [
     { path: "/settings", title: { ar: "عام", en: "General" } },
-    { path: "/settings/invoice", title: { ar: "الفاتورة", en: "Invoice" } },
-    { path: "/settings/tax", title: { ar: "الضرايب", en: "Tax" }, permission: "settings.tax" },
+    { path: "/settings/invoice", title: { ar: "الفاتورة", en: "Invoice" }, element: lazy(() => import("./invoice/InvoiceDesigner")) },
+    { path: "/settings/tax", title: { ar: "الضرايب", en: "Tax" }, permission: "settings.tax", element: lazy(() => import("./tax/TaxSettings")) },
     { path: "/settings/users", title: { ar: "المستخدمين", en: "Users" }, permission: "staff.manage" },
   ],
   tabs: [

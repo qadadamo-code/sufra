@@ -155,7 +155,7 @@ export const floorDict = defineDict({
   "draw.calibrateHint": { ar: "ارسم خط على حاجة معروف طولها (حيطة، باب) في الرسمة", en: "Draw a line over something of known length (a wall, a door) on the plan" },
   "draw.length": { ar: "طول الخط في الحقيقة (متر)", en: "Real length of the line (m)" },
   "draw.apply": { ar: "طبّق المقياس", en: "Apply scale" },
-  "draw.scale": { ar: "المقياس: ١ متر = {px} بكسل", en: "Scale: 1 m = {px} px" },
+  "draw.scale": { ar: "المقياس: 1 متر = {px} بكسل", en: "Scale: 1 m = {px} px" },
   "draw.fitZone": { ar: "خلّي المكان قد الرسمة", en: "Fit area to drawing" },
   "draw.detect": { ar: "اقترح ترابيزات", en: "Suggest tables" },
   "draw.beta": { ar: "تجريبي", en: "Beta" },

@@ -52,10 +52,10 @@ export function ItemSheet({ item, onClose, onAdded }: { item: MenuItemView | nul
       footer={
         item ? (
           <div className="flex w-full items-center gap-3">
-            <QtyStepper value={qty} onChange={setQty} min={1} label={L("الكمية", "Quantity")} size="lg" />
-            <Button size="lg" className="flex-1 justify-between gap-4" onClick={submit} disabled={!item.available}>
+            <QtyStepper value={qty} onChange={setQty} min={1} label={L("الكمية", "Quantity")} />
+            <Button size="lg" className="min-w-0 flex-1 justify-between gap-2 px-4" onClick={submit} disabled={!item.available}>
               <span>{L("أضف للطلب", "Add to order")}</span>
-              <AnimatedMoney value={total} className="text-[15px]" />
+              <AnimatedMoney value={total} className="text-[14.5px]" />
             </Button>
           </div>
         ) : null

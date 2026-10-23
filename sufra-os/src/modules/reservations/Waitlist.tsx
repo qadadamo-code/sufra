@@ -107,7 +107,7 @@ export function Waitlist({ waiting, layout, reservations, checks, now, labels, r
               const waited = Math.max(0, Math.floor((now - Date.parse(w.arrivedAt ?? w.createdAt)) / 60000));
               const q = w.quotedWaitMin ?? 30;
               const pct = Math.min(100, (waited / Math.max(1, q)) * 100);
-              const over = waited > q;
+              const over = q > 0 && waited > q;
               const best = suggestTables(w.party, nowMin, w.durationMin, layout, coreRes, coreCk, nowMin, { excludeId: w.id })[0];
               return (
                 <motion.div key={w.id} layout={!reduced} initial={reduced ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: 40 }}>
@@ -118,8 +118,11 @@ export function Waitlist({ waiting, layout, reservations, checks, now, labels, r
                         <p className="truncate text-[16px] font-bold">{w.name}</p>
                         <p className="flex flex-wrap items-center gap-x-3 text-[13px] text-muted">
                           <span>{t("common.guests", { n: w.party })}</span>
-                          <span className={cn("num font-semibold", over ? "text-danger" : "text-ink-2")}>
-                            {r("wait.waited")} {waited}′ / {q}′
+                          <span className={cn("font-semibold", over ? "text-danger" : "text-ink-2")}>
+                            {r("wait.waited")}{" "}
+                            <span className="num" dir="ltr">
+                              {q ? `${waited}′ / ${q}′` : `${waited}′`}
+                            </span>
                           </span>
                           {over ? <Badge tone="danger" size="sm">{r("wait.over")}</Badge> : null}
                         </p>

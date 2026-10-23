@@ -124,9 +124,7 @@ export default function BookingPage() {
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <Clock className="size-4" />
-                  <span className="num ltr">
-                    {info.branch.hours.open} – {info.branch.hours.close}
-                  </span>
+                  <span className="num" dir="ltr">{`${info.branch.hours.open} – ${info.branch.hours.close}`}</span>
                 </span>
               </div>
             </motion.div>
@@ -259,7 +257,9 @@ export default function BookingPage() {
                       );
                     })}
                   </div>
-                  <Textarea label={r("book.note")} value={note} onChange={(e) => setNote(e.target.value)} rows={2} className="sm:col-span-2" maxLength={300} />
+                  <div className="sm:col-span-2">
+                    <Textarea label={r("book.note")} value={note} onChange={(e) => setNote(e.target.value)} rows={2} maxLength={300} />
+                  </div>
                 </div>
               </Step>
             </div>

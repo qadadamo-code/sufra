@@ -106,7 +106,7 @@ function TableView() {
     <div className="min-h-dvh bg-bg pb-44">
       {/* hero */}
       <header className="relative">
-        <Photo src={TABLE_IMAGE} alt="" eager className="h-[236px] w-full sm:h-[280px]">
+        <Photo src={TABLE_IMAGE} alt="" eager className="h-[264px] w-full sm:h-[300px]">
           <div className="absolute inset-0 bg-[linear-gradient(180deg,rgb(0_0_0/0.45)_0%,rgb(0_0_0/0.05)_38%,rgb(0_0_0/0.72)_100%)]" />
         </Photo>
         <div className="absolute inset-x-0 top-0 mx-auto flex max-w-2xl items-center justify-between px-4 pt-[calc(env(safe-area-inset-top)+12px)]">
@@ -122,7 +122,7 @@ function TableView() {
             </span>
             {menu.branch ? <span className="text-[13px] text-white/80">{loc(menu.branch.name)}</span> : null}
           </div>
-          <h1 className="mt-2 text-[30px] leading-tight drop-shadow-sm">{loc(menu.restaurant.name)}</h1>
+          <h1 className="mt-2 line-clamp-2 text-[26px] leading-tight drop-shadow-sm sm:text-[30px]">{loc(menu.restaurant.name)}</h1>
           <p className="mt-1 text-[12.5px] text-white/80">
             {menu.pricing.priceMode === "inclusive" ? L("الأسعار شاملة الخدمة والضريبة", "Prices include service and VAT") : L(`الأسعار من غير ${menu.pricing.serviceRate / 100}٪ خدمة و${menu.pricing.vatRegistered ? menu.pricing.vatRate / 100 : 0}٪ ضريبة`, `Prices exclude ${menu.pricing.serviceRate / 100}% service and ${menu.pricing.vatRegistered ? menu.pricing.vatRate / 100 : 0}% VAT`)}
           </p>

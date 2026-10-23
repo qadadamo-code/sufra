@@ -393,7 +393,7 @@ function DrawingPanel(p: InspectorProps) {
             <img src={bg.src} alt="" className="size-14 shrink-0 rounded-xl border border-line object-cover" />
             <div className="min-w-0 flex-1">
               <p className="truncate text-[13.5px] font-semibold">{bg.fileName ?? f("draw.title")}</p>
-              <p className="num text-[12px] text-muted">{f("draw.scale", { px: Math.round(100 / bg.cmPerPx) })}</p>
+              <p className="text-[12px] text-muted">{f("draw.scale", { px: Math.round(100 / bg.cmPerPx) })}</p>
             </div>
             <IconButton size="sm" label={f("draw.replace")} onClick={() => file.current?.click()}>
               <Pencil />

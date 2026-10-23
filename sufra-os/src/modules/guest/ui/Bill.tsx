@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { CreditCard, Divide, ListChecks, ReceiptText, ShieldCheck, Smartphone, Users, Wallet } from "lucide-react";
+import { CreditCard, ReceiptText, ShieldCheck, Smartphone, Wallet } from "lucide-react";
 import { useT } from "@/i18n/i18n";
 import { cn } from "@/lib/cn";
 import { major, UNITS_PER_MAJOR, type Units } from "@/lib/money";
@@ -79,15 +79,15 @@ export function BillSheet({
             <AnimatedMoney value={share + tip} className="text-[20px] font-bold" />
           </div>
           {canPayOnline ? (
-            <Button size="lg" block icon={<Smartphone />} disabled={share <= 0} loading={paying} onClick={() => onPayOnline(choice)}>
+            <Button size="lg" block icon={<Smartphone className="size-5" />} disabled={share <= 0} loading={paying} onClick={() => onPayOnline(choice)}>
               {L("ادفع أونلاين", "Pay online")}
             </Button>
           ) : null}
           <div className="grid grid-cols-2 gap-2">
-            <Button variant="secondary" size="lg" icon={<Wallet />} onClick={() => onWaiter("cash", choice)}>
+            <Button variant="secondary" size="lg" icon={<Wallet className="size-5 shrink-0" />} onClick={() => onWaiter("cash", choice)}>
               {L("كاش للجرسون", "Cash to waiter")}
             </Button>
-            <Button variant="secondary" size="lg" icon={<CreditCard />} onClick={() => onWaiter("card", choice)}>
+            <Button variant="secondary" size="lg" icon={<CreditCard className="size-5 shrink-0" />} onClick={() => onWaiter("card", choice)}>
               {L("كارت للجرسون", "Card to waiter")}
             </Button>
           </div>
@@ -159,10 +159,10 @@ export function BillSheet({
                   value={mode}
                   onChange={setMode}
                   options={[
-                    { value: "full", label: L("الكل", "All"), icon: <ReceiptText /> },
-                    { value: "even", label: L("بالتساوي", "Evenly"), icon: <Users /> },
-                    { value: "items", label: L("أصنافي", "My items"), icon: <ListChecks /> },
-                    { value: "custom", label: L("مبلغ", "Amount"), icon: <Divide /> },
+                    { value: "full", label: L("الكل", "All") },
+                    { value: "even", label: L("بالتساوي", "Evenly") },
+                    { value: "items", label: L("أصنافي", "Mine") },
+                    { value: "custom", label: L("مبلغ", "Amount") },
                   ]}
                 />
                 {mode === "even" ? (

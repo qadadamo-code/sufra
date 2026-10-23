@@ -126,10 +126,12 @@ export default function Register() {
     }
   };
 
-  const newTicket = (k: Kind = kind) => {
+  /** Clears the register for the next order; `prompt` asks for the table / customer right away (explicit "New"). */
+  const newTicket = (k: Kind = kind, prompt = false) => {
     setActiveId(null);
     setDraft(NEW_DRAFT(k));
     setShares(null);
+    if (!prompt) return;
     if (k === "dine_in") setDlg("table");
     else if (k === "delivery") setDlg("customer");
   };
@@ -155,7 +157,7 @@ export default function Register() {
     const mods = choice?.modifiers ?? menu.mods.filter((m) => item.modifierGroupIds.includes(m.groupId) && m.isDefault && m.available);
     const current = activeId === t.checkId ? items : [];
     await run(() =>
-      addLine(db, { orderId: t.orderId, checkId: t.checkId, items: current, tableId: draft.tableIds[0] ?? check?.tableIds[0] ?? null }, { item, modifiers: mods, qty: choice?.qty ?? 1, notes: choice?.notes ?? "", seat: choice?.seat ?? null, course: choice?.course ?? 1 }, menu.cats),
+      addLine(db, { orderId: t.orderId, checkId: t.checkId, items: current, tableId: (activeId === t.checkId ? check?.tableIds[0] : undefined) ?? draft.tableIds[0] ?? null }, { item, modifiers: mods, qty: choice?.qty ?? 1, notes: choice?.notes ?? "", seat: choice?.seat ?? null, course: choice?.course ?? 1 }, menu.cats),
     );
   };
 
@@ -363,7 +365,7 @@ export default function Register() {
   useHotkeys(
     {
       s: k(() => searchRef.current?.focus()),
-      n: k(() => newTicket(kind)),
+      n: k(() => newTicket(kind, true)),
       k: k(() => void send()),
       h: k(() => void hold()),
       p: k(pay),
@@ -388,7 +390,7 @@ export default function Register() {
   );
   useCommands(
     [
-      { id: "pos.new", group: "actions", title: { ar: "طلب جديد", en: "New order" }, icon: <Plus />, shortcut: "n", perform: () => newTicket(kind) },
+      { id: "pos.new", group: "actions", title: { ar: "طلب جديد", en: "New order" }, icon: <Plus />, shortcut: "n", perform: () => newTicket(kind, true) },
       { id: "pos.checks", group: "actions", title: { ar: "الشيكات المفتوحة", en: "Open checks" }, icon: <ClipboardList />, shortcut: "o", perform: () => setDlg("checks") },
     ],
     [kind],
@@ -474,7 +476,7 @@ export default function Register() {
     <div className="-mx-4 -mt-5 -mb-28 flex h-[calc(100dvh-8rem-env(safe-area-inset-bottom))] min-h-0 flex-col md:-mx-6 md:-mt-6 md:-mb-10 md:h-[calc(100dvh-4rem)] xl:-mx-8">
       {/* toolbar */}
       <div className="flex shrink-0 items-center gap-2 border-b border-line bg-surface/70 px-3 py-2 backdrop-blur md:px-4">
-        <Button size="sm" variant="soft" icon={<Plus className="size-4" />} onClick={() => newTicket(kind)}>
+        <Button size="sm" variant="soft" icon={<Plus className="size-4" />} onClick={() => newTicket(kind, true)}>
           {L("طلب جديد", "New")}
         </Button>
         <Button size="sm" variant="secondary" icon={<ClipboardList className="size-4" />} onClick={() => setDlg("checks")}>

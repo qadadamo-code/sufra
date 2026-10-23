@@ -44,7 +44,7 @@ export function useFloorData() {
 export function useFormatters() {
   const { lang } = useT();
   const fmtMoney = useCallback((u: Units) => formatMoney(u, { lang, whole: true, bare: true }), [lang]);
-  const fmtElapsed = useCallback((m: number) => (m < 60 ? (lang === "ar" ? `${m}د` : `${m}m`) : `${Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")}`), [lang]);
+  const fmtElapsed = useCallback((m: number) => (m < 60 ? `${m}′` : `${Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")}`), [lang]);
   const fmtTime = useCallback((iso: string) => new Date(iso).toLocaleTimeString(lang === "ar" ? "ar-EG-u-nu-latn" : "en-GB", { hour: "numeric", minute: "2-digit", hour12: lang === "ar" }), [lang]);
   return { fmtMoney, fmtElapsed, fmtTime };
 }
