@@ -87,6 +87,8 @@ export interface GuestMenu {
   modifierGroups: { id: string; name: Localized; min: number; max: number }[];
   modifiers: { id: string; groupId: string; name: Localized; price: Units; isDefault: boolean }[];
   qrOrdering: { enabled: boolean; allowServiceCalls: boolean };
+  /** so the menu can say whether prices include service/VAT */
+  pricing: { priceMode: "exclusive" | "inclusive"; serviceRate: number; vatRate: number; vatRegistered: boolean };
 }
 export interface GuestOrderLine {
   itemId: string;

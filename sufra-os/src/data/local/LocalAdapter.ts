@@ -383,6 +383,7 @@ export class LocalAdapter implements Repo {
         modifierGroups: this.peek("modifierGroups", { where: { restaurantId: rid }, orderBy: [{ field: "sort" }] }).map((g) => ({ id: g.id, name: g.name, min: g.min, max: g.max })),
         modifiers: this.peek("modifiers", { where: { restaurantId: rid, available: true }, orderBy: [{ field: "sort" }] }).map((m) => ({ id: m.id, groupId: m.groupId, name: m.name, price: m.price, isDefault: m.isDefault })),
         qrOrdering: { enabled: settings?.qrOrdering.enabled ?? false, allowServiceCalls: settings?.qrOrdering.allowServiceCalls ?? false },
+        pricing: { priceMode: settings?.tax.priceMode ?? "exclusive", serviceRate: settings?.tax.serviceRate ?? 0, vatRate: settings?.tax.vatRate ?? 0, vatRegistered: settings?.tax.vatRegistered ?? false },
       };
       return menu;
     },
