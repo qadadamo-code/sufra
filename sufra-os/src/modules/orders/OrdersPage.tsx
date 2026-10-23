@@ -199,10 +199,7 @@ function OrderDrawer({ orderId, onClose }: { orderId: string | null; onClose: ()
               {check && (check.status === "open" || check.status === "bill_requested") && can("pos.use") ? (
                 <Button
                   variant="soft"
-                  onClick={() => {
-                    localStorage.setItem("sufra-os.pos.active", check.id);
-                    nav("/pos");
-                  }}
+                  onClick={() => nav(`/pos?check=${check.id}${check.tableIds[0] ? `&table=${check.tableIds[0]}` : ""}`)}
                 >
                   {L("افتح في الكاشير", "Open in POS")}
                 </Button>

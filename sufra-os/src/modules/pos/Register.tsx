@@ -3,14 +3,14 @@
  * Keyboard: S search · N new · K send · H hold · P pay · D discount · X split · T transfer · O open checks.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { motion } from "motion/react";
 import { Bike, ChevronDown, ClipboardList, LayoutGrid, Plus, ReceiptText, ShoppingBag, Store, Timer, UserRound, Users, Utensils, Wallet } from "lucide-react";
 import { useApproval } from "@/auth/approval";
 import { useSession } from "@/auth/session";
 import { useDb, useLive, useRow } from "@/data/hooks";
 import { priceItems } from "@/data/pricing";
-import { recomputeCheck } from "@/data/ops";
+import { activeOrderFor, recomputeCheck } from "@/data/ops";
 import type { Check, Discount, MenuItem, OrderItem, OrderMode, Payment } from "@/data/types";
 import { useT } from "@/i18n/i18n";
 import { cn } from "@/lib/cn";
@@ -102,6 +102,35 @@ export default function Register() {
   const pendingMoves = useRef<{ itemId: string; qty: number }[]>([]);
   const afterShift = useRef<(() => void) | null>(null);
 
+  // deep link from the floor / orders: /pos?table=<tableId>&check=<checkId>
+  const [params, setParams] = useSearchParams();
+  const pTable = params.get("table");
+  const pCheck = params.get("check");
+  useEffect(() => {
+    if (!pTable && !pCheck) return;
+    let cancelled = false;
+    (async () => {
+      let target = pCheck ? await db.get("checks", pCheck) : null;
+      if (target && target.status !== "open" && target.status !== "bill_requested") target = null;
+      if (!target && pTable) {
+        const [c] = await db.list("checks", { where: { status: ["open", "bill_requested"] }, contains: { tableIds: pTable }, orderBy: [{ field: "openedAt", dir: "desc" }] });
+        target = c ?? null;
+      }
+      if (cancelled) return;
+      setShares(null);
+      setDlg(null);
+      if (target) setActiveId(target.id);
+      else if (pTable) {
+        setActiveId(null);
+        setDraft({ ...NEW_DRAFT("dine_in"), tableIds: [pTable] });
+      }
+      setParams({}, { replace: true });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [pTable, pCheck]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // a check closed or voided elsewhere (another tablet, the waiter app) leaves the register
   useEffect(() => {
     if (activeId && check && !live && !receipt && dlg !== "pay") setActiveId(null);
@@ -138,7 +167,11 @@ export default function Register() {
 
   /** Ensures a check exists (dine-in needs a table first). */
   const ensure = async (): Promise<{ checkId: string; orderId: string } | null> => {
-    if (check && live && order) return { checkId: check.id, orderId: order.id };
+    if (check && live) {
+      // the floor seats a table with an empty open order (and the waiter): lines go into that one, never a second order
+      const o = await activeOrderFor(db, check, { source: "pos", mode: order?.mode ?? "dine_in", tableId: check.tableIds[0] ?? null });
+      return { checkId: check.id, orderId: o.id };
+    }
     if (draft.mode === "dine_in" && !draft.tableIds.length) {
       setDlg("table");
       return null;
@@ -501,7 +534,7 @@ export default function Register() {
         <div className="@container flex min-h-0 min-w-0 flex-1 flex-col">
           <MenuPanel ref={searchRef} cats={menu.cats} items={menu.items} counts={counts} onPick={pick} />
         </div>
-        {!isMobile ? <aside className="w-[340px] shrink-0 border-s border-line lg:w-[380px] 2xl:w-[420px]">{ticketPanel}</aside> : null}
+        {!isMobile ? <aside aria-label={L("الشيك", "Check")} data-pos-ticket className="w-[340px] shrink-0 border-s border-line lg:w-[380px] 2xl:w-[420px]">{ticketPanel}</aside> : null}
       </div>
 
       {isMobile ? (

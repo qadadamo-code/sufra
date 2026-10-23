@@ -4,7 +4,7 @@
  * and the kitchen module so the POS, KDS and waiter app agree.
  */
 import type { Db } from "@/data/hooks";
-import { nextOrderNumber, recomputeCheck, resolveServiceCall } from "@/data/ops";
+import { activeOrderFor, recomputeCheck, resolveServiceCall } from "@/data/ops";
 import type { Check, DiningTable, MenuCategory, MenuItem, Modifier, Order, OrderItem } from "@/data/types";
 import { nowIso } from "@/lib/time";
 import { syncOrders } from "@/modules/kitchen/ops";
@@ -21,7 +21,6 @@ export interface CartLine {
 
 export const lineTotal = (l: Pick<CartLine, "qty" | "modifiers" | "item">) => l.qty * (l.item.price + l.modifiers.reduce((a, m) => a + m.price, 0));
 
-const ACTIVE_ORDER: Order["status"][] = ["open", "sent", "ready", "served"];
 
 /** The table's open check (creating one when the table has none). */
 export async function ensureCheck(db: Db, table: Pick<DiningTable, "id" | "branchId">, guests: number): Promise<Check> {
@@ -50,14 +49,9 @@ export async function sendRound(
   if (!lines.length) throw new Error("empty");
   const t = nowIso();
   const check = await ensureCheck(db, table, guests);
-  const existing = (await db.list("orders", { where: { status: ACTIVE_ORDER, checkId: check.id }, contains: { tableIds: table.id }, orderBy: [{ field: "openedAt", dir: "desc" }] }))[0];
-  const order =
-    existing ??
-    (await db.insert("orders", {
-      branchId: table.branchId, number: await nextOrderNumber(db, table.branchId), mode: "dine_in", source: "waiter", status: "sent", tableIds: [table.id], checkId: check.id,
-      customerId: check.customerId, guests, openedBy: db.actorId, waiterId: db.actorId, note: "", delivery: null, deliveryStatus: null, driverId: null, deliveryFee: 0,
-      openedAt: t, closedAt: null, priority: "normal",
-    }));
+  // reuse the check's active order (e.g. the empty one the floor made when seating) — shared with the POS
+  const order = await activeOrderFor(db, check, { source: "waiter", tableId: table.id });
+  const existing = order;
   const stationOfCat = new Map(categories.map((c) => [c.id, c.stationId]));
   const firstCourse = Math.min(...lines.map((l) => l.course));
   const rows: Omit<OrderItem, "id" | "createdAt" | "updatedAt" | "restaurantId">[] = lines.map((l) => {

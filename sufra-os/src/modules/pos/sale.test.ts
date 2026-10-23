@@ -8,7 +8,8 @@ import { makeDb } from "@/data/hooks";
 import { DEMO_BRANCH_ID, DEMO_RESTAURANT_ID, staffId } from "@/data/seed";
 import { major } from "@/lib/money";
 import { verifyEtaUuid } from "@/lib/receipt/eta";
-import { addLine, loadTicket, openTicket, sendToKitchen, splitIntoChecks } from "./ops";
+import { addLine, loadTicket, mergeChecks, openTicket, sendToKitchen, splitIntoChecks } from "./ops";
+import { activeOrderFor } from "@/data/ops";
 import { buildZ, cashMove, closeCheck, closeShift, openShift, refundSale, returnable, takePayment } from "./sale";
 import { splitEvenly } from "./math";
 
@@ -105,5 +106,29 @@ describe("POS sale flow", () => {
     expect(closed.shift.status).toBe("closed");
     const z = closed.z;
     expect(z.byMethod.card + z.byMethod.wallet + z.byMethod.cash).toBe(z.sales.total - z.returns.total);
+  });
+});
+
+describe("one order per check across floor, waiter and POS", () => {
+  it("reuses the seated (empty) order, and merging moves orders + payments", async () => {
+    await repo.ready();
+    const { check, order } = await openTicket(db, { mode: "dine_in", pickup: false, tableIds: [], guests: 2, customerId: null, deliveryFee: 0, delivery: null, pickupAt: null });
+    expect((await activeOrderFor(db, check, { source: "pos" })).id).toBe(order.id);
+    expect((await activeOrderFor(db, check, { source: "waiter" })).id).toBe(order.id);
+    await db.update("orders", order.id, { status: "closed" });
+    const fresh = await activeOrderFor(db, check, { source: "pos" });
+    expect(fresh.id).not.toBe(order.id);
+
+    const a = await ticket([["KOFTA", 1]]);
+    const b = await ticket([["TEA", 2]]);
+    await takePayment(db, b.check, { method: "card", amount: major(10), tip: 0, tendered: null });
+    await mergeChecks(db, (await db.get("checks", a.check.id))!, (await db.get("checks", b.check.id))!);
+    const gone = (await db.get("checks", b.check.id))!;
+    expect(gone.status).toBe("void");
+    expect(gone.tableIds).toEqual([]);
+    const into = (await db.get("checks", a.check.id))!;
+    expect(into.paid).toBe(major(10));
+    expect((await db.list("orders", { where: { checkId: a.check.id } })).length).toBe(2);
+    expect((await db.list("payments", { where: { checkId: a.check.id } })).length).toBe(1);
   });
 });

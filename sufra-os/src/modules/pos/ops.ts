@@ -189,10 +189,15 @@ export async function splitIntoChecks(db: Db, t: Ticket, groups: { itemId: strin
 /** Merge `from` into `into`: orders move, tables join, `from` is voided. */
 export async function mergeChecks(db: Db, into: Check, from: Check) {
   const orders = await db.list("orders", { where: { checkId: from.id } });
-  for (const o of orders) await db.update("orders", o.id, { checkId: into.id });
   const tables = [...new Set([...into.tableIds, ...from.tableIds])];
-  await db.update("checks", into.id, { tableIds: tables, guests: into.guests + from.guests });
-  await db.update("checks", from.id, { status: "void", closedAt: nowIso() });
+  for (const o of orders) await db.update("orders", o.id, { checkId: into.id, ...(o.mode === "dine_in" && !o.tableIds.length ? { tableIds: from.tableIds } : {}) });
+  // tenders already taken on the merged-away check follow it
+  const pays = await db.list("payments", { where: { checkId: from.id } });
+  for (const p of pays) await db.update("payments", p.id, { checkId: into.id });
+  const paid = (await db.list("payments", { where: { checkId: into.id, status: "captured" } })).reduce((a, p) => a + p.amount, 0);
+  await db.update("checks", into.id, { tableIds: tables, guests: into.guests + from.guests, paid });
+  // merged-away checks are void with no tables (same convention as the floor)
+  await db.update("checks", from.id, { status: "void", tableIds: [], paid: 0, closedAt: nowIso() });
   await recomputeCheck(db, into.id);
   await db.audit("check.merge", "checks", into.id, { from: from.id });
 }
