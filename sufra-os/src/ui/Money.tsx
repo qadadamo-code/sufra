@@ -8,9 +8,9 @@ import { useT } from "@/i18n/i18n";
  * An amount in Units (0.00001 EGP). Digits in the mono face (tabular), currency in the text face, smaller.
  * Arabic: "1,250.00 ج.م" · English: "EGP 1,250.00". Always bidi-isolated so it reads right in either language.
  */
-export function Money({ value, currency = "EGP", compact, signed, className, currencyClassName, tone }: { value: Units; currency?: Currency; compact?: boolean; signed?: boolean; className?: string; currencyClassName?: string; tone?: "auto" }) {
+export function Money({ value, currency = "EGP", compact, whole, signed, className, currencyClassName, tone }: { value: Units; currency?: Currency; compact?: boolean; whole?: boolean; signed?: boolean; className?: string; currencyClassName?: string; tone?: "auto" }) {
   const { lang } = useT();
-  const p = moneyParts(value, { lang, currency, compact, signed });
+  const p = moneyParts(value, { lang, currency, compact: compact || whole, whole, signed });
   const cur = <span className={cn("font-sans text-[0.72em] font-semibold opacity-75", currencyClassName)}>{p.currency}</span>;
   const digits = (
     <span className="num" dir="ltr">

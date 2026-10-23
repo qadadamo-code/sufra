@@ -48,6 +48,8 @@ export interface MoneyFormat {
   currency?: Currency;
   /** drop ".00" on whole amounts (menus, tiles). Default false (bills always show piastres). */
   compact?: boolean;
+  /** round to whole pounds (dashboard tiles) */
+  whole?: boolean;
   /** omit the currency label */
   bare?: boolean;
   /** show "+" for positive amounts */
@@ -56,13 +58,13 @@ export interface MoneyFormat {
 
 /** Parts so components can style digits (mono) and currency (text) separately. */
 export function moneyParts(u: Units, f: MoneyFormat): { sign: string; digits: string; currency: string } {
-  const r = roundMinor(u);
+  const r = f.whole ? Math.round(u / UNITS_PER_MAJOR) * UNITS_PER_MAJOR : roundMinor(u);
   const neg = r < 0;
   const abs = Math.abs(r);
   const whole = Math.floor(abs / UNITS_PER_MAJOR);
   const frac = Math.round((abs % UNITS_PER_MAJOR) / UNITS_PER_MINOR);
   const grouped = whole.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  const digits = f.compact && frac === 0 ? grouped : `${grouped}.${String(frac).padStart(2, "0")}`;
+  const digits = (f.compact || f.whole) && frac === 0 ? grouped : `${grouped}.${String(frac).padStart(2, "0")}`;
   const sign = neg ? "-" : f.signed && r > 0 ? "+" : "";
   return { sign, digits, currency: f.bare ? "" : CUR[f.currency ?? "EGP"][f.lang] };
 }

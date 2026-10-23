@@ -28,9 +28,9 @@ export function StatTile({ label, value, sub, icon, tone = "primary", spark, cla
         {icon ? <span className={cn("grid size-9 shrink-0 place-items-center rounded-xl [&_svg]:size-[18px]", ICON_TONE[tone])}>{icon}</span> : null}
         <p className="min-w-0 truncate text-[13.5px] font-semibold text-muted">{label}</p>
       </div>
-      <div className="mt-3 truncate font-display text-[28px] font-semibold leading-none tracking-tight sm:text-[30px]">{value}</div>
-      {sub ? <div className="mt-2 truncate text-[12.5px] text-muted">{sub}</div> : null}
-      {spark && spark.length > 1 ? <Sparkline values={spark} className="absolute inset-x-0 bottom-0 h-10 opacity-60" /> : null}
+      <div className="mt-3 truncate font-display text-[23px] font-semibold leading-none tracking-tight sm:text-[30px]">{value}</div>
+      {spark && spark.length > 1 ? <Sparkline values={spark} className="absolute bottom-0 end-0 h-12 w-1/2 opacity-50" /> : null}
+      {sub ? <div className="relative mt-2 truncate text-[12.5px] text-muted">{sub}</div> : null}
     </motion.div>
   );
 }
@@ -42,7 +42,7 @@ export function Sparkline({ values, className }: { values: number[]; className?:
   const pts = values.map((v, i) => [(i / (values.length - 1)) * w, h - (v / max) * (h - 4) - 2] as const);
   const line = pts.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(2)},${y.toFixed(2)}`).join(" ");
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className={cn("pointer-events-none", className)} aria-hidden dir="ltr">
+    <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className={cn("pointer-events-none", className)} aria-hidden>
       <defs>
         <linearGradient id="sf-spark" x1="0" x2="0" y1="0" y2="1">
           <stop offset="0" stopColor="var(--sf-primary)" stopOpacity="0.22" />

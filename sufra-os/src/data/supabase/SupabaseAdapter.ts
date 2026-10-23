@@ -27,9 +27,11 @@ const MEMBERSHIP_COLS = "id,restaurant_id,user_id,name,role,branch_ids,phone,ema
 
 export const toSnake = (k: string) => k.replace(/[A-Z]/g, (c) => "_" + c.toLowerCase());
 export const toCamel = (k: string) => k.replace(/_([a-z0-9])/g, (_, c: string) => c.toUpperCase());
+/** generated / server-owned columns the client must not send */
+const READ_ONLY = new Set(["hasPin"]);
 export function rowToDb(r: Record<string, unknown>) {
   const o: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(r)) if (v !== undefined) o[toSnake(k)] = v;
+  for (const [k, v] of Object.entries(r)) if (v !== undefined && !READ_ONLY.has(k)) o[toSnake(k)] = v;
   return o;
 }
 export function rowFromDb<T>(r: Record<string, unknown>): T {

@@ -120,11 +120,13 @@ export function ComingSoon() {
                 </ul>
               </motion.div>
             ) : null}
+            {homeFor(role) !== m.nav?.path ? (
             <motion.div {...item(6)} className="mt-7">
               <LinkButton to={homeFor(role)} variant="secondary" iconEnd={<Arrow className="size-4" />}>
                 {t("soon.home")}
               </LinkButton>
             </motion.div>
+            ) : null}
           </div>
 
           {m.features?.length ? (

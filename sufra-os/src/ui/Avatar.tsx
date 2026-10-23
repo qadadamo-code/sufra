@@ -1,10 +1,15 @@
 import { cn } from "@/lib/cn";
 
 export function initials(name: string) {
-  const parts = name.replace(/^(ال)?(شيف|عم|أستاذ|د\.)\s+/u, "").trim().split(/\s+/).filter(Boolean);
+  const parts = name
+    .replace(/^(ال)?(شيف|عم|أستاذ|د\.)\s+/u, "")
+    .trim()
+    .split(/\s+/)
+    .filter((w) => /\p{L}/u.test(w))
+    .map((w) => w.replace(/^(?:ال|عبد\s?ال)(?=\p{L}{2})/u, ""));
   if (!parts.length) return "؟";
   const first = [...parts[0]][0] ?? "";
-  const second = parts.length > 1 ? [...parts[parts.length - 1]][0] ?? "" : "";
+  const second = parts.length > 1 ? ([...parts[parts.length - 1]][0] ?? "") : "";
   return (first + second).toUpperCase();
 }
 

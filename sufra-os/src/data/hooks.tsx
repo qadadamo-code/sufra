@@ -64,7 +64,7 @@ export function makeDb(repo: Repo, restaurantId: string, branchId: string | null
       const rid = c === "restaurants" ? (r as { id?: string } | null)?.id : (r as { restaurantId?: string } | null)?.restaurantId;
       return r && rid === restaurantId ? r : null;
     },
-    insert: (c, row) => repo.insert(c, { ...(row as object), restaurantId } as Insertable<RowOf<typeof c>>),
+    insert: (c, row) => repo.insert(c, { ...(row as object), restaurantId } as unknown as Insertable<RowOf<typeof c>>),
     update: (c, id, patch) => repo.update(c, id, patch),
     remove: (c, id) => repo.remove(c, id),
     audit: async (action, entity, entityId, data = {}, approvedBy = null) => {
@@ -105,7 +105,7 @@ export function useLive<C extends CollectionName>(c: C, q?: Query<RowOf<C>>, opt
   const [state, setState] = useState<{ data: RowOf<C>[]; loading: boolean; error: Error | null; key: string }>(() => {
     if (enabled && peek) {
       try {
-        return { data: peek.call(repo, c, query) as RowOf<C>[], loading: false, error: null, key };
+        return { data: (peek as (c: CollectionName, q?: unknown) => RowOf<C>[]).call(repo, c, query), loading: false, error: null, key };
       } catch {
         /* not ready yet */
       }

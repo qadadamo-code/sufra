@@ -61,6 +61,15 @@ export class LocalAdapter implements Repo {
   private status: SyncStatus = { mode: "local", online: true, pending: 0, peers: 0, lastSyncAt: null, error: null };
   private readyP: Promise<void>;
   private opts: Required<LocalAdapterOptions>;
+  /** email session when localStorage is unavailable (private mode, tests) */
+  private memSession: string | null = null;
+  private readSession() {
+    return loadRaw(this.opts.sessionKey) ?? this.memSession;
+  }
+  private writeSession(id: string | null) {
+    saveRaw(this.opts.sessionKey, id);
+    this.memSession = id;
+  }
 
   constructor(opts: LocalAdapterOptions = {}) {
     this.opts = { name: "sufra-os", memory: false, seed: true, now: () => new Date(), sessionKey: "sufra-os.session", ...opts };
@@ -110,7 +119,7 @@ export class LocalAdapter implements Repo {
   private async writeSeed() {
     const seed = buildSeed(this.opts.now());
     const batch: { c: string; id: string; row: unknown }[] = [];
-    for (const c of COLLECTIONS) for (const r of seed.data[c] as AnyRow[]) batch.push({ c, id: r.id, row: r });
+    for (const c of COLLECTIONS) for (const r of seed.data[c] as unknown as AnyRow[]) batch.push({ c, id: r.id, row: r });
     for (const u of seed.users) batch.push({ c: USERS, id: u.id, row: u });
     for (const [id, hash] of Object.entries(seed.pinHashes)) batch.push({ c: PINS, id, row: { id, hash } });
     batch.push({ c: META, id: "seed", row: { id: "seed", version: SEED_VERSION, at: nowIso() } });
@@ -307,7 +316,7 @@ export class LocalAdapter implements Repo {
   auth: AuthApi = {
     current: async () => {
       await this.readyP;
-      const id = loadRaw(this.opts.sessionKey);
+      const id = this.readSession();
       const u = id ? this.users.get(id) : undefined;
       return u ? { id: u.id, email: u.email, name: u.name } : null;
     },
@@ -316,13 +325,13 @@ export class LocalAdapter implements Repo {
       const e = email.trim().toLowerCase();
       const u = [...this.users.values()].find((x) => x.email.toLowerCase() === e);
       if (!u || u.passwordHash !== hashPassword(e, password)) throw new AuthError("invalid_credentials");
-      saveRaw(this.opts.sessionKey, u.id);
+      this.writeSession(u.id);
       const au = { id: u.id, email: u.email, name: u.name };
       for (const cb of this.authListeners) cb(au);
       return au;
     },
     signOut: async () => {
-      saveRaw(this.opts.sessionKey, null);
+      this.writeSession(null);
       for (const cb of this.authListeners) cb(null);
     },
     onChange: (cb) => {
