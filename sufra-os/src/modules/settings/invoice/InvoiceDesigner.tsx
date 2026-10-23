@@ -147,7 +147,7 @@ export default function InvoiceDesigner() {
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
         <fieldset disabled={!editable} className="grid gap-4">
           <Card className="grid gap-4 p-5">
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3 2xl:grid-cols-2">
               <div>
                 <p className="mb-2 text-[13px] font-semibold text-ink-2">{L("مقاس الورق", "Paper")}</p>
                 <Segmented block label={L("مقاس الورق", "Paper")} value={design.paper} onChange={(v) => setDesign({ paper: v })} options={[{ value: "58", label: "58mm" }, { value: "80", label: "80mm" }, { value: "a4", label: "A4" }]} />
@@ -193,9 +193,9 @@ export default function InvoiceDesigner() {
           </Card>
 
           <Card className="grid gap-4 p-5">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <TextBox label={L("الهيدر (عربي)", "Header (Arabic)")} value={tpl.header.ar} onChange={(v) => setText("header", "ar", v)} dir="rtl" />
-              <TextBox label={L("الهيدر (إنجليزي)", "Header (English)")} value={tpl.header.en} onChange={(v) => setText("header", "en", v)} dir="ltr" />
+            <div className="grid gap-3 xl:grid-cols-2">
+              <TextBox label={L("الهيدر (عربي)", "Header (Arabic)")} value={tpl.header.ar} onChange={(v) => setText("header", "ar", v)} dir="rtl" rows={2} />
+              <TextBox label={L("الهيدر (إنجليزي)", "Header (English)")} value={tpl.header.en} onChange={(v) => setText("header", "en", v)} dir="ltr" rows={2} />
               <TextBox label={L("الفوتر (عربي)", "Footer (Arabic)")} value={tpl.footer.ar} onChange={(v) => setText("footer", "ar", v)} dir="rtl" rows={2} />
               <TextBox label={L("الفوتر (إنجليزي)", "Footer (English)")} value={tpl.footer.en} onChange={(v) => setText("footer", "en", v)} dir="ltr" rows={2} />
             </div>
