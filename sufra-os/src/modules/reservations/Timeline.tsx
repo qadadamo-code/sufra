@@ -50,7 +50,6 @@ export function Timeline(p: TimelineProps) {
   const width = span * ppm;
 
   const rows = useMemo(() => {
-    const out: { kind: "zone"; zone: Zone }[] | { kind: "table"; table: DiningTable }[] = [];
     const list: ({ kind: "zone"; zone: Zone } | { kind: "table"; table: DiningTable } | { kind: "none" })[] = [{ kind: "none" }];
     for (const z of p.zones) {
       const ts = p.tables.filter((t) => t.zoneId === z.id).sort((a, b) => a.label.localeCompare(b.label, "en", { numeric: true }));
@@ -58,15 +57,16 @@ export function Timeline(p: TimelineProps) {
       list.push({ kind: "zone", zone: z });
       for (const t of ts) list.push({ kind: "table", table: t });
     }
-    void out;
     return list;
   }, [p.zones, p.tables]);
-  const tableRows = rows.map((r, i) => ({ r, i })).filter((x) => x.r.kind === "table" || x.r.kind === "none");
   const rowIndexOf = (tableId: string | null) => rows.findIndex((r) => (tableId ? r.kind === "table" && r.table.id === tableId : r.kind === "none"));
 
-  const [drag, setDrag] = useState<Drag | null>(null);
+  const [drag, setDragState] = useState<Drag | null>(null);
   const dragRef = useRef(drag);
-  dragRef.current = drag;
+  const setDrag = (d: Drag | null) => {
+    dragRef.current = d;
+    setDragState(d);
+  };
 
   const draft = (r: Reservation): Reservation => {
     const d = drag;
@@ -86,10 +86,8 @@ export function Timeline(p: TimelineProps) {
     return rows[j];
   };
 
-  const live = p.reservations.filter((r) => r.status === "pending" || r.status === "confirmed" || r.status === "seated");
   const drafts = p.reservations.map(draft);
   const clashes = new Set(drafts.filter((r) => conflictsOf(coreReservation(r), drafts.map(coreReservation)).length > 0).map((r) => r.id));
-  void live;
 
   const x = (min: number) => (min - p.dayStart - p.hours.open) * ppm;
 
@@ -118,8 +116,6 @@ export function Timeline(p: TimelineProps) {
     if (next.startsAt !== r.startsAt || next.durationMin !== r.durationMin || next.tableIds.join() !== r.tableIds.join()) p.onMove(r, { startsAt: next.startsAt, durationMin: next.durationMin, tableIds: next.tableIds });
   };
   const draftFrom = (r: Reservation, d: Drag) => {
-    const saved = drag;
-    void saved;
     const startsAt = new Date((toMin(r.startsAt) + d.dMin) * 60000).toISOString();
     let tableIds = r.tableIds;
     if (d.dRow && r.tableIds.length <= 1) {
@@ -225,7 +221,6 @@ export function Timeline(p: TimelineProps) {
           ) : null}
         </div>
       </div>
-      <span hidden>{tableRows.length}</span>
     </div>
   );
 }

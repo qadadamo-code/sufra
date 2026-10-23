@@ -155,3 +155,6 @@
 /* the plan is usually black-on-white: invert it in dark mode so it does not glare */
 :root[data-theme="dark"] .fl-plan { filter: invert(0.92) hue-rotate(180deg); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .fl-plan { filter: invert(0.92) hue-rotate(180deg); } }
+
+.fl-table:focus { outline: none; }
+.fl-table:focus-visible .fl-top { stroke: var(--sf-primary); stroke-width: 6; }

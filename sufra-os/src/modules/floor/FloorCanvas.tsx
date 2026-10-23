@@ -109,7 +109,11 @@ export function FloorCanvas(p: FloorCanvasProps) {
   viewRef.current = view;
   const [preview, setPreview] = useState<Map<string, Partial<Item>>>(new Map());
   const previewRef = useRef(preview);
-  previewRef.current = preview;
+  // keep the ref in step synchronously: several pointer events can arrive before React re-renders
+  const setPv = (m: Map<string, Partial<Item>>) => {
+    previewRef.current = m;
+    setPreview(m);
+  };
   const [guides, setGuides] = useState<Guide[]>([]);
   const [live, setLive] = useState<string | null>(null); // item being resized: seat bubble
   const [marquee, setMarquee] = useState<Box | null>(null);
@@ -207,7 +211,10 @@ export function FloorCanvas(p: FloorCanvasProps) {
   };
   const commitPreview = () => {
     const pv = previewRef.current;
-    if (!pv.size) return;
+    if (![...pv.values()].some((x) => Object.keys(x).length)) {
+      setPv(new Map());
+      return;
+    }
     const patches: LayoutPatch[] = [];
     for (const [id, patch] of pv) {
       const isT = itemsRef.current.tables.some((t) => t.id === id);
@@ -217,7 +224,7 @@ export function FloorCanvas(p: FloorCanvasProps) {
     }
     propsRef.current.onCommit(patches);
     // keep showing the preview until the live rows arrive (no flicker back)
-    window.setTimeout(() => setPreview(new Map()), 260);
+    window.setTimeout(() => setPv(new Map()), 260);
   };
 
   const onPointerDown = (e: RPointerEvent<SVGSVGElement>) => {
@@ -238,14 +245,14 @@ export function FloorCanvas(p: FloorCanvasProps) {
       const pinchId = g.kind === "move" && g.ids.length === 1 && !g.isDecor ? g.hitId : g.kind === "resize" ? g.id : null;
       if (pinchId && P.mode === "design") {
         const origin = findItem(pinchId)!;
-        setPreview(new Map([[pinchId, {}]]));
+        setPv(new Map([[pinchId, {}]]));
         gesture.current = { kind: "pinchItem", id: pinchId, v0: { x: b.x - a.x, y: b.y - a.y }, origin };
         setGuides([]);
         setLive(pinchId);
         begin();
         return;
       }
-      if (g.kind === "move" && g.moved) setPreview(new Map());
+      if (g.kind === "move" && g.moved) setPv(new Map());
       gesture.current = { kind: "zoom", view: viewRef.current, dist: Math.hypot(b.x - a.x, b.y - a.y), mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } };
       setGuides([]);
       return;
@@ -355,6 +362,7 @@ export function FloorCanvas(p: FloorCanvasProps) {
       case "bg": {
         const nx = g.origin.x + (pt.x - g.start.x) / v.k;
         const ny = g.origin.y + (pt.y - g.start.y) / v.k;
+        bgDragRef.current = { x: nx, y: ny };
         setBgDrag({ x: nx, y: ny });
         return;
       }
@@ -367,21 +375,21 @@ export function FloorCanvas(p: FloorCanvasProps) {
         const sx = Math.abs(l0.x) > 16 ? Math.abs(l1.x) / Math.abs(l0.x) : 1;
         const sy = Math.abs(l0.y) > 16 ? Math.abs(l1.y) / Math.abs(l0.y) : 1;
         const next = pinchResize(placedOf(g.origin) as Table, sx, sy);
-        setPreview(new Map([[g.id, { w: next.w, h: next.h }]]));
+        setPv(new Map([[g.id, { w: next.w, h: next.h }]]));
         return;
       }
       case "resize": {
         const dx = (pt.x - g.start.x) / v.k;
         const dy = (pt.y - g.start.y) / v.k;
         const next = resizeFrom(placedOf(g.origin) as Table, g.handle, dx, dy);
-        setPreview(new Map([[g.id, { w: next.w, h: next.h, x: next.x, y: next.y }]]));
+        setPv(new Map([[g.id, { w: next.w, h: next.h, x: next.x, y: next.y }]]));
         return;
       }
       case "rotate": {
         const f = toFloorPt(pt.x, pt.y);
         const ang = (Math.atan2(f.y - g.origin.y, f.x - g.origin.x) * 180) / Math.PI + 90;
         const snapped = ((Math.round(ang / 45) * 45) % 360 + 360) % 360;
-        setPreview(new Map([[g.id, { rotation: snapped }]]));
+        setPv(new Map([[g.id, { rotation: snapped }]]));
         return;
       }
       case "move": {
@@ -415,7 +423,7 @@ export function FloorCanvas(p: FloorCanvasProps) {
           const o = g.origin.get(id)!;
           next.set(id, { x: o.x + fx, y: o.y + fy });
         }
-        setPreview(next);
+        setPv(next);
         return;
       }
     }
@@ -582,7 +590,7 @@ export function FloorCanvas(p: FloorCanvasProps) {
           {tables.map((t) => {
             const tv = views.get(t.id);
             const g = geo.get(t.id)!;
-            return <TableGlyph key={t.id} t={t} chairs={g.chairs} state={designing ? "design" : tv?.state ?? "free"} taken={taken.get(t.id) ?? 0} selected={selected.has(t.id)} multi={!designing && p.selected.length > 1 && selected.has(t.id)} overlap={designing && !!tv?.overlaps} />;
+            return <TableGlyph key={t.id} onActivate={() => (mode === "design" ? p.onSelect([t.id]) : p.onTableTap(t.id, { long: false, toggle: false }))} label={`${t.label}${tv ? ` · ${tv.state}` : ""}`} t={t} chairs={g.chairs} state={designing ? "design" : tv?.state ?? "free"} taken={taken.get(t.id) ?? 0} selected={selected.has(t.id)} multi={!designing && p.selected.length > 1 && selected.has(t.id)} overlap={designing && !!tv?.overlaps} />;
           })}
 
           {tables.map((t) => {
@@ -673,13 +681,23 @@ function ChairGlyph({ x, y, angle, taken }: { x: number; y: number; angle: numbe
   );
 }
 
-function TableGlyph({ t, chairs, state, taken, selected, multi, overlap }: { t: DiningTable; chairs: ReturnType<typeof chairsFor>; state: FloorState | "design"; taken: number; selected: boolean; multi: boolean; overlap: boolean }) {
+function TableGlyph({ t, chairs, state, taken, selected, multi, overlap, onActivate, label }: { t: DiningTable; chairs: ReturnType<typeof chairsFor>; state: FloorState | "design"; taken: number; selected: boolean; multi: boolean; overlap: boolean; onActivate: () => void; label: string }) {
   let seated = 0;
   const round = t.shape === "round" || t.shape === "oval";
   const pattern = state === "reserved" || state === "dirty" || state === "bill" || state === "blocked" || state === "long" ? `url(#fl-pat-${state})` : null;
   const ring = 12;
   return (
-    <g data-hit="1" data-item={t.id} data-kind="table" className={cn("fl-table", `fl-st-${state}`, overlap && "fl-overlap")} aria-label={t.label}>
+    <g
+      data-hit="1"
+      data-item={t.id}
+      data-kind="table"
+      className={cn("fl-table", `fl-st-${state}`, overlap && "fl-overlap")}
+      aria-label={t.label}
+      role="button"
+      tabIndex={0}
+      aria-description={label}
+      onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), onActivate())}
+    >
       <g className="fl-move" style={{ transform: `translate(${t.x}px, ${t.y}px) rotate(${t.rotation}deg)` }}>
         {chairs.map((c, i) => {
           if (c.blocked) return null;

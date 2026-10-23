@@ -26,7 +26,7 @@ const STATUS_TONE: Record<ReservationStatus, Tone> = { pending: "brass", confirm
 
 export default function ReservationsPage() {
   const r = useDict(resDict);
-  const { t, L, loc, lang } = useT();
+  const { L, loc } = useT();
   const db = useDb();
   const session = useSession();
   const branch = useBranch();
@@ -221,11 +221,6 @@ export default function ReservationsPage() {
         reservations={allLive.filter((x) => x.status === "pending" || x.status === "confirmed" || x.status === "seated")}
         checks={floor.checks}
       />
-      <span hidden>
-        {t("common.loading")}
-        {lang}
-        {isMobile ? "m" : ""}
-      </span>
     </div>
   );
 }

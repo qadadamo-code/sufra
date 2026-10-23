@@ -36,7 +36,7 @@ type Pick = { kind: "transfer" | "merge"; from: string } | null;
 
 export default function FloorPage() {
   const f = useDict(floorDict);
-  const { t, loc, L } = useT();
+  const { loc, L } = useT();
   const db = useDb();
   const session = useSession();
   const { toast } = useToast();
@@ -367,7 +367,7 @@ export default function FloorPage() {
     }
   };
 
-  const useDemoPlan = () => {
+  const loadDemoPlan = () => {
     if (!zone) return;
     setBackground({ ...initialBackground({ src: demoPlanSvg(), pxW: 1000, pxH: 660, fileName: "sample-plan.svg" }, zone.width), cmPerPx: zone.width / 1000 });
   };
@@ -643,7 +643,7 @@ export default function FloorPage() {
                 suggestions={suggestions ? suggestions.length : null}
                 onAcceptAll={() => suggestions && acceptSuggestions(suggestions.map((s) => s.id))}
                 onDiscard={() => setSuggestions(null)}
-                onDemoPlan={useDemoPlan}
+                onDemoPlan={loadDemoPlan}
               />
             </Card>
           ) : null}
@@ -669,7 +669,6 @@ export default function FloorPage() {
         fmtElapsed={fmtElapsed}
         fmtTime={fmtTime}
       />
-      <span hidden>{t("common.loading")}</span>
     </div>
   );
 }
