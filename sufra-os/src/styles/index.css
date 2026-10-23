@@ -1,0 +1,183 @@
+@import "tailwindcss";
+
+/* Dark mode follows the resolved [data-theme] on <html>. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* ───────────── Sufra OS tokens ─────────────
+   Same identity as sufra-web: sage-stone ground, deep teal, brass for anything special.
+   Every colour is a token here; components never hard-code hex. */
+:root {
+  --sf-bg: #e9eee9;
+  --sf-bg-deep: #dfe6e0;
+  --sf-surface: #ffffff;
+  --sf-surface-2: #f4f7f4;
+  --sf-surface-3: #eaf0eb;
+  --sf-ink: #16211e;
+  --sf-ink-2: #2c3a35;
+  --sf-muted: #5b6a64;
+  --sf-faint: #8a9892;
+  --sf-line: #d3dbd5;
+  --sf-line-strong: #b9c5bd;
+  --sf-primary: #0d5a53;
+  --sf-primary-hover: #0a4a44;
+  --sf-primary-ink: #ffffff;
+  --sf-primary-soft: #d6e7e3;
+  --sf-brass: #a8700c;
+  --sf-brass-ink: #ffffff;
+  --sf-brass-soft: #f3e7cf;
+  --sf-brass-text: #6d4706;
+  --sf-danger: #c2412d;
+  --sf-danger-soft: #f6dcd6;
+  --sf-ok: #1d7f4a;
+  --sf-ok-soft: #d7efe0;
+  --sf-warn: #c46a12;
+  --sf-warn-soft: #f8e4cd;
+  --sf-info: #2f6f9f;
+  --sf-info-soft: #dbe8f3;
+  --sf-sidebar: #f6f8f5;
+  --sf-overlay: rgb(14 22 19 / 0.42);
+  --sf-shadow-sm: 0 1px 2px rgb(22 33 30 / 0.06);
+  --sf-shadow: 0 1px 2px rgb(22 33 30 / 0.06), 0 12px 32px -18px rgb(22 33 30 / 0.35);
+  --sf-shadow-lg: 0 2px 6px rgb(22 33 30 / 0.06), 0 30px 70px -24px rgb(22 33 30 / 0.45);
+  --sf-glow: 0 0 0 4px color-mix(in srgb, var(--sf-primary) 18%, transparent);
+  --radius: 0.875rem;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --sf-bg: #0e1412; --sf-bg-deep: #0a0f0d; --sf-surface: #162019; --sf-surface-2: #1b2620; --sf-surface-3: #212d27;
+    --sf-ink: #e6eee9; --sf-ink-2: #c9d5cf; --sf-muted: #93a59d; --sf-faint: #6d7f77; --sf-line: #2a3832; --sf-line-strong: #3a4a43;
+    --sf-primary: #3db3a3; --sf-primary-hover: #52c4b4; --sf-primary-ink: #04201c; --sf-primary-soft: #143630;
+    --sf-brass: #e2a93c; --sf-brass-ink: #241703; --sf-brass-soft: #2e2512; --sf-brass-text: #f1c977;
+    --sf-danger: #e5664f; --sf-danger-soft: #3a1c16; --sf-ok: #4cc683; --sf-ok-soft: #133524; --sf-warn: #f0a04e; --sf-warn-soft: #3a2714;
+    --sf-info: #7db7e3; --sf-info-soft: #16293a; --sf-sidebar: #111915; --sf-overlay: rgb(0 0 0 / 0.6);
+    --sf-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
+    --sf-shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 16px 40px -20px rgb(0 0 0 / 0.8);
+    --sf-shadow-lg: 0 2px 6px rgb(0 0 0 / 0.35), 0 30px 80px -24px rgb(0 0 0 / 0.9);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --sf-bg: #0e1412; --sf-bg-deep: #0a0f0d; --sf-surface: #162019; --sf-surface-2: #1b2620; --sf-surface-3: #212d27;
+  --sf-ink: #e6eee9; --sf-ink-2: #c9d5cf; --sf-muted: #93a59d; --sf-faint: #6d7f77; --sf-line: #2a3832; --sf-line-strong: #3a4a43;
+  --sf-primary: #3db3a3; --sf-primary-hover: #52c4b4; --sf-primary-ink: #04201c; --sf-primary-soft: #143630;
+  --sf-brass: #e2a93c; --sf-brass-ink: #241703; --sf-brass-soft: #2e2512; --sf-brass-text: #f1c977;
+  --sf-danger: #e5664f; --sf-danger-soft: #3a1c16; --sf-ok: #4cc683; --sf-ok-soft: #133524; --sf-warn: #f0a04e; --sf-warn-soft: #3a2714;
+  --sf-info: #7db7e3; --sf-info-soft: #16293a; --sf-sidebar: #111915; --sf-overlay: rgb(0 0 0 / 0.6);
+  --sf-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
+  --sf-shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 16px 40px -20px rgb(0 0 0 / 0.8);
+  --sf-shadow-lg: 0 2px 6px rgb(0 0 0 / 0.35), 0 30px 80px -24px rgb(0 0 0 / 0.9);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--sf-bg);
+  --color-bg-deep: var(--sf-bg-deep);
+  --color-surface: var(--sf-surface);
+  --color-surface-2: var(--sf-surface-2);
+  --color-surface-3: var(--sf-surface-3);
+  --color-ink: var(--sf-ink);
+  --color-ink-2: var(--sf-ink-2);
+  --color-muted: var(--sf-muted);
+  --color-faint: var(--sf-faint);
+  --color-line: var(--sf-line);
+  --color-line-strong: var(--sf-line-strong);
+  --color-primary: var(--sf-primary);
+  --color-primary-hover: var(--sf-primary-hover);
+  --color-primary-ink: var(--sf-primary-ink);
+  --color-primary-soft: var(--sf-primary-soft);
+  --color-brass: var(--sf-brass);
+  --color-brass-ink: var(--sf-brass-ink);
+  --color-brass-soft: var(--sf-brass-soft);
+  --color-brass-text: var(--sf-brass-text);
+  --color-danger: var(--sf-danger);
+  --color-danger-soft: var(--sf-danger-soft);
+  --color-ok: var(--sf-ok);
+  --color-ok-soft: var(--sf-ok-soft);
+  --color-warn: var(--sf-warn);
+  --color-warn-soft: var(--sf-warn-soft);
+  --color-info: var(--sf-info);
+  --color-info-soft: var(--sf-info-soft);
+  --color-sidebar: var(--sf-sidebar);
+
+  --radius-sm: calc(var(--radius) - 6px);
+  --radius-md: calc(var(--radius) - 3px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 10px);
+
+  --font-display: "Reem Kufi", "IBM Plex Sans Arabic", system-ui, sans-serif;
+  --font-sans: "IBM Plex Sans Arabic", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --shadow-sf-sm: var(--sf-shadow-sm);
+  --shadow-sf: var(--sf-shadow);
+  --shadow-sf-lg: var(--sf-shadow-lg);
+  --ease-sf: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --animate-shimmer: sf-shimmer 1.6s linear infinite;
+  --animate-pulse-dot: sf-pulse-dot 2s ease-out infinite;
+}
+
+@keyframes sf-shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+@keyframes sf-pulse-dot {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 55%, transparent); }
+  70% { box-shadow: 0 0 0 7px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+@layer base {
+  * { border-color: var(--sf-line); }
+  html { -webkit-text-size-adjust: 100%; overflow-x: clip; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0;
+    background: var(--sf-bg);
+    color: var(--sf-ink);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.6;
+    min-height: 100dvh;
+    overflow-x: clip;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 600; line-height: 1.2; text-wrap: balance; margin: 0; }
+  p { margin: 0; }
+  img, video, svg, canvas { display: block; max-width: 100%; }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  button:disabled { cursor: not-allowed; }
+  :focus-visible { outline: 2px solid var(--sf-primary); outline-offset: 2px; }
+  ::selection { background: color-mix(in srgb, var(--sf-primary) 30%, transparent); }
+  [hidden] { display: none !important; }
+  :where(.grid) > * { min-width: 0; }
+  fieldset { min-width: 0; margin: 0; padding: 0; border: 0 solid; }
+}
+
+@layer utilities {
+  /* numbers: mono, tabular, isolated so they read LTR inside Arabic */
+  .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+  .ltr { direction: ltr; unicode-bidi: isolate; }
+  .no-scrollbar { scrollbar-width: none; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .thin-scrollbar { scrollbar-width: thin; scrollbar-color: var(--sf-line-strong) transparent; }
+  .paper-grain {
+    background-image: radial-gradient(color-mix(in srgb, var(--sf-ink) 6%, transparent) 1px, transparent 1px);
+    background-size: 18px 18px;
+  }
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+  .flip-rtl:where([dir="rtl"] *) { transform: scaleX(-1); }
+}
+
+/* Calm everything for people who asked for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
