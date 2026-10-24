@@ -6,6 +6,7 @@ import { Mark } from "./Logo";
 import { NotificationsBell } from "./Notifications";
 import { SyncIndicator } from "./SyncIndicator";
 import { UserMenu } from "./UserMenu";
+import { InstallApp } from "./InstallApp";
 import { matchPath, useLocation } from "react-router-dom";
 import { modules } from "@/modules/registry";
 import { useBranch } from "@/auth/session";
@@ -51,6 +52,7 @@ export function TopBar({ title }: { title?: string }) {
           <IconButton label={t("shell.theme")} onClick={theme.toggle} className="hidden sm:inline-flex">
             {theme.dark ? <Sun /> : <Moon />}
           </IconButton>
+          <InstallApp />
           <NotificationsBell />
           <div className="ms-1 md:hidden">
             <UserMenu />

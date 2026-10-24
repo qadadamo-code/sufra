@@ -1,0 +1,28 @@
+{
+  "id": "/app/",
+  "name": "سُفرة — نظام المطعم",
+  "short_name": "سُفرة",
+  "description": "كاشير، صالة، مطبخ، جرسون، حجوزات ودليفري — كله في مكان واحد.",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "/app/",
+  "scope": "/app/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#0d5a53",
+  "theme_color": "#0d5a53",
+  "categories": ["business", "food", "productivity"],
+  "icons": [
+    { "src": "/app/icons/icon-96.png", "sizes": "96x96", "type": "image/png" },
+    { "src": "/app/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/app/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/app/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "الكاشير", "short_name": "الكاشير", "url": "/app/pos", "icons": [{ "src": "/app/icons/icon-96.png", "sizes": "96x96" }] },
+    { "name": "الصالة", "short_name": "الصالة", "url": "/app/floor", "icons": [{ "src": "/app/icons/icon-96.png", "sizes": "96x96" }] },
+    { "name": "المطبخ", "short_name": "المطبخ", "url": "/app/kitchen", "icons": [{ "src": "/app/icons/icon-96.png", "sizes": "96x96" }] },
+    { "name": "الجرسون", "short_name": "الجرسون", "url": "/app/waiter", "icons": [{ "src": "/app/icons/icon-96.png", "sizes": "96x96" }] }
+  ]
+}

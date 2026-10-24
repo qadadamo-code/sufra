@@ -4,12 +4,14 @@ import { Languages, Moon, Sun } from "lucide-react";
 import { useT } from "@/i18n/i18n";
 import { useTheme } from "@/theme/theme";
 import { IconButton, useReduced } from "@/ui";
+import { InstallApp } from "@/shell/InstallApp";
 
 export function AuthToggles() {
   const { t, toggleLang } = useT();
   const theme = useTheme();
   return (
     <div className="flex items-center gap-1">
+      <InstallApp />
       <IconButton label={t("shell.langLabel")} onClick={toggleLang}>
         <Languages />
       </IconButton>
