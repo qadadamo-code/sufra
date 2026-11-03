@@ -333,6 +333,32 @@ design + sources: `src/modules/guest/pay/DESIGN.md`; schema `supabase/migrations
   Move the deduction into a SECURITY DEFINER function fired by an `order_items` trigger, and apply channel prices / selling
   hours inside the 0005 guest RPCs (today they use `menu_items.price`).
 
+## Staff, HR, attendance & payroll (`src/modules/staff`, `src/modules/hr`, `/api/attendance-push`)
+
+- **Team** (`/staff`): employee files (photo, national ID, contract, station, emergency contact, documents with expiry alerts —
+  the health certificate is mandatory for food handlers), add staff with role + PIN (+ email invite), role & branches, deactivate.
+  Salary, allowances, insurable wage, service points and payout (cash/bank IBAN/wallet) are on the **Pay** tab — owner/admin/accountant only.
+- **Rota** (`/staff/schedule`): weekly grid per branch, drag-and-drop (Alt/Ctrl copies), templates, copy last week, publish,
+  open shifts, swap requests with manager approval, labour cost vs sales forecast (cost shown to payroll roles only).
+- **Attendance** (`/staff/attendance`): who's in now, day/month boards (late / early / absent / overtime / rest-day work vs the
+  published rota, 05:00 business-day cut-off), manager corrections (void + re-add, reason required, audited), unlinked fingerprints,
+  ZKTeco terminals and CSV import. Clocking in: `/timeclock` (shared POS device, PIN + optional selfie), `/me` on the staff's phone
+  (geofence: branch coordinates + radius in Staff → Settings), or the terminal pushing to `/api/attendance-push`.
+- **Leave**, **Advances** (approve → pay from an open drawer (cash movement + Dr 1202/Cr 1101) or bank → instalments deducted by payroll),
+  **Payroll** (`/staff/payroll`, owner/admin/accountant): monthly run per branch — base/daily/hourly, overtime (+35 % day, +70 % night,
+  ×2 rest day), POS tips + service-charge pool (points × hours, shares add up exactly), bonuses/penalties, absence & lateness tiers,
+  advances, Egypt social insurance 11 % / 18.75 % on the 2026 insurable wage (EGP 2,700–16,700), Egypt salary tax (Law 7/2024 brackets,
+  configurable) or KSA GOSI + end-of-service accrual; approve → journal via `postJournal` (6301/6302/6303/2202/2203 → 2401/2304/2303/1202),
+  mark paid (Dr 2401 / Cr safe 1106 or bank 1105), printable payslips, bank CSV (KSA: input for the WPS/Mudad file), pay-day reminder.
+  Every tax/insurance figure is labelled "تقديري — يراجعه المحاسب".
+- **Self-service** `/me` (every role, `hr.self`): clock in/out, my schedule + swap, my attendance, leave balance & requests, advances, payslips.
+- Rules are pure and tested in `src/modules/hr/lib` (`statutory`, `attendance`, `leave`, `advances`, `pool`, `payroll`, `geo`, `zkteco`).
+  Schema `supabase/migrations/0010_hr.sql`; SQL checks `supabase/tests/hr_run.sh`; screenshots `node scripts/shots-hr.mjs <base> <dir>`.
+- **ZKTeco ADMS**: register the terminal (Staff → Attendance → Terminals; the secret is shown once, only its sha256 is stored) and point it at
+  the site (port 443). Terminals call `/iclock/cdata` + `/iclock/getrequest`, so the root `vercel.json` needs
+  `{ "source": "/iclock/cdata", "destination": "/api/attendance-push" }` and `{ "source": "/iclock/getrequest", "destination": "/api/attendance-push?cmd=getrequest" }`.
+  Auth per device: `?key=` / `x-device-key` / Bearer (relays, newer firmware) or the branch's fixed IP in `allowed_ips`. Env: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`.
+
 ## Design system (`src/ui`)
 
 Tokens in `src/styles/index.css` (same identity as sufra-web: sage-stone neutrals, deep teal, brass; Reem Kufi / IBM Plex Sans Arabic /

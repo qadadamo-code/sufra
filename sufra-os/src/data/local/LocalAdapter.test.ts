@@ -141,6 +141,6 @@ describe("LocalAdapter", () => {
     const [t] = await a.list("tables", { limit: 1 });
     await a.remove("tables", t.id);
     await a.reset();
-    expect(await a.list("tables")).toHaveLength(18);
+    expect(await a.list("tables", { where: { restaurantId: DEMO_RESTAURANT_ID } })).toHaveLength(18); // + the KSA demo tenant's tables
   });
 });
