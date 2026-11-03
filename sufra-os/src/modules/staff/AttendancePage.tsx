@@ -10,7 +10,7 @@ import { addManualPunch, evaluateRange, importPunches, registerDevice, rotateDev
 import { presence, summarize, type DayEval } from "@/modules/hr/lib/attendance";
 import { addDays, businessDate, periodBounds, zonedToMs } from "@/modules/hr/lib/tz";
 import { parseAttendanceCsv, type CsvPunch } from "@/modules/hr/lib/zkteco";
-import { PUNCH_KIND, PUNCH_SOURCE, minutesText } from "@/modules/hr/labels";
+import { PUNCH_KIND, PUNCH_SOURCE, minutesText, hmRange } from "@/modules/hr/labels";
 import { DayBadge, PersonCell, PersonPhoto, Section, useDateFmt } from "@/modules/hr/ui";
 
 export default function AttendancePage() {
@@ -81,7 +81,7 @@ export default function AttendancePage() {
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-semibold">{m.name}</p>
                       <p className="num truncate text-[12.5px] text-muted">
-                        {sh ? `${sh.start}–${sh.end}` : L("بدون وردية", "no shift")}
+                        {sh ? hmRange(sh.start, sh.end) : L("بدون وردية", "no shift")}
                         {h ? ` · ${L("من", "since")} ${f.time(h.since, hr.tz)}` : ""}
                       </p>
                     </div>
@@ -105,7 +105,7 @@ export default function AttendancePage() {
             empty={<EmptyState compact title={L("مفيش ورديات اليوم ده", "No shifts that day")} />}
             columns={[
               { key: "who", header: L("الموظف", "Staff"), cell: (r) => <PersonCell m={r.m} p={hr.profileOf(r.m.id)} size="sm" /> },
-              { key: "shift", header: L("الوردية", "Shift"), cell: (r) => <span className="num">{shifts.filter((s) => s.membershipId === r.m.id && s.date === date).map((s) => `${s.start}–${s.end}`).join(" · ") || "—"}</span>, hideOnMobile: true },
+              { key: "shift", header: L("الوردية", "Shift"), cell: (r) => <span className="num">{shifts.filter((s) => s.membershipId === r.m.id && s.date === date).map((s) => hmRange(s.start, s.end)).join(" · ") || "—"}</span>, hideOnMobile: true },
               { key: "in", header: L("حضور", "In"), cell: (r) => <span className="num">{r.day?.firstIn ? f.time(r.day.firstIn, hr.tz) : "—"}</span> },
               { key: "out", header: L("انصراف", "Out"), cell: (r) => <span className="num">{r.day?.lastOut ? f.time(r.day.lastOut, hr.tz) : "—"}</span> },
               { key: "worked", header: L("شغل", "Worked"), cell: (r) => <span className="num">{r.day?.workedMin ? minutesText(r.day.workedMin, lang) : "—"}</span>, hideOnMobile: true },

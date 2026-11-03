@@ -12,7 +12,7 @@ import { fitsBalance, leaveDays } from "./lib/leave";
 import { addMonths, addDays } from "./lib/tz";
 import { installmentSchedule } from "./lib/advances";
 import { effectiveComp } from "./lib/payroll";
-import { LEAVE_TYPE } from "./labels";
+import { LEAVE_TYPE, hmRange } from "./labels";
 import { MoneyInput, NumberInput, useDateFmt } from "./ui";
 import { useLeaveBalance } from "./components";
 
@@ -136,7 +136,7 @@ export function SwapRequestDialog({ shift, onClose }: { shift: RotaShift; onClos
       open
       onClose={onClose}
       title={L("اطلب تبديل الوردية", "Ask to swap this shift")}
-      description={`${f.day(shift.date)} · ${shift.start}–${shift.end}`}
+      description={`${f.day(shift.date)} · ${hmRange(shift.start, shift.end)}`}
       footer={
         <Button block icon={<Repeat />} onClick={async () => { await requestSwap(db, shift, to || null, reason); toast({ title: L("الطلب اتبعت للمدير", "Sent to your manager"), tone: "success" }); onClose(); }}>
           {L("ابعت", "Send")}

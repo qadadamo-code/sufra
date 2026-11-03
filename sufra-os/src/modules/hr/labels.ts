@@ -105,3 +105,6 @@ export function minutesText(min: number, lang: "ar" | "en"): string {
 }
 
 export const WEEKDAYS: Localized[] = [L("الحد", "Sun"), L("الاتنين", "Mon"), L("التلات", "Tue"), L("الأربع", "Wed"), L("الخميس", "Thu"), L("الجمعة", "Fri"), L("السبت", "Sat")];
+
+/** "18:00–02:00" isolated left-to-right, so RTL text never flips it to "02:00–18:00" */
+export const hmRange = (a: string, b: string) => `⁦${a}–${b}⁩`;

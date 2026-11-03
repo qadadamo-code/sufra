@@ -11,7 +11,7 @@ import { useHr, useNow } from "./useHr";
 import { HrError, punch } from "./ops";
 import { presence } from "./lib/attendance";
 import { addDays, dateRange, hm, weekStart } from "./lib/tz";
-import { STATION, minutesText } from "./labels";
+import { STATION, minutesText, hmRange } from "./labels";
 import { PersonPhoto, Section, useDateFmt } from "./ui";
 import { AdvanceCard, AttendanceSummary, DayList, LeaveBalanceCards, LeaveRequestRow, PayslipList, useMonthAttendance } from "./components";
 import { AdvanceRequestDialog, LeaveRequestDialog, SwapRequestDialog } from "./forms";
@@ -117,7 +117,7 @@ function ClockCard() {
           <p className="num mt-1 font-display text-[40px] font-semibold leading-none">{new Date(now).toLocaleTimeString(lang === "ar" ? "ar-EG-u-nu-latn" : "en-GB", { hour: "numeric", minute: "2-digit", timeZone: hr.tz })}</p>
           <p className="mt-2 text-[14px]">
             {today ? (
-              <span className="num">{L("ورديتك النهارده", "Today's shift")} <b>{today.start}–{today.end}</b>{today.station ? ` · ${STATION[today.station]?.[lang] ?? today.station}` : ""}</span>
+              <span className="num">{L("ورديتك النهارده", "Today's shift")} <b>{hmRange(today.start, today.end)}</b>{today.station ? ` · ${STATION[today.station]?.[lang] ?? today.station}` : ""}</span>
             ) : (
               <span className="text-muted">{L("مفيش وردية ليك النهارده", "No shift for you today")}</span>
             )}
@@ -174,7 +174,7 @@ function MyWeek() {
               <div className={cn("flex items-center gap-3 rounded-2xl border px-3 py-2.5", d === hr.today ? "border-brass bg-brass-soft/40" : "border-line", !s.length && "opacity-60")}>
                 <span className="w-24 shrink-0 text-[13.5px] font-semibold">{f.day(d)}</span>
                 <span className="num min-w-0 flex-1 text-[14.5px]">
-                  {s.length ? s.map((x) => <b key={x.id} className="me-2">{x.start}–{x.end}</b>) : L("راحة", "Off")}
+                  {s.length ? s.map((x) => <b key={x.id} className="me-2">{hmRange(x.start, x.end)}</b>) : L("راحة", "Off")}
                   {s[0]?.station ? <span className="text-[12.5px] text-muted"> · {STATION[s[0].station]?.[lang]}</span> : null}
                 </span>
                 {pending ? <Badge tone="warn" size="sm">{L("طلب تبديل", "Swap asked")}</Badge> : s.length && d >= hr.today ? (
@@ -189,7 +189,7 @@ function MyWeek() {
         <div className="mt-4 rounded-2xl bg-surface-2 p-3">
           <p className="mb-1 text-[13.5px] font-semibold">{L("ورديات مفتوحة محتاجة حد", "Open shifts that need someone")}</p>
           {open.map((s) => (
-            <p key={s.id} className="num text-[13.5px] text-muted">{f.day(s.date)} · {s.start}–{s.end}{s.note ? ` · ${s.note}` : ""} — {L("كلّم المدير", "ask your manager")}</p>
+            <p key={s.id} className="num text-[13.5px] text-muted">{f.day(s.date)} · {hmRange(s.start, s.end)}{s.note ? ` · ${s.note}` : ""} — {L("كلّم المدير", "ask your manager")}</p>
           ))}
         </div>
       ) : null}

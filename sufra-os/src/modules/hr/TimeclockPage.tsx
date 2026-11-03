@@ -14,7 +14,7 @@ import { useHr, useNow } from "./useHr";
 import { punch } from "./ops";
 import { presence } from "./lib/attendance";
 import { snapshot } from "./image";
-import { minutesText } from "./labels";
+import { minutesText, hmRange } from "./labels";
 import { PersonPhoto } from "./ui";
 
 type Step = { k: "pick" } | { k: "pin"; m: Membership } | { k: "selfie"; m: Membership } | { k: "done"; m: Membership; kind: "in" | "out" | "break_start" | "break_end" };
@@ -70,7 +70,7 @@ export default function TimeclockPage() {
                   <button type="button" onClick={() => { setErr(null); setStep({ k: "pin", m }); }} className={cn("flex w-full flex-col items-center gap-2 rounded-[20px] border bg-surface p-4 shadow-sf-sm transition-transform active:scale-[0.98]", h ? "border-ok/50" : "border-line")}>
                     <PersonPhoto m={m} p={hr.profileOf(m.id)} size="lg" status={h ? (h.state === "in" ? "online" : "away") : null} />
                     <span className="max-w-full truncate text-[15px] font-bold">{m.name}</span>
-                    <span className="num text-[12.5px] text-muted">{h ? L(`جوه من ${minutesText(Math.floor((now - Date.parse(h.since)) / 60000), lang)}`, `in for ${minutesText(Math.floor((now - Date.parse(h.since)) / 60000), lang)}`) : sh ? `${sh.start}–${sh.end}` : "—"}</span>
+                    <span className="num text-[12.5px] text-muted">{h ? L(`جوه من ${minutesText(Math.floor((now - Date.parse(h.since)) / 60000), lang)}`, `in for ${minutesText(Math.floor((now - Date.parse(h.since)) / 60000), lang)}`) : sh ? hmRange(sh.start, sh.end) : "—"}</span>
                   </button>
                 </li>
               );

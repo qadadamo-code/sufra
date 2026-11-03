@@ -10,7 +10,7 @@ import { useHr } from "@/modules/hr/useHr";
 import { copyWeek, decideSwap, publishWeek, saveShift, moveShift } from "@/modules/hr/ops";
 import { addDays, dateRange, hm, weekStart, weekday } from "@/modules/hr/lib/tz";
 import { effectiveComp } from "@/modules/hr/lib/payroll";
-import { STATION, SWAP_STATUS } from "@/modules/hr/labels";
+import { STATION, SWAP_STATUS, hmRange } from "@/modules/hr/labels";
 import { PersonPhoto, Section, useDateFmt } from "@/modules/hr/ui";
 
 const shiftHours = (s: Pick<RotaShift, "start" | "end" | "breakMin">) => {
@@ -104,7 +104,7 @@ export default function SchedulePage() {
               style={{ borderInlineStartColor: tplColor(s) }}
               title={s.published ? undefined : L("مسودة — مش منشور", "Draft — not published")}
             >
-              <span className="num block font-bold">{s.start}–{s.end}</span>
+              <span className="num block font-bold">{hmRange(s.start, s.end)}</span>
               <span className="block truncate text-muted">{s.station ? (STATION[s.station]?.[lang] ?? s.station) : ""}{s.note ? ` · ${s.note}` : ""}</span>
             </button>
           ))}
@@ -181,7 +181,7 @@ export default function SchedulePage() {
           {templates.map((t) => (
             <span key={t.id} draggable onDragStart={() => setDrag({ kind: "tpl", tpl: t })} className="num inline-flex h-9 cursor-grab items-center gap-1.5 rounded-full border border-line bg-surface px-3 text-[13px] font-semibold shadow-sf-sm active:cursor-grabbing">
               <span className="size-2.5 rounded-full" style={{ background: t.color }} />
-              {t.name[lang]} {t.start}–{t.end}
+              {t.name[lang]} {hmRange(t.start, t.end)}
             </span>
           ))}
         </div>
@@ -239,7 +239,7 @@ export default function SchedulePage() {
                 <li key={sw.id} className="flex flex-wrap items-center gap-3 py-2.5">
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold">{from?.name} → {to?.name ?? L("أي حد", "anyone")}</p>
-                    <p className="num text-[13px] text-muted">{sh ? `${f.day(sh.date)} ${sh.start}–${sh.end}` : ""} · {sw.reason}</p>
+                    <p className="num text-[13px] text-muted">{sh ? `${f.day(sh.date)} ${hmRange(sh.start, sh.end)}` : ""} · {sw.reason}</p>
                   </div>
                   <Badge tone={SWAP_STATUS[sw.status].tone}>{SWAP_STATUS[sw.status].label[lang]}</Badge>
                   {hr.canManage ? (
@@ -290,7 +290,7 @@ function ShiftDialog({ shift, templates, onClose }: { shift: Partial<RotaShift>;
           {templates.map((t) => (
             <button key={t.id} type="button" onClick={() => setS({ ...s, start: t.start, end: t.end, breakMin: t.breakMin, templateId: t.id, station: s.station ?? t.station })} className={cn("num inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-[12.5px] font-semibold", s.templateId === t.id ? "border-primary bg-primary-soft text-primary" : "border-line")}>
               <span className="size-2 rounded-full" style={{ background: t.color }} />
-              {t.name[lang]} {t.start}–{t.end}
+              {t.name[lang]} {hmRange(t.start, t.end)}
             </button>
           ))}
         </div>
