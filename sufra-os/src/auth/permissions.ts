@@ -44,6 +44,11 @@ export const PERMISSIONS = [
   "marketing.view",
   "marketing.manage",
   "ads.buy", // buy Sufra sponsored placements (spends money)
+  // inventory & purchasing (Wave 3)
+  "inventory.view", // stock, recipes, reports
+  "inventory.count", // stock counts, waste, receiving deliveries
+  "inventory.manage", // items, recipes, transfers, production, approve counts
+  "purchasing.manage", // suppliers, purchase orders, supplier invoices & payments
   // management
   "dashboard.view",
   "reports.view",
@@ -93,10 +98,10 @@ export const MATRIX: Record<Role, ReadonlySet<Permission>> = {
     "messages.use",
   ),
   waiter: only(...SERVICE_BASE, "waiter.use", "orders.create", "orders.edit", "orders.transfer", "checks.split", "floor.manage", "reservations.manage", "customers.edit"),
-  chef: only("kitchen.view", "kitchen.bump", "menu.availability", "menu.edit", "reports.view", "staff.view"),
-  kitchen: only("kitchen.view", "kitchen.bump", "menu.availability"),
+  chef: only("kitchen.view", "kitchen.bump", "menu.availability", "menu.edit", "reports.view", "staff.view", "inventory.view", "inventory.count", "inventory.manage"),
+  kitchen: only("kitchen.view", "kitchen.bump", "menu.availability", "inventory.count"),
   delivery: only("delivery.view", "delivery.run", "customers.view"),
-  accountant: only("dashboard.view", "reports.view", "reports.financial", "accounting.view", "accounting.post", "audit.view", "staff.view", "staff.payroll", "settings.view", "customers.view", "marketing.view"),
+  accountant: only("dashboard.view", "reports.view", "reports.financial", "accounting.view", "accounting.post", "audit.view", "staff.view", "staff.payroll", "settings.view", "customers.view", "marketing.view", "inventory.view", "purchasing.manage"),
   platform_admin: only("platform.admin"),
 };
 

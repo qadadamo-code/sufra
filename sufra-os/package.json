@@ -13,6 +13,8 @@
     "gen:seed": "tsx scripts/gen-seed-sql.ts"
   },
   "dependencies": {
+    "@noble/curves": "2.4.0",
+    "@noble/hashes": "2.4.0",
     "@supabase/supabase-js": "^2.118.0",
     "clsx": "^2.1.1",
     "leaflet": "^1.9.4",

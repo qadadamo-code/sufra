@@ -16,9 +16,21 @@ import type {
   AdBooking, AdSlot, Campaign, CampaignMessage, Consent, CouponCode, GiftCard, GiftCardTxn, GuestFeedback, Journey, LeadSource, LoyaltyEntry, LoyaltyProgram,
   MarketProfile, PromoBanner, PromoRedemption, Promotion, ReceiptPromoBlock, Referral, Segment,
 } from "./crmTypes";
+import type {
+  Advance, AttendanceDevice, AttendancePunch, LeaveBalance, LeaveRequest, PayrollAdjustment, PayrollRun, Payslip, RotaShift, ShiftSwap, ShiftTemplate, StaffProfile,
+} from "./hrTypes";
+import type {
+  AvailabilityWindow, ComboComponent, GoodsReceipt, InventorySettings, PurchaseOrder, Recipe, SalesChannel, StockBatch, StockCount, StockItem, StockLevel, StockMove, StockTransfer,
+  StorageLocation, Supplier, SupplierInvoice, SupplierItem, SupplierPayment,
+} from "./inventoryTypes";
+import type { Camera, PeopleCount, RadioClip, SupportTicket, OpsSettings, OpsAck } from "@/modules/ops/types";
+import type { AccountingSettings, BankStatementLine, CashAccount, CashTransfer, CostCentre, Expense, GlAccount, JournalDraft, RecurringExpense } from "./accountingTypes";
 
 export type { Units, Currency, Role };
 export * from "./crmTypes";
+export * from "./hrTypes";
+export * from "./inventoryTypes";
+export * from "./accountingTypes";
 
 export interface Localized {
   ar: string;
@@ -85,6 +97,24 @@ export interface StaffCompensation extends TenantRow {
   membershipId: string;
   monthlySalary: Units;
   hourlyRate: Units;
+  /* HR & payroll (0010_hr.sql) — all optional; defaults in src/modules/hr/lib/comp.ts */
+  salaryType?: import("./hrTypes").SalaryType;
+  /** daily-paid staff (عمالة يومية) */
+  dailyRate?: Units;
+  allowances?: { housing: Units; transport: Units; meal: Units; other: Units };
+  /** declared insurable wage (أجر الاشتراك); null = basic + fixed allowances, clamped to the legal bounds */
+  insurableWage?: Units | null;
+  insured?: boolean;
+  /** KSA: GOSI scheme for Saudi nationals ("legacy" before Jul 2024, "new" entrants after) */
+  gosiScheme?: "legacy" | "new";
+  /** service-charge pool points (نقاط الخدمة) */
+  servicePoints?: number;
+  /** shares the POS tips pool */
+  tipsEligible?: boolean;
+  payMethod?: import("./hrTypes").PayMethod;
+  bankName?: string | null;
+  iban?: string | null;
+  walletNumber?: string | null;
 }
 
 /* ───────────── Floor ───────────── */
@@ -208,6 +238,19 @@ export interface MenuItem extends TenantRow {
   imageUrl: string | null;
   sort: number;
   active: boolean;
+  /* menu manager (0012_inventory.sql) — optional so older rows stay valid */
+  /** price per sales channel (missing = `price`) */
+  channelPrices?: Partial<Record<SalesChannel, Units>>;
+  /** price per branch (missing = `price`); a channel price wins over a branch price */
+  branchPrices?: Record<string, Units>;
+  /** only sold inside these windows (breakfast 07:00–12:00); empty/missing = whenever open */
+  schedule?: AvailabilityWindow[];
+  allergens?: string[];
+  calories?: number | null;
+  /** a combo/meal: selling it deducts each component's recipe */
+  comboOf?: ComboComponent[];
+  /** hidden from these channels (e.g. not on aggregators) */
+  hiddenOn?: SalesChannel[];
 }
 
 export interface ModifierGroup extends TenantRow {
@@ -535,6 +578,10 @@ export interface Settings extends TenantRow {
   delivery?: DeliverySettings;
   /** WhatsApp / customer messaging. Optional: 0007_messaging.sql (defaults in src/lib/notify/settings.ts) */
   messaging?: import("@/lib/notify/settings").MessagingSettings;
+  /** HR, attendance & payroll rules. Optional: 0010_hr.sql (defaults in src/modules/hr/lib/settings.ts) */
+  hr?: import("@/modules/hr/lib/settings").HrSettings;
+  /** inventory & purchasing. Optional: 0012_inventory.sql (defaults in src/modules/inventory/settings.ts) */
+  inventory?: InventorySettings;
 }
 
 export interface AuditEntry extends TenantRow {
@@ -991,6 +1038,51 @@ export interface Collections {
   marketProfiles: MarketProfile;
   adSlots: AdSlot;
   adBookings: AdBooking;
+  /* HR, attendance & payroll (0010_hr.sql) */
+  staffProfiles: StaffProfile;
+  shiftTemplates: ShiftTemplate;
+  rotaShifts: RotaShift;
+  shiftSwaps: ShiftSwap;
+  attendancePunches: AttendancePunch;
+  attendanceDevices: AttendanceDevice;
+  leaveRequests: LeaveRequest;
+  leaveBalances: LeaveBalance;
+  advances: Advance;
+  payrollAdjustments: PayrollAdjustment;
+  payrollRuns: PayrollRun;
+  payslips: Payslip;
+  /* Inventory, recipes & purchasing (0012_inventory.sql) */
+  stockItems: StockItem;
+  storageLocations: StorageLocation;
+  stockLevels: StockLevel;
+  stockMoves: StockMove;
+  recipes: Recipe;
+  stockBatches: StockBatch;
+  suppliers: Supplier;
+  supplierItems: SupplierItem;
+  purchaseOrders: PurchaseOrder;
+  goodsReceipts: GoodsReceipt;
+  supplierInvoices: SupplierInvoice;
+  supplierPayments: SupplierPayment;
+  stockCounts: StockCount;
+  stockTransfers: StockTransfer;
+  /* Wave 3 ops: cameras, walkie-talkie, support desk, alerts (0013_ops.sql) */
+  cameras: Camera;
+  peopleCounts: PeopleCount;
+  radioClips: RadioClip;
+  supportTickets: SupportTicket;
+  opsSettings: OpsSettings;
+  opsAcks: OpsAck;
+  /* Accounting, cash & liquidity (0011_accounting.sql) */
+  glAccounts: GlAccount;
+  costCentres: CostCentre;
+  journalDrafts: JournalDraft;
+  accountingSettings: AccountingSettings;
+  cashAccounts: CashAccount;
+  cashTransfers: CashTransfer;
+  expenses: Expense;
+  recurringExpenses: RecurringExpense;
+  bankLines: BankStatementLine;
 }
 export type CollectionName = keyof Collections;
 export type RowOf<C extends CollectionName> = Collections[C];
@@ -1050,5 +1142,46 @@ export const TABLE_NAMES: { [C in CollectionName]: string } = {
   marketProfiles: "market_profiles",
   adSlots: "ad_slots",
   adBookings: "ad_bookings",
+  staffProfiles: "staff_profiles",
+  shiftTemplates: "shift_templates",
+  rotaShifts: "rota_shifts",
+  shiftSwaps: "shift_swaps",
+  attendancePunches: "attendance_punches",
+  attendanceDevices: "attendance_devices",
+  leaveRequests: "leave_requests",
+  leaveBalances: "leave_balances",
+  advances: "staff_advances",
+  payrollAdjustments: "payroll_adjustments",
+  payrollRuns: "payroll_runs",
+  payslips: "payslips",
+  stockItems: "stock_items",
+  storageLocations: "storage_locations",
+  stockLevels: "stock_levels",
+  stockMoves: "stock_moves",
+  recipes: "recipes",
+  stockBatches: "stock_batches",
+  suppliers: "suppliers",
+  supplierItems: "supplier_items",
+  purchaseOrders: "purchase_orders",
+  goodsReceipts: "goods_receipts",
+  supplierInvoices: "supplier_invoices",
+  supplierPayments: "supplier_payments",
+  stockCounts: "stock_counts",
+  stockTransfers: "stock_transfers",
+  cameras: "cameras",
+  peopleCounts: "people_counts",
+  radioClips: "radio_clips",
+  supportTickets: "support_tickets",
+  opsSettings: "ops_settings",
+  opsAcks: "ops_acks",
+  glAccounts: "gl_accounts",
+  costCentres: "cost_centres",
+  journalDrafts: "journal_drafts",
+  accountingSettings: "accounting_settings",
+  cashAccounts: "cash_accounts",
+  cashTransfers: "cash_transfers",
+  expenses: "expenses",
+  recurringExpenses: "recurring_expenses",
+  bankLines: "bank_statement_lines",
 };
 export const COLLECTIONS = Object.keys(TABLE_NAMES) as CollectionName[];
