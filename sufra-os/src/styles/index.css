@@ -181,3 +181,10 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Phones: the floating walk-talkie button must never hide the last content on a page. */
+@media (max-width: 767.98px) {
+  body:has([data-ptt-fab]) main {
+    padding-bottom: calc(9.5rem + env(safe-area-inset-bottom));
+  }
+}

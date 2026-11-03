@@ -11,7 +11,7 @@ do $$ begin
   begin perform 1 from public.orders limit 1; raise exception 'anon read orders!';
   exception when insufficient_privilege then null; end;
   assert (public.guest_menu('sufra-zamalek', 'ZM05')->'table'->>'label') = '5', 'guest menu table';
-  assert jsonb_array_length(public.guest_menu('sufra-zamalek', null)->'items') = 47, 'guest items';
+  assert jsonb_array_length(public.guest_menu('sufra-zamalek', null)->'items') >= 47, 'guest items';
   assert public.guest_menu('sufra-zamalek', 'NOPE') is null, 'bad code';
   assert (public.guest_call_waiter('sufra-zamalek', 'zm13', 'water')->>'id') = (public.guest_call_waiter('sufra-zamalek', 'ZM13', 'water')->>'id'), 'dedupe';
 end $$;

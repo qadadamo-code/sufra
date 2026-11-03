@@ -24,7 +24,7 @@ do $$ declare rid uuid := (select id from public.restaurants where slug = 'sufra
   assert (select count(*) from public.ad_bookings) = 2, 'owner sees own 2 bookings';
   assert (select count(*) from public.customers) >= 60, 'owner sees customers';
   assert (select count(*) from public.loyalty_ledger) > 100, 'owner sees ledger';
-  assert (select count(*) from public.restaurants) = 1, 'owner sees one restaurant';
+  assert (select count(*) from public.restaurants) = (select count(distinct restaurant_id) from public.memberships where user_id = auth.uid()), 'owner sees only own restaurants';
   assert array_length(public.ad_slot_availability((select id from public.ad_slots where type = 'home_banner'), current_date, current_date + 2), 1) = 3, 'home banner full today';
   select id into b from public.ad_bookings where status = 'requested' limit 1;
   update public.ad_bookings set status = 'live' where id = b;
