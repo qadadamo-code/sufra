@@ -517,7 +517,7 @@ export async function sendCampaign(db: Db, campaign: Campaign, ctx: SendContext)
     else if (status === "queued") queued++;
     else sent++;
     await db.insert("campaignMessages", {
-      campaignId: campaign.id, variantId: v.id, customerId: c.id, to: c.phone, text, code, status, link: url, sentAt: status === "queued" ? null : nowIso(), readAt: null, redeemedAt: null, revenue: 0,
+      campaignId: campaign.id, variantId: v.id, customerId: c.id, phone: c.phone, text, code, status, link: url, sentAt: status === "queued" ? null : nowIso(), readAt: null, redeemedAt: null, revenue: 0,
     });
   }
   await db.update("campaigns", campaign.id, { status: "sent", sentAt: nowIso() });
@@ -599,7 +599,7 @@ export async function runJourneys(db: Db, ctx: SendContext, now = new Date()): P
       if (promo && code) await db.insert("couponCodes", { promotionId: promo.id, code, customerId: c.id, campaignId: camp.id, usedAt: null, checkId: null, expiresAt: new Date(now.getTime() + 14 * DAY).toISOString() });
       const text = renderText(j.text[ctx.lang] || j.text.ar, { name: c.name.split(" ")[0], restaurant: ctx.restaurantName, code, points: c.loyaltyPoints, link: `${ctx.origin}${import.meta.env?.BASE_URL ?? "/app/"}r/${ctx.slug}/me` });
       const status = await deliver(svc, db, c, text, { code, offer: promo ? (promo.name[ctx.lang] || promo.name.ar) : "", link: `${ctx.origin}${import.meta.env?.BASE_URL ?? "/app/"}r/${ctx.slug}/me`, restaurant: ctx.restaurantName, lang: ctx.lang, channel: j.channel, dedupeKey: `journey:${j.id}:${c.id}:${now.toISOString().slice(0, 7)}` });
-      await db.insert("campaignMessages", { campaignId: camp.id, variantId: "a", customerId: c.id, to: c.phone, text, code, status, link: clickToChatUrl(c.phone, text), sentAt: status === "queued" ? null : nowIso(), readAt: null, redeemedAt: null, revenue: 0 });
+      await db.insert("campaignMessages", { campaignId: camp.id, variantId: "a", customerId: c.id, phone: c.phone, text, code, status, link: clickToChatUrl(c.phone, text), sentAt: status === "queued" ? null : nowIso(), readAt: null, redeemedAt: null, revenue: 0 });
       if (j.trigger === "birthday") {
         const program = await loadProgram(db);
         const bonus = rulesOf(program).birthdayBonus;

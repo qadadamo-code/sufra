@@ -270,7 +270,7 @@ export function demoCrmRows(c: Ctx) {
       const first = cu.name.split(" ")[0];
       const text = variant.text.ar.replace("{name}", first).replace("{code}", code ?? "").replace("{link}", "sufra.app/r/sufra-zamalek");
       campaignMessages.push({
-        ...base(`cmsg:${camp.id}:${cu.id}`, sentDaysAgo * DAY), campaignId: camp.id, variantId: variant.id, customerId: cu.id, to: cu.phone, text, code, status: st,
+        ...base(`cmsg:${camp.id}:${cu.id}`, sentDaysAgo * DAY), campaignId: camp.id, variantId: variant.id, customerId: cu.id, phone: cu.phone, text, code, status: st,
         link: null, sentAt, readAt: st === "read" ? c.T(sentDaysAgo * DAY - 90 - i) : null, redeemedAt: redeemed ? c.T((sentDaysAgo - 3) * DAY) : null, revenue,
       });
       if (code) couponCodes.push({ ...base(`code:${camp.id}:${cu.id}`, sentDaysAgo * DAY), promotionId: camp.promotionId!, code, customerId: cu.id, campaignId: camp.id, usedAt: redeemed ? c.T((sentDaysAgo - 3) * DAY) : null, checkId: null, expiresAt: c.T((sentDaysAgo - 30) * DAY) });

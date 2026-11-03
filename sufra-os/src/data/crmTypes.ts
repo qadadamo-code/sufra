@@ -182,7 +182,7 @@ export interface CampaignMessage extends TenantRow {
   campaignId: string;
   variantId: string;
   customerId: string;
-  to: string;
+  phone: string;
   text: string;
   code: string | null;
   status: MessageStatus;

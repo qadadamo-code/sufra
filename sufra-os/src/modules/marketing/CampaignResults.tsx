@@ -117,7 +117,7 @@ export default function CampaignResults() {
           <ul className="grid gap-2 sm:grid-cols-2">
             {queued.slice(0, 40).map((m) => (
               <li key={m.id} className="flex items-center gap-2 rounded-xl border border-line px-3 py-2 text-[13.5px]">
-                <span className="min-w-0 flex-1 truncate">{customers.find((x) => x.id === m.customerId)?.name ?? m.to}</span>
+                <span className="min-w-0 flex-1 truncate">{customers.find((x) => x.id === m.customerId)?.name ?? m.phone}</span>
                 {m.link ? (
                   <a href={m.link} target="_blank" rel="noreferrer" onClick={() => void db.update("campaignMessages", m.id, { status: "sent", sentAt: new Date().toISOString() })} className="inline-flex items-center gap-1 font-semibold text-primary">
                     {L("افتح", "Open")} <ExternalLink className="size-3.5" />
@@ -134,7 +134,7 @@ export default function CampaignResults() {
           {msgs.map((m) => (
             <li key={m.id} className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 rounded-xl px-2 py-1.5 hover:bg-surface-2">
               <span className="truncate">
-                <Link to={`/customers/${m.customerId}`} className="font-semibold hover:underline">{customers.find((x) => x.id === m.customerId)?.name ?? m.to}</Link>
+                <Link to={`/customers/${m.customerId}`} className="font-semibold hover:underline">{customers.find((x) => x.id === m.customerId)?.name ?? m.phone}</Link>
                 {m.code ? <span className="num ms-2 text-muted" dir="ltr">{m.code}</span> : null}
               </span>
               <Badge size="sm" tone={m.status === "read" ? "ok" : m.status === "failed" ? "danger" : m.status === "queued" ? "warn" : "info"}>{m.status}</Badge>
