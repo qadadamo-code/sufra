@@ -22,6 +22,7 @@ import { nowIso } from "@/lib/time";
 import { freezeBill, toFinanceBill, toFinancePayments } from "@/lib/receipt/bill";
 import { etaConfig, etaSettingsOf, issueEtaReceipt, EtaValidationError } from "@/lib/receipt/eta";
 import { loadTicket } from "./ops";
+import { onCheckPaid } from "@/modules/marketing/ops";
 import { remaining, toPiastre } from "./math";
 
 /* ───────── device ───────── */
@@ -192,10 +193,8 @@ export async function closeCheck(db: Db, checkId: string, opts: { shift: Shift |
     const others = (await db.list("checks", { where: { status: ["open", "bill_requested"] }, contains: { tableIds: tid } })).filter((c) => c.id !== checkId);
     if (!others.length) await setTableStatus(db, tid, "dirty");
   }
-  if (t.check.customerId) {
-    const c = await db.get("customers", t.check.customerId);
-    if (c) await db.update("customers", c.id, { visits: c.visits + 1, lastVisitAt: now, totalSpent: c.totalSpent + frozen.payable, loyaltyPoints: c.loyaltyPoints + Math.floor(frozen.payable / 2_000_000) });
-  }
+  // CRM hook: visit + points (program rules, tiers, stamps), promo redemptions finalized, referral / campaign attribution
+  await onCheckPaid(db, checkId, { total: frozen.payable }).catch((e) => db.audit("loyalty.error", "checks", checkId, { error: String((e as Error).message ?? e) }));
   const ledgerError = await post(db, t.check.branchId, (l) =>
     postSale(l, bill, toFinancePayments(tenders), { date: businessDate(), receiptId: receipt.receiptNo, branch: t.check.branchId, drawer: opts.device }),
   );

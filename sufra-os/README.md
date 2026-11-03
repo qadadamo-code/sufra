@@ -192,6 +192,21 @@ DemoProvider simulates everything. Owner setup (env vars, webhook URLs, document
 design + sources: `src/modules/guest/pay/DESIGN.md`; schema `supabase/migrations/0008_payments.sql`
 (`supabase/tests/payments_run.sh`).
 
+## WhatsApp & messaging (`src/modules/messaging`, `src/lib/notify`, `/api/whatsapp-*`)
+
+- **Channels** (Settings → Messaging): off · **click-to-chat** (`wa.me/<E.164>?text=…`, works with no Meta account — staff tap send) ·
+  **WhatsApp Cloud API** (through `api/whatsapp-send.ts`; token in Vercel env / Supabase Vault, never in the browser) · BSP (360dialog via the
+  same API; Unifonic/Infobip/Twilio documented stubs). `notifierFor(settings)` picks the adapter; all share the `Notifier` interface.
+- **Inbox** (`/messages`): conversations per customer, unread, assign, 24h-window badge, quick replies, attach a menu item / offer,
+  send an order status or a template, record consent; **Templates** (AR/EN preview, Meta review status, copy the submission JSON);
+  **Opt-in** register; **Message log** with delivery ticks and cost estimate. Nav badge = unread + click-to-chat messages waiting.
+- **Rules** (`MessagingService`): STOP/إلغاء/وقف opts out (and confirms), marketing needs explicit opt-in, Utility allowed for the
+  customer's own order, free text via the API only inside the 24h window, marketing postponed in quiet hours, dedupe per `orderId:stage`.
+- **Automation**: delivery's `notifyOrderStage()` goes through it (`registerOrderNotifier()` at start-up); a feedback request is
+  scheduled after delivery / a paid visit. Webhook `api/whatsapp-webhook.ts` (HMAC `X-Hub-Signature-256`) → `messaging_ingest_webhook()`.
+- Schema `supabase/migrations/0007_messaging.sql` (+ `supabase/tests/messaging_test.sql`). Setup, env vars and Meta steps:
+  [`docs/WHATSAPP-SETUP.md`](docs/WHATSAPP-SETUP.md). Screenshots: `node scripts/shots-messaging.mjs <base> <dir>`.
+
 ## Design system (`src/ui`)
 
 Tokens in `src/styles/index.css` (same identity as sufra-web: sage-stone neutrals, deep teal, brass; Reem Kufi / IBM Plex Sans Arabic /

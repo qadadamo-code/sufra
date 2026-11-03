@@ -126,4 +126,4 @@ export function sameLine(a: Pick<OrderItem, "itemId" | "modifiers" | "notes" | "
 }
 
 /** Tender buttons shown in the payment sheet. */
-export const TENDERS: PaymentMethod[] = ["cash", "card", "wallet", "instapay", "online"];
+export const TENDERS: PaymentMethod[] = ["cash", "card", "wallet", "instapay", "online", "gift_card"];

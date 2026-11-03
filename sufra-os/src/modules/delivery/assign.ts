@@ -87,7 +87,18 @@ export function suggestDrivers(order: { id: string; to: LatLng | null; prepLeftM
       if (near && !onRoad.length) {
         reason = "batch";
         batchWith = waiting.map((l) => l.orderId);
-      } else reason = "full"; // holding orders that go elsewhere
+      } else {
+        // holding orders that go elsewhere: those drops first, then back to the kitchen
+        reason = "full";
+        let at = p.origin;
+        let m = atKitchenMin;
+        for (const l of waiting) {
+          if (!l.to) continue;
+          m += travelMinutes(at, l.to, p.speedKmh);
+          at = l.to;
+        }
+        atKitchenMin = m + travelMinutes(at, p.origin, p.speedKmh, { handover: false });
+      }
     }
     if (others.length >= p.maxBatch) reason = "full";
     const leaveIn = Math.max(atKitchenMin, order.prepLeftMin);

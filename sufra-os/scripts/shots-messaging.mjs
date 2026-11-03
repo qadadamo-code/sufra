@@ -29,7 +29,7 @@ for (const [w, theme, lang] of combos) {
   const page = await ctx.newPage();
   page.on("pageerror", (e) => errors.push(`${tag}: ${e.message}`));
   page.on("console", (m) => m.type() === "error" && !/Failed to load resource|api\/whatsapp/.test(m.text()) && errors.push(`${tag} console: ${m.text()}`));
-  const shot = async (name) => { await page.waitForTimeout(600); await page.screenshot({ path: `${OUT}/${name}-${tag}.png` }); console.log("✓", name, tag); };
+  const shot = async (name) => { await page.waitForTimeout(1200); await page.screenshot({ path: `${OUT}/${name}-${tag}.png` }); console.log("✓", name, tag); };
   // login as cashier (messages.use) — owner for settings
   const login = async (name, pin) => {
     await page.goto(BASE + "login/pin", { waitUntil: "networkidle" });

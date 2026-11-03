@@ -69,7 +69,7 @@ export function WindowBadge({ lastInboundAt, mode, compact }: { lastInboundAt: s
   const { L, lang } = useT();
   const w = windowState(lastInboundAt);
   if (mode === "click_to_chat" || mode === "off") {
-    return compact ? null : <Badge tone="neutral" size="sm">{L("إرسال من واتساب الجهاز", "Sends from this device's WhatsApp")}</Badge>;
+    return compact ? null : <Badge tone="neutral" size="sm">{L("من واتساب الجهاز", "Via this device's WhatsApp")}</Badge>;
   }
   if (!w.open) return <Badge tone="neutral" size="sm" icon={<Clock />}>{compact ? L("قوالب بس", "Templates only") : L("النافذة مقفولة — قوالب بس", "Window closed — templates only")}</Badge>;
   return (

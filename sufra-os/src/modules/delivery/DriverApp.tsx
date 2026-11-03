@@ -24,7 +24,7 @@ export default function DriverApp() {
   const { staff } = useSession();
   const { toast } = useToast();
   const data = useDeliveryData();
-  const now = useNow(30_000);
+  useNow(30_000); // keeps "due" times and distances fresh
   const me = staff?.id ?? null;
   const shift = data.shifts.find((s) => s.driverId === me && s.status === "on") ?? null;
   const mine = data.views.filter((v) => v.order.driverId === me);
@@ -95,7 +95,7 @@ export default function DriverApp() {
         <ul className="grid gap-3">
           <AnimatePresence initial={false}>
             {queue.map((v, i) => (
-              <RiderCard key={v.order.id} v={v} first={i === 0} shiftId={shift.id} data={data} gps={gps.last} now={now} />
+              <RiderCard key={v.order.id} v={v} first={i === 0} shiftId={shift.id} data={data} gps={gps.last} />
             ))}
           </AnimatePresence>
         </ul>
@@ -147,7 +147,7 @@ function GpsChip({ state }: { state: ReturnType<typeof useRiderGps>["state"] }) 
   );
 }
 
-function RiderCard({ v, first, shiftId, data, gps, now }: { v: OrderView; first: boolean; shiftId: string; data: ReturnType<typeof useDeliveryData>; gps: { lat: number; lng: number } | null; now: number }) {
+function RiderCard({ v, first, shiftId, data, gps }: { v: OrderView; first: boolean; shiftId: string; data: ReturnType<typeof useDeliveryData>; gps: { lat: number; lng: number } | null }) {
   const { L, lang } = useT();
   const db = useDb();
   const { toast } = useToast();
@@ -264,7 +264,6 @@ function RiderCard({ v, first, shiftId, data, gps, now }: { v: OrderView; first:
       </article>
       <DeliverDialog open={deliverOpen} onClose={() => setDeliverOpen(false)} v={v} rule={data.cfg.proof} />
       <FailDialog open={failOpen} onClose={() => setFailOpen(false)} v={v} />
-      <span className="hidden">{now}</span>
     </motion.li>
   );
 }

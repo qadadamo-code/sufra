@@ -120,7 +120,7 @@ function ZonesEditor() {
   };
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
+    <div className="grid gap-4 xl:grid-cols-[360px_minmax(0,1fr)]">
       <div className="grid content-start gap-3">
         <div className="flex items-center gap-2">
           <p className="flex-1 text-[15px] font-bold">{L(`${zones.data.length} منطقة`, `${zones.data.length} zones`)}</p>
@@ -186,7 +186,7 @@ function ZonesEditor() {
         ) : null}
       </div>
 
-      <div className="grid content-start gap-2 lg:sticky lg:top-4 lg:self-start">
+      <div className="order-first grid content-start gap-2 xl:order-none xl:sticky xl:top-4 xl:self-start">
         {draft ? (
           <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-line bg-surface p-2">
             <Segmented
@@ -227,7 +227,7 @@ function ZonesEditor() {
         ) : null}
         <DeliveryMap
           ref={mapRef}
-          className="h-[min(70vh,680px)] rounded-[22px] border border-line shadow-sf-sm"
+          className="h-[440px] rounded-[22px] border border-line shadow-sf-sm xl:h-[min(70vh,680px)]"
           ariaLabel={L("خريطة مناطق التوصيل", "Delivery zones map")}
           shapes={shapes}
           pins={[{ id: "kitchen", kind: "kitchen", lat: origin.lat, lng: origin.lng, label: L("المطبخ", "Kitchen") }]}

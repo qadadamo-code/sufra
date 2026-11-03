@@ -39,9 +39,6 @@ export default function InboxPage() {
         subtitle={L("اقبل الطلب وحدد وقت التجهيز، أو ارفضه بسبب — العميل بيوصله إشعار", "Accept with a prep time or reject with a reason — the customer is notified")}
         actions={
           <>
-            <Button variant="secondary" icon={<Settings2 />} onClick={() => setRules(true)}>
-              {L("القبول التلقائي", "Auto-accept")}
-            </Button>
             <Button variant="secondary" icon={<Receipt />} onClick={() => setAgg(true)}>
               {L("طلب تطبيق", "App order")}
             </Button>
@@ -58,7 +55,9 @@ export default function InboxPage() {
           <div className="flex items-center gap-2">
             <h2 className="font-sans text-[17px] font-bold">{L("مستني رد", "Waiting for you")}</h2>
             {data.inbox.length ? <Badge tone="danger" pulse dot>{data.inbox.length}</Badge> : null}
-            <span className="ms-auto text-[12.5px] text-muted">{autoSummary(data, L)}</span>
+            <button type="button" onClick={() => setRules(true)} className="ms-auto inline-flex min-h-10 items-center gap-1.5 rounded-full px-3 text-[12.5px] text-muted hover:bg-surface-3 hover:text-ink">
+              <Settings2 className="size-4" /> {autoSummary(data, L)}
+            </button>
           </div>
           {data.inbox.length === 0 ? (
             <EmptyState

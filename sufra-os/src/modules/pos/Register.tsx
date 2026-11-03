@@ -34,6 +34,8 @@ import { Stepper } from "./components/bits";
 import { discountPct, lineDiscountUnits } from "./math";
 import { addLine, discardTicket, loadTicket, mergeChecks, moveCheckToTable, moveItems, openTicket, sendToKitchen, setBillDiscount, setLineDiscount, setLineQty, setTicketMeta, splitIntoChecks, updateLine, voidLine, type TicketDraft } from "./ops";
 import { closeCheck, takePayment, voidPayment } from "./sale";
+import { PromoDialog } from "@/modules/marketing/pos/PromoDialog";
+import { redeemGiftCard, refundGiftCard } from "@/modules/marketing/ops";
 import { useMenu, useReceiptSourceBuilder, useSettings, useShift } from "./usePos";
 
 const ACTIVE_KEY = "sufra-os.pos.active";
@@ -95,7 +97,7 @@ export default function Register() {
   /* ── dialogs ── */
   const [modItem, setModItem] = useState<MenuItem | null>(null);
   const [lineItem, setLineItem] = useState<OrderItem | null>(null);
-  const [dlg, setDlg] = useState<null | "table" | "customer" | "discount" | "split" | "pay" | "checks" | "transfer" | "merge" | "moveTable" | "itemsToTable" | "guests" | "shift" | "ticket">(null);
+  const [dlg, setDlg] = useState<null | "table" | "customer" | "discount" | "split" | "pay" | "checks" | "transfer" | "merge" | "moveTable" | "itemsToTable" | "guests" | "shift" | "ticket" | "promo">(null);
   const [shares, setShares] = useState<{ amounts: Units[]; labels: string[] } | null>(null);
   const [receipt, setReceipt] = useState<{ model: ReceiptModel; etaError: string | null; title?: string } | null>(null);
   const pendingItem = useRef<{ item: MenuItem; choice: ModifierChoice | null } | null>(null);
@@ -371,13 +373,20 @@ export default function Register() {
   };
   const tender = async (t: TenderInput) => {
     if (!check) return;
-    await run(() => takePayment(db, check, t));
+    // gift card: take what the card covers, debit its balance (marketing/ops)
+    if (t.method === "gift_card") {
+      const ok = await run(() => redeemGiftCard(db, check, t.reference ?? "", t.amount, (p) => takePayment(db, check, p)));
+      if (!ok) return;
+    } else await run(() => takePayment(db, check, t));
     const fresh = await db.get("checks", check.id);
     if (fresh && fresh.paid >= fresh.total) await finish();
   };
   const voidTender = async (p: Payment) => {
     const who = await approve({ kind: "refund" }, L("إلغاء دفعة", "Void a payment"));
-    if (who) await run(() => voidPayment(db, p));
+    if (who) await run(async () => {
+      await voidPayment(db, p);
+      if (p.method === "gift_card" && p.reference) await refundGiftCard(db, p.id, p.reference, p.amount);
+    });
   };
   const prebill = async () => {
     if (!check || !receiptSrc) return;
@@ -403,6 +412,7 @@ export default function Register() {
       h: k(() => void hold()),
       p: k(pay),
       d: k(() => check && setDlg("discount")),
+      c: k(() => check && setDlg("promo")),
       x: k(() => check && setDlg("split")),
       t: k(() => check && setDlg("transfer")),
       o: k(() => setDlg("checks")),
@@ -415,6 +425,7 @@ export default function Register() {
         h: { ar: "علّق الشيك", en: "Hold check" },
         p: { ar: "ادفع", en: "Pay" },
         d: { ar: "خصم", en: "Discount" },
+        c: { ar: "عروض وكوبونات ونقاط", en: "Offers, coupons & points" },
         x: { ar: "قسّم الشيك", en: "Split check" },
         t: { ar: "نقل", en: "Transfer" },
         o: { ar: "الشيكات المفتوحة", en: "Open checks" },
@@ -494,6 +505,7 @@ export default function Register() {
       onHold={() => void hold()}
       onPay={pay}
       onDiscount={() => setDlg("discount")}
+      onPromo={() => setDlg("promo")}
       onSplit={() => setDlg("split")}
       onTransfer={() => setDlg("transfer")}
       onMerge={() => setDlg("merge")}
@@ -618,6 +630,15 @@ export default function Register() {
         limitPct={policy.discountApprovalPct}
         preview={preview}
         onApply={(d, r) => void applyDiscount(d, r)}
+      />
+      <PromoDialog
+        open={dlg === "promo"}
+        onClose={() => setDlg(null)}
+        check={check}
+        onAttachCustomer={async (customerId) => {
+          const t = await loadTicket(db, check!.id);
+          if (t) await run(() => setTicketMeta(db, t, { customerId }));
+        }}
       />
       <SplitDialog
         open={dlg === "split"}

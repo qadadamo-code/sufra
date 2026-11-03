@@ -11,6 +11,8 @@ import { AnimatedMoney, Badge, Button, Dialog, IconButton, spring, useHotkeys, u
 import { changeDue, quickTenders, remaining, toPiastre, TENDERS } from "../math";
 import { MoneyKeypad } from "./bits";
 import { PayLinkPanel } from "@/modules/payments/PayLinkPanel";
+import { useLive } from "@/data/hooks";
+import { normalizeGiftCode, usable } from "@/lib/promo/giftcards";
 
 const ICON: Record<PaymentMethod, typeof Banknote> = { cash: Banknote, card: CreditCard, wallet: Smartphone, instapay: QrCode, online: Link2, gift_card: Gift };
 
@@ -58,11 +60,14 @@ export function PaymentDialog({ open, onClose, check, payments, shares, tipsEnab
   useEffect(() => setTip(0), [method]);
 
   const isCash = method === "cash";
+  // gift card tender: the code goes in `ref`; the amount is capped at the card's balance (marketing/ops redeemGiftCard)
+  const gc = useLive("giftCards", { where: { code: normalizeGiftCode(ref) } }, { enabled: method === "gift_card" && ref.trim().length >= 6 }).data[0] ?? null;
+  const gcUsable = method === "gift_card" && gc ? usable(gc, due) : 0;
   const isLink = method === "online";
   const apply = Math.min(toPiastre(amount), due);
   const change = isCash ? changeDue(apply, amount) : 0;
   const quick = useMemo(() => quickTenders(shareDue), [shareDue]);
-  const canTake = !busy && due > 0 && amount > 0 && (isCash || amount <= due) && method !== "online";
+  const canTake = !busy && due > 0 && amount > 0 && (isCash || amount <= due) && method !== "online" && (method !== "gift_card" || (gcUsable > 0 && amount <= gcUsable));
 
   const take = async () => {
     if (!canTake) return;
@@ -145,7 +150,7 @@ export function PaymentDialog({ open, onClose, check, payments, shares, tipsEnab
         </div>
 
         <div className="grid content-start gap-4">
-          <div className="grid grid-cols-5 gap-2" role="radiogroup" aria-label={L("طريقة الدفع", "Tender")}>
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-6" role="radiogroup" aria-label={L("طريقة الدفع", "Tender")}>
             {TENDERS.map((m) => {
               const Icon = ICON[m];
               const on = m === method;
@@ -185,7 +190,7 @@ export function PaymentDialog({ open, onClose, check, payments, shares, tipsEnab
             </div>
           ) : (
             <>
-              {tipsEnabled && !isLink ? (
+              {tipsEnabled && !isLink && method !== "gift_card" ? (
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-[13px] font-semibold text-muted">{L("إكرامية", "Tip")}</span>
                   {[0, 500, 1000, 1500].map((bp) => {
@@ -206,7 +211,15 @@ export function PaymentDialog({ open, onClose, check, payments, shares, tipsEnab
               {isLink && check ? (
                 <PayLinkPanel check={check} amount={apply} onPaid={() => onLinkPaid?.()} />
               ) : (
-                <input value={ref} onChange={(e) => setRef(e.target.value)} placeholder={method === "card" ? L("رقم الموافقة / آخر ٤ أرقام (اختياري)", "Auth code / last 4 (optional)") : L("رقم المرجع (اختياري)", "Reference (optional)")} aria-label={L("رقم المرجع", "Reference")} className="h-11 rounded-xl border border-line bg-surface px-3.5 outline-none focus:border-primary focus:shadow-[var(--sf-glow)]" />
+                <>
+                {method === "gift_card" ? (
+                  <p className={cn("rounded-xl px-3 py-2 text-[13px] font-semibold", gc ? (gcUsable ? "bg-ok-soft text-ok" : "bg-danger-soft text-danger") : "bg-surface-2 text-muted")}>
+                    {gc ? (gcUsable ? `${L("رصيد الكارت", "Card balance")} ${formatMoney(gc.balance, { lang })}` : L("الكارت منتهي أو رصيده صفر", "Card expired or empty")) : L("اكتب أو امسح كود الكارت (GC-XXXX-XXXX-X)", "Type or scan the card code (GC-XXXX-XXXX-X)")}
+                    {gc && gcUsable && amount > gcUsable ? <button type="button" className="ms-2 underline" onClick={() => setAmount(gcUsable)}>{L("خد الرصيد", "Use balance")}</button> : null}
+                  </p>
+                ) : null}
+                <input value={ref} onChange={(e) => setRef(e.target.value)} placeholder={method === "gift_card" ? L("كود كارت الهدية", "Gift card code") : method === "card" ? L("رقم الموافقة / آخر ٤ أرقام (اختياري)", "Auth code / last 4 (optional)") : L("رقم المرجع (اختياري)", "Reference (optional)")} aria-label={L("رقم المرجع", "Reference")} className="h-11 rounded-xl border border-line bg-surface px-3.5 outline-none focus:border-primary focus:shadow-[var(--sf-glow)]" />
+                </>
               )}
             </>
           )}

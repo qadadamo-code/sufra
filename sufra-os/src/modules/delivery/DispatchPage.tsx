@@ -199,7 +199,15 @@ function BoardCard({ v, p, batch, data, selected, onOpen, onAssign, now }: { v: 
               </span>
             ) : null}
             {v.column === "done" ? <span>{d.stage === "failed" ? <b className="text-danger">{L("ماتسلّمش", "Failed")}</b> : ago(d.deliveredAt ?? v.order.updatedAt, lang, now)}</span> : null}
-            {v.due > 0 ? <Money value={v.due} compact className="font-bold text-brass-text" /> : <span className="font-semibold text-ok">{L("مدفوع", "Paid")}</span>}
+            {v.column === "done" && d.collected?.method === "cash" && v.check?.status !== "paid" ? (
+              <span className="font-semibold text-brass-text">
+                {L("مع الطيار", "With rider")} <Money value={d.collected.amount} compact />
+              </span>
+            ) : v.due > 0 ? (
+              <Money value={v.due} compact className="font-bold text-brass-text" />
+            ) : (
+              <span className="font-semibold text-ok">{L("مدفوع", "Paid")}</span>
+            )}
           </div>
           {batch && v.column !== "assigned" ? (
             <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-info-soft px-2 py-0.5 text-[11.5px] font-bold text-info">
@@ -222,7 +230,7 @@ function BoardCard({ v, p, batch, data, selected, onOpen, onAssign, now }: { v: 
                 {L("اتسلّم", "Handed over")}
               </Button>
             ) : !counter && (v.column === "ready" || v.column === "preparing" || v.column === "assigned") ? (
-              <Button size="sm" variant={v.column === "ready" && !v.driver ? "primary" : "secondary"} icon={<Bike />} onClick={onAssign}>
+              <Button size="sm" variant={v.column === "ready" && !v.driver ? "primary" : "secondary"} icon={v.driver ? undefined : <Bike />} onClick={onAssign}>
                 {v.driver ? L("غيّر", "Reassign") : L("وزّع", "Assign")}
               </Button>
             ) : null}
