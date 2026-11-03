@@ -15,6 +15,7 @@ import { ErrorBoundary } from "./ErrorBoundary";
 import { ShortcutsDialog } from "./ShortcutsDialog";
 import { Sidebar } from "./Sidebar";
 import { TopBar, useShellTitle } from "./TopBar";
+import { OpsShellExtras } from "@/modules/ops/shell";
 
 const COLLAPSE_KEY = "sufra-os.sidebar";
 
@@ -123,6 +124,8 @@ export function AppShell() {
         </main>
       </div>
       <BottomNav />
+      {/* walkie-talkie runtime + floating PTT button + alert toasts (src/modules/ops) */}
+      <OpsShellExtras />
       <ShortcutsDialog open={help} onClose={() => setHelp(false)} />
     </div>
   );

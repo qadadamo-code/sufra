@@ -191,3 +191,31 @@ export const SERVICE_OUTSIDE_VAT: Pick<TaxProfile, 'serviceCode' | 'vatOnService
   serviceCode: { type: 'T17', subType: 'SC03' },
   vatOnService: false,
 }
+
+/**
+ * Saudi Arabia (ZATCA): VAT 15% (category S), menus are commonly VAT-inclusive, no Egyptian service-charge tax code
+ * (a KSA service charge, if any, is just part of the taxable price). Amounts round to halalas (2 decimals; 1 SAR = 100
+ * halalas = 100 000 units — the same 5-decimal Amount scale). `vatCode` carries the UBL category/scheme instead of an
+ * ETA type/subtype. Confirm per outlet with the accountant like every profile here.
+ */
+export const KSA_PROFILE: TaxProfile = {
+  vatRegistered: true,
+  vatRate: 1500,
+  vatCode: { type: 'S', subType: 'VAT' },
+  serviceRate: 0,
+  serviceModes: [],
+  vatOnService: false,
+  serviceCode: null,
+  priceMode: 'inclusive',
+  vatOnDelivery: true,
+  taxDecimals: 2,
+}
+
+/**
+ * VAT of one category computed on the document's taxable total, rounded half-up once (ZATCA XML Implementation
+ * Standard §9.6 / §10: "VAT category tax amount shall be rounded on document level and not as a summation of rounded
+ * invoice line VAT amounts"). It can differ from Σ line VAT by a halala; e-invoices declare this one.
+ */
+export function documentVat(taxable: Amount, rate: Rate): Amount {
+  return applyRate(taxable, rate, 2)
+}

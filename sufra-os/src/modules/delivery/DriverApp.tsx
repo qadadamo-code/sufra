@@ -17,6 +17,7 @@ import { shiftCash } from "./settle";
 import { useDeliveryData, useNow, type OrderView } from "./useDelivery";
 import { useRiderGps } from "./useRiderGps";
 import { ContactButtons, ItemLines } from "./ui";
+import { DriverRadio } from "@/modules/ops/radio/DriverRadio";
 
 export default function DriverApp() {
   const { L, lang } = useT();
@@ -79,6 +80,8 @@ export default function DriverApp() {
           </div>
         ) : null}
       </section>
+      {/* rider ↔ dispatch push-to-talk (src/modules/ops/radio) */}
+      <DriverRadio />
 
       {gps.state === "denied" ? (
         <p className="flex items-start gap-2 rounded-2xl border border-warn/40 bg-warn-soft px-3 py-2.5 text-[13.5px] text-warn">

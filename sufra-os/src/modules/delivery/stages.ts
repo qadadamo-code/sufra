@@ -11,6 +11,7 @@
  * tracking page keep working, and calls `notifyOrderStage` for the customer.
  */
 import type { Db } from "@/data/hooks";
+import { deductForItems } from "@/modules/inventory/deduct";
 import { recomputeCheck } from "@/data/ops";
 import type { DeliveryStatus, DispatchInfo, DispatchStage, Order, OrderItem } from "@/data/types";
 import { nowIso } from "@/lib/time";
@@ -127,6 +128,7 @@ export async function acceptOrder(db: Db, orderId: string, prepMin: number): Pro
   const t = nowIso();
   // fire before the stage flips, so the kitchen has the tickets when the customer reads "preparing"
   await Promise.all(items.map((i) => db.update("orderItems", i.id, { status: "sent", firedAt: t })));
+  await deductForItems(db, items, { trigger: "send", branchId: o.branchId });
   const promisedAt = o.mode === "dine_in" || o.source === "qr" ? null : promiseFor(o, prepMin, s);
   return advance(db, orderId, "accepted", { prepMin, promisedAt, otp: o.mode === "delivery" ? (dispatchOf(o).otp ?? makeOtp()) : null, expiresAt: null });
 }

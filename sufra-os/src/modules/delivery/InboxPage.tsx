@@ -1,5 +1,6 @@
 /** /delivery — incoming orders that need a decision: accept with a prep time, or reject with a reason. */
 import { useState } from "react";
+import { deductForItems } from "@/modules/inventory/deduct";
 import { Link } from "react-router-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { BellRing, Check, ChefHat, Clock, MapPin, PhoneCall, QrCode, Receipt, Settings2, StickyNote, Volume2, VolumeX, X } from "lucide-react";
@@ -306,6 +307,7 @@ function QrCard({ v }: { v: OrderView }) {
             const items = v.items.filter((i) => i.status === "new");
             const t = new Date().toISOString();
             await Promise.all(items.map((i) => db.update("orderItems", i.id, { status: "sent", firedAt: t })));
+            await deductForItems(db, items, { trigger: "send", branchId: v.order.branchId });
             if (v.order.status === "open") await db.update("orders", v.order.id, { status: "sent" });
             await db.audit("qr.confirm", "orders", v.order.id, { items: items.length });
             toast({ title: L("اتبعت للمطبخ", "Sent to the kitchen"), tone: "success", duration: 2000 });

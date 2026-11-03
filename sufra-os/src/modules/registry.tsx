@@ -21,7 +21,8 @@ import type { ModuleDef } from "./types";
 import { ROLE_HOME, type Role } from "@/auth/roles";
 import { can } from "@/auth/permissions";
 
-const found = import.meta.glob<{ default: ModuleDef }>("./*/module.tsx", { eager: true });
+// ops/* holds several modules (cameras, radio, support, alerts) under one folder
+const found = import.meta.glob<{ default: ModuleDef }>(["./*/module.tsx", "./ops/*/module.tsx"], { eager: true });
 
 export const modules: ModuleDef[] = Object.entries(found)
   .map(([file, m]) => {

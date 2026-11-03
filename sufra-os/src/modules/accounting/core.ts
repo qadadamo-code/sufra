@@ -97,7 +97,7 @@ export const weekday = (day: string) => {
 
 /* ───────── balances & statements ───────── */
 
-type Entry = Pick<LedgerEntry, "date" | "lines" | "branchId">;
+type Entry = Pick<LedgerEntry, "date" | "lines"> & { branchId?: string | null };
 export interface Filter {
   from?: string;
   to?: string;

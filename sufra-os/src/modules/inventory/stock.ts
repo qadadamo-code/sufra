@@ -4,13 +4,20 @@
  * layers over it; each posts its ledger entry through ./posting.
  */
 import type { Db } from "@/data/hooks";
-import type { CountLine, MoveKind, Recipe, StockAccount, StockCount, StockItem, StockLevel, StockMove, StockTransfer, WasteReason } from "@/data/types";
+import type { CountLine, MoveKind, Recipe, StockAccount, StockCount, StockItem, StockLevel, StockMove, StockTransfer, StorageLocation, WasteReason } from "@/data/types";
 import { seedId, uuid } from "@/lib/id";
 import { nowIso } from "@/lib/time";
 import type { Units } from "@/lib/money";
 import { avgCost, consume, countTo, grossQty, receive, type Position } from "./costing";
 import { addTo, postCountVariance, postWasteCost, type ByAccount } from "./posting";
 import { q3 } from "./units";
+
+/** Home location of a stock item in a branch (first of its defaultLocationIds there), else the branch kitchen. */
+export function homeLocation(item: Pick<StockItem, "defaultLocationIds"> | undefined, branchId: string, locations: StorageLocation[]): StorageLocation | null {
+  const inBranch = locations.filter((l) => l.branchId === branchId && l.active);
+  const home = item ? inBranch.find((l) => item.defaultLocationIds.includes(l.id)) : undefined;
+  return home ?? inBranch.find((l) => l.kind === "kitchen") ?? inBranch[0] ?? null;
+}
 
 export const levelId = (restaurantId: string, locationId: string, itemId: string) => seedId(`stock-level:${restaurantId}:${locationId}:${itemId}`);
 
@@ -162,10 +169,13 @@ export async function produce(db: Db, p: { prepItemId: string; batches: number; 
   const [recipe] = await db.list("recipes", { where: { ownerType: "prep", ownerId: p.prepItemId } });
   if (!recipe || !recipe.lines.length) throw new Error("this prep item has no recipe");
   const items = new Map((await db.list("stockItems")).map((i) => [i.id, i]));
+  const locations = await db.list("storageLocations", { where: { branchId: p.branchId } });
+  // each ingredient comes from where it lives in this branch (the store for dry goods, the cold room for meat …)
+  const from = (itemId: string) => homeLocation(items.get(itemId), p.branchId, locations)?.id ?? p.locationId;
   const groupId = uuid();
   const outs = await applyMoves(
     db,
-    recipe.lines.map((l) => ({ itemId: l.itemId, locationId: p.locationId, branchId: p.branchId, kind: "production_out" as const, qty: -q3(grossQty(l, items.get(l.itemId)) * p.batches), refType: "production", refId: groupId, groupId })),
+    recipe.lines.map((l) => ({ itemId: l.itemId, locationId: from(l.itemId), branchId: p.branchId, kind: "production_out" as const, qty: -q3(grossQty(l, items.get(l.itemId)) * p.batches), refType: "production", refId: groupId, groupId })),
     { items },
   );
   const value = -outs.reduce((a, m) => a + m.value, 0);

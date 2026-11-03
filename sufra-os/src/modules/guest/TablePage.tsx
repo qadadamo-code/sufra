@@ -12,6 +12,7 @@ import { cartCount, type MenuItemView } from "./cart";
 import { pipeline } from "./stages";
 import { GuestProvider, useGuest } from "./ui/context";
 import { GuestToggles, Photo } from "./ui/bits";
+import { ContactRestaurant } from "@/modules/ops/support/ContactRestaurant";
 import { MenuBrowser } from "./ui/Menu";
 import { PromoStrip } from "@/modules/marketing/guest/PromoStrip";
 import { ItemSheet } from "./ui/ItemSheet";
@@ -114,7 +115,10 @@ function TableView() {
           <span className="rounded-full bg-black/30 p-1 backdrop-blur-md">
             <Mark className="size-8" />
           </span>
-          <GuestToggles glass />
+          <div className="flex items-center gap-1.5">
+            <ContactRestaurant glass slug={slug} tableCode={tableCode} fallbackPhone={venue.branch?.phone ?? venue.phone} />
+            <GuestToggles glass />
+          </div>
         </div>
         <div className="absolute inset-x-0 bottom-0 mx-auto max-w-2xl px-4 pb-5 text-white">
           <div className="flex items-center gap-2">

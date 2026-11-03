@@ -96,7 +96,8 @@ export function workIntervals(punches: PunchLike[]): { intervals: { start: numbe
 export function evaluateDay(x: { date: string; shifts: ShiftLike[]; punches: PunchLike[]; leave: LeaveType | null; now: number; tz: string; rules: HrSettings }): DayEval {
   const { rules, tz } = x;
   const windows = x.shifts.map((s) => shiftWindow(s, tz)).sort((a, b) => a.start - b.start);
-  const scheduledMin = windows.reduce((a, w) => a + w.netMin, 0);
+  // paid breaks are part of the scheduled time (worked time keeps them too); unpaid ones come off both
+  const scheduledMin = windows.reduce((a, w, i) => a + (rules.breaks.paid ? w.netMin + (x.shifts[i]?.breakMin || 0) : w.netMin), 0);
   const { intervals, breakMs } = workIntervals(x.punches);
   const first = windows[0];
   const last = windows[windows.length - 1];
@@ -165,6 +166,8 @@ export interface PeriodSummary {
   /** lateness + early-leave tier deductions (days' pay), excluding absences */
   lateDeductionDays: number;
   missingOut: number;
+  /** days worked with no shift (rest days) */
+  extraDays: number;
   /** 0–100: on time = 1, late = ½, absent = 0, over scheduled days */
   score: number;
 }
@@ -185,6 +188,7 @@ export function summarize(days: DayEval[]): PeriodSummary {
     restDayMin: days.reduce((a, d) => a + d.restDayMin, 0),
     lateDeductionDays: days.filter((d) => d.status !== "absent").reduce((a, d) => a + d.deductionDays, 0),
     missingOut: days.filter((d) => d.status === "missing_out").length,
+    extraDays: days.filter((d) => d.scheduledMin === 0 && d.restDayMin > 0).length,
     score: 100,
   };
   if (sched.length) {

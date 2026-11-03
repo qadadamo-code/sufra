@@ -21,6 +21,7 @@ import type { PaymentIntent } from "../pay/types";
 import { driverView, intakeDispatch, venueZones, type DriverView } from "@/modules/delivery/intake";
 import { zoneFee } from "@/modules/delivery/geo";
 import { recordGuestConsent, type GuestConsentInput } from "@/lib/notify/guestConsent";
+import { deductForItems } from "@/modules/inventory/deduct";
 
 /* ───────── shapes ───────── */
 
@@ -219,6 +220,7 @@ export class GuestService {
       const items = await this.repo.list("orderItems", { where: { orderId: order.id } });
       const t = nowIso();
       await Promise.all(items.map((i) => this.repo.update("orderItems", i.id, { status: "sent", firedAt: t })));
+      await deductForItems(db, items, { trigger: "send", branchId: order.branchId });
       patch.status = "sent";
     }
     if (Object.keys(patch).length) await this.repo.update("orders", order.id, patch);

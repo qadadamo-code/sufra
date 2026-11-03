@@ -8,6 +8,7 @@
  *    with a PIN can take it over. "Lock" returns to the staff picker without signing the device out.
  */
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { setDefaultCurrency } from "@/lib/money";
 import { useRepo, ScopeProvider } from "@/data/hooks";
 import type { AuthUser } from "@/data/repo";
 import type { Branch, Membership, Restaurant } from "@/data/types";
@@ -182,6 +183,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     [s, role, signIn, pinSignIn, lock, signOut, switchRestaurant, switchBranch],
   );
 
+  // amounts without an explicit currency follow the restaurant (EGP / SAR)
+  setDefaultCurrency(s.restaurant?.currency ?? "EGP");
   return (
     <Ctx.Provider value={api}>
       <ScopeProvider restaurantId={s.restaurant?.id ?? s.deviceRestaurantId} branchId={s.branchId} actorId={s.staff?.id ?? null}>

@@ -7,6 +7,8 @@ import { nextOrderNumber, recomputeCheck, setTableStatus } from "@/data/ops";
 import type { Check, Discount, MenuCategory, MenuItem, Modifier, Order, OrderItem, OrderItemModifier, OrderMode, OrderSource } from "@/data/types";
 import { nowIso } from "@/lib/time";
 import { sameLine, sendableItems } from "./math";
+import { deductForItems, onLineVoided } from "@/modules/inventory/deduct";
+import { channelOf, priceFor } from "@/modules/menu/rules";
 
 export interface TicketDraft {
   mode: OrderMode;
@@ -78,10 +80,13 @@ export async function addLine(db: Db, t: { orderId: string; checkId: string; ite
   const probe = { itemId: x.item.id, modifiers: mods, notes: x.notes.trim(), seat: x.seat, course: x.course, status: "new" as const, discount: 0 };
   const same = t.items.find((i) => sameLine(i, probe));
   let row: OrderItem;
+  // menu manager: price per channel (dine-in / takeaway / delivery / apps) and per branch
+  const order = same ? null : await db.get("orders", t.orderId);
+  const unitPrice = order ? priceFor(x.item, channelOf(order.mode, order.source), order.branchId) : x.item.price;
   if (same) row = await db.update("orderItems", same.id, { qty: same.qty + x.qty });
   else
     row = await db.insert("orderItems", {
-      orderId: t.orderId, itemId: x.item.id, name: x.item.name, qty: x.qty, unitPrice: x.item.price, modifiers: mods, notes: probe.notes, seat: x.seat,
+      orderId: t.orderId, itemId: x.item.id, name: x.item.name, qty: x.qty, unitPrice, modifiers: mods, notes: probe.notes, seat: x.seat,
       course: x.course, status: "new", stationId: stationFor(x.item, cats), originTableId: t.tableId, discount: 0, firedAt: null, readyAt: null, servedAt: null,
       voidReason: null, voidedBy: null, createdBy: db.actorId,
     });
@@ -108,6 +113,8 @@ export async function voidLine(db: Db, checkId: string, it: OrderItem, reason: s
   } else {
     await db.update("orderItems", it.id, { status: "void", voidReason: reason, voidedBy: approvedBy ?? db.actorId });
     await db.audit("order.void", "orderItems", it.id, { item: it.name.en, qty: it.qty, reason }, approvedBy);
+    // inventory: the food was made — its cost moves from cost of sales to waste
+    await onLineVoided(db, { ...it, voidReason: reason });
   }
   await recomputeCheck(db, checkId);
 }
@@ -122,6 +129,8 @@ export async function sendToKitchen(db: Db, t: Ticket, course?: number): Promise
     for (const o of t.orders) if (orderIds.has(o.id) && (o.status === "open" || o.status === "ready" || o.status === "served")) await db.update("orders", o.id, { status: "sent" });
     for (const tid of t.check.tableIds) await setTableStatus(db, tid, "ordered");
     await db.audit(course == null ? "order.send" : "order.fire_course", "checks", t.check.id, { items: list.length, course: course ?? null });
+    // inventory: deduct recipes at send (never throws; see src/modules/inventory/deduct.ts)
+    await deductForItems(db, list, { trigger: "send", branchId: t.check.branchId });
   }
   return list.length;
 }

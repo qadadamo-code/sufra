@@ -159,6 +159,8 @@ export interface AttendanceDevice {
   active: boolean;
   lastSeenAt: string | null;
   lastStamp: string | null;
+  /** stock terminals that cannot send the secret: the branch's fixed public IP(s) */
+  allowedIps: string[];
 }
 
 export type LeaveType = "annual" | "casual" | "sick" | "unpaid" | "hajj" | "maternity" | "other";

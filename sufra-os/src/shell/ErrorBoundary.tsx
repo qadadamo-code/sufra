@@ -10,6 +10,8 @@ export class ErrorBoundary extends Component<{ children: ReactNode; lang: Lang; 
   }
   override componentDidCatch(error: Error) {
     console.error(error);
+    // picked up by the support diagnostics (src/modules/ops/support/diagnostics.ts)
+    window.dispatchEvent(new CustomEvent("sufra:error", { detail: error }));
   }
   override componentDidUpdate(prev: { resetKey?: string }) {
     if (prev.resetKey !== this.props.resetKey && this.state.error) this.setState({ error: null });

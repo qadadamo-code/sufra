@@ -9,6 +9,7 @@ import { Mark } from "@/shell/Logo";
 import { PICKUP_MINUTES } from "./data/venue";
 import { GuestProvider, useGuest } from "./ui/context";
 import { GuestToggles, TotalsList } from "./ui/bits";
+import { ContactRestaurant } from "@/modules/ops/support/ContactRestaurant";
 import { STAGE_COPY, Timeline } from "./ui/Tracker";
 import { FeedbackCard, LoyaltyCard, ReceiptCard } from "./ui/AfterMeal";
 import { useLiveFetch } from "./ui/useLiveFetch";
@@ -102,6 +103,7 @@ function TrackView() {
         </Link>
         <Mark className="size-8" />
         <p className="min-w-0 flex-1 truncate font-display text-[17px] font-semibold">{loc(menu.restaurant.name)}</p>
+        <ContactRestaurant slug={slug} orderId={orderId} fallbackPhone={venue.branch?.phone ?? venue.phone} />
         <GuestToggles />
       </div>
     </header>

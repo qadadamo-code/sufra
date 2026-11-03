@@ -7,6 +7,8 @@ import { buildReceiptModel, freezeBill, type ReceiptModel, type ReceiptSource } 
 import { priceItems } from "@/data/pricing";
 import type { OrderItem } from "@/data/types";
 import { deviceCode } from "./sale";
+import { receiptZatca } from "@/lib/zatca/receipt";
+import type { ZatcaInvoiceRow } from "@/lib/zatca/model";
 
 export function useMenu() {
   const cats = useLive("menuCategories", { where: { active: true }, orderBy: [{ field: "sort" }] }).data;
@@ -40,6 +42,7 @@ export function useReceiptSourceBuilder() {
   const staff = useStaffNames();
   const tables = useLive("tables").data;
   const customers = useLive("customers").data;
+  const zatcaDocs = useLive("zatcaInvoices").data; // KSA only (empty elsewhere)
   return useMemo(() => {
     if (!settings || !restaurant) return null;
     const base = (check: Check, orders: Order[]) => {
@@ -56,11 +59,12 @@ export function useReceiptSourceBuilder() {
         guests: check.guests,
         mode: order?.mode ?? "dine_in",
         pickup: !!order?.pickupAt,
+        currency: restaurant.currency,
         customer: cust ? { name: cust.name, phone: cust.phone, address: order?.delivery?.address ?? null } : order?.delivery ? { name: "", phone: "", address: order.delivery.address } : null,
       };
     };
     return {
-      fromReceipt(r: Receipt, check: Check, orders: Order[], payments: Payment[], original?: Receipt | null): ReceiptModel {
+      fromReceipt(r: Receipt, check: Check, orders: Order[], payments: Payment[], original?: Receipt | null, zatca?: ZatcaInvoiceRow | null): ReceiptModel {
         const cash = payments.filter((p) => p.method === "cash" && p.status === "captured");
         const src: ReceiptSource = {
           ...base(check, orders),
@@ -74,6 +78,7 @@ export function useReceiptSourceBuilder() {
           change: r.kind === "SC" && cash.length ? cash.reduce((a, p) => a + (p.change ?? 0), 0) : null,
           eta: r.etaUuid && r.etaQr ? { uuid: r.etaUuid, qr: r.etaQr } : null,
           refundOf: original?.receiptNo ?? null,
+          zatca: receiptZatca(zatca ?? zatcaDocs.find((z) => z.receiptId === r.id) ?? null, settings),
         };
         return buildReceiptModel(src);
       },
@@ -99,5 +104,5 @@ export function useReceiptSourceBuilder() {
         });
       },
     };
-  }, [settings, restaurant, branch, staff, tables, customers]);
+  }, [settings, restaurant, branch, staff, tables, customers, zatcaDocs]);
 }

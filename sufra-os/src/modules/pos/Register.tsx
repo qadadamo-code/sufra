@@ -3,6 +3,7 @@
  * Keyboard: S search · N new · K send · H hold · P pay · D discount · X split · T transfer · O open checks.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { onSchedule, scheduleLabel } from "@/modules/menu/rules";
 import { Link, useSearchParams } from "react-router-dom";
 import { motion } from "motion/react";
 import { Bike, ChevronDown, ClipboardList, LayoutGrid, Plus, ReceiptText, ShoppingBag, Store, Timer, UserRound, Users, Utensils, Wallet } from "lucide-react";
@@ -198,6 +199,7 @@ export default function Register() {
 
   const pick = (item: MenuItem, { forceSheet }: { forceSheet: boolean }) => {
     if (!item.available) return toast({ title: L("الصنف ده خلصان النهارده", "This item is 86'd today"), tone: "warn" });
+    if (!onSchedule(item)) return toast({ title: L("الصنف ده مش متاح دلوقتي", "Not served at this hour"), description: scheduleLabel(item.schedule, lang), tone: "warn" });
     const required = item.modifierGroupIds.some((g) => (menu.groups.find((x) => x.id === g)?.min ?? 0) > 0);
     if (forceSheet || required) setModItem(item);
     else void add(item, null);
@@ -368,7 +370,7 @@ export default function Register() {
     const pays = await db.list("payments", { where: { checkId: check.id } });
     setDlg(null);
     setShares(null);
-    if (fresh) setReceipt({ model: receiptSrc.fromReceipt(res.receipt, fresh.check, fresh.orders, pays), etaError: res.etaError, title: L(`إيصال ${res.receipt.receiptNo}`, `Receipt ${res.receipt.receiptNo}`) });
+    if (fresh) setReceipt({ model: receiptSrc.fromReceipt(res.receipt, fresh.check, fresh.orders, pays, null, res.zatca), etaError: res.etaError, title: L(`إيصال ${res.receipt.receiptNo}`, `Receipt ${res.receipt.receiptNo}`) });
     if (res.ledgerError) toast({ title: L("القيد المحاسبي اتسجل كخطأ للمحاسب", "Ledger posting logged for the accountant"), description: res.ledgerError, tone: "warn" });
   };
   const tender = async (t: TenderInput) => {

@@ -56,6 +56,11 @@ export interface MoneyFormat {
   signed?: boolean;
 }
 
+let defaultCurrency: Currency = "EGP";
+/** The signed-in restaurant's currency (set by the session) — used when a format doesn't name one (KSA tenants: SAR). */
+export const setDefaultCurrency = (c: Currency) => void (defaultCurrency = c);
+export const getDefaultCurrency = () => defaultCurrency;
+
 /** Parts so components can style digits (mono) and currency (text) separately. */
 export function moneyParts(u: Units, f: MoneyFormat): { sign: string; digits: string; currency: string } {
   const r = f.whole ? Math.round(u / UNITS_PER_MAJOR) * UNITS_PER_MAJOR : roundMinor(u);
@@ -66,7 +71,7 @@ export function moneyParts(u: Units, f: MoneyFormat): { sign: string; digits: st
   const grouped = whole.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   const digits = (f.compact || f.whole) && frac === 0 ? grouped : `${grouped}.${String(frac).padStart(2, "0")}`;
   const sign = neg ? "-" : f.signed && r > 0 ? "+" : "";
-  return { sign, digits, currency: f.bare ? "" : CUR[f.currency ?? "EGP"][f.lang] };
+  return { sign, digits, currency: f.bare ? "" : CUR[f.currency ?? defaultCurrency][f.lang] };
 }
 
 /**

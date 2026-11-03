@@ -71,6 +71,8 @@ export interface StockItem extends Row {
   allergens: string[];
   active: boolean;
   note: string;
+  /** matching product key in the Sufra supplier marketplace (compare prices / order online), e.g. "tomato" */
+  marketKey?: string | null;
 }
 
 export type LocationKind = "store" | "kitchen" | "bar" | "fridge" | "freezer" | "central";
@@ -146,6 +148,8 @@ export interface RecipeLine {
 export interface Recipe extends Row {
   ownerType: "menu_item" | "modifier" | "prep";
   ownerId: string;
+  /** modifier recipes only: applies to this menu item ("large" mango juice ≠ "large" lemon-mint); null = every item */
+  scopeItemId?: string | null;
   lines: RecipeLine[];
   /** prep items: base units one batch yields (5 kg tahini sauce = 5000). Menu items/modifiers: 1. */
   yieldQty: number;

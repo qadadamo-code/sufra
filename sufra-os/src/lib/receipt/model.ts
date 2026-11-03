@@ -2,7 +2,7 @@
  * Receipt model: everything a printed receipt / invoice shows, computed once from a frozen bill and the restaurant's
  * settings. The renderer (ReceiptView) only lays it out, so 58 mm, 80 mm and A4 always say the same thing.
  */
-import type { InvoiceDesign, InvoiceTemplate, Localized, OrderMode, PaymentMethod, ReceiptBill, TaxSettings, Units } from "@/data/types";
+import type { Currency, InvoiceDesign, InvoiceTemplate, Localized, OrderMode, PaymentMethod, ReceiptBill, TaxSettings, Units } from "@/data/types";
 import { resolveDesign } from "./design";
 
 const L = (ar: string, en: string): Localized => ({ ar, en });
@@ -46,6 +46,23 @@ export interface ReceiptSource {
   eta: { uuid: string; qr: string } | null;
   /** RC: the original receipt number */
   refundOf?: string | null;
+  /** KSA: the ZATCA document of this receipt (its QR replaces the ETA QR) — src/lib/zatca */
+  zatca?: ReceiptZatca | null;
+  /** currency label on totals (default EGP) */
+  currency?: Currency;
+}
+
+export interface ReceiptZatca {
+  uuid: string;
+  qr: string;
+  kind: "simplified" | "standard";
+  docType: "invoice" | "credit" | "debit";
+  /** false = Phase-1 QR (tags 1–5) until the server stamps the document */
+  signed: boolean;
+  vatNumber: string;
+  crn: string;
+  /** standard invoices: buyer shown on the invoice */
+  buyer?: { name: string; vatNumber?: string } | null;
 }
 
 export interface MetaRow {
@@ -83,6 +100,8 @@ export interface ReceiptModel {
   change: Units | null;
   footer: Localized;
   eta: { uuid: string; qr: string } | null;
+  zatca: ReceiptZatca | null;
+  currency: Currency;
   issuedAt: string;
   /** marketing promo block (Settings.invoice.promo) — next-visit coupon, loyalty/feedback QR */
   promo: { title: Localized; body: Localized; code: string | null; qr: string | null } | null;
@@ -101,13 +120,22 @@ export function buildReceiptModel(src: ReceiptSource): ReceiptModel {
   const f = design.fields;
   const b = src.bill;
   const legal: MetaRow[] = [];
-  if (f.taxId && src.tax.taxId) legal.push({ label: L("رقم التسجيل الضريبي", "Tax reg. no (RIN)"), value: src.tax.taxId, mono: true });
-  if (f.activityCode && src.tax.activityCode) legal.push({ label: L("كود النشاط", "Activity code"), value: src.tax.activityCode, mono: true });
-  if (src.tax.commercialRegister) legal.push({ label: L("سجل تجاري", "Commercial reg."), value: src.tax.commercialRegister, mono: true });
+  const z = src.zatca ?? null;
+  if (z) {
+    legal.push({ label: L("الرقم الضريبي", "VAT No."), value: z.vatNumber, mono: true });
+    if (z.crn) legal.push({ label: L("السجل التجاري", "CR No."), value: z.crn, mono: true });
+  }
+  if (!z && f.taxId && src.tax.taxId) legal.push({ label: L("رقم التسجيل الضريبي", "Tax reg. no (RIN)"), value: src.tax.taxId, mono: true });
+  if (!z && f.activityCode && src.tax.activityCode) legal.push({ label: L("كود النشاط", "Activity code"), value: src.tax.activityCode, mono: true });
+  if (!z && src.tax.commercialRegister) legal.push({ label: L("سجل تجاري", "Commercial reg."), value: src.tax.commercialRegister, mono: true });
 
   const meta: MetaRow[] = [];
   if (src.receiptNo) meta.push({ label: L("رقم الإيصال", "Receipt no"), value: src.receiptNo, mono: true });
   if (src.refundOf) meta.push({ label: L("مرتجع من", "Return of"), value: src.refundOf, mono: true });
+  if (z?.buyer) {
+    meta.push({ label: L("المشتري", "Buyer"), value: z.buyer.name });
+    if (z.buyer.vatNumber) meta.push({ label: L("الرقم الضريبي للمشتري", "Buyer VAT No."), value: z.buyer.vatNumber, mono: true });
+  }
   if (src.orderNumber != null) meta.push({ label: L("رقم الطلب", "Order"), value: `#${src.orderNumber}`, mono: true });
   meta.push({ label: L("التاريخ", "Date"), value: formatStamp(src.issuedAt), mono: true });
   if (f.orderType) meta.push({ label: L("النوع", "Type"), value: MODE_LABEL[src.pickup ? "pickup" : src.mode] });
@@ -151,7 +179,7 @@ export function buildReceiptModel(src: ReceiptSource): ReceiptModel {
     kind: src.kind,
     design,
     language: src.invoice.language,
-    title: receiptTitle(src.kind, src.tax.vatRegistered),
+    title: z && src.kind !== "prebill" ? zatcaTitle(z) : receiptTitle(src.kind, src.tax.vatRegistered),
     brand: {
       name: src.restaurant.name,
       header: src.invoice.header,
@@ -168,10 +196,20 @@ export function buildReceiptModel(src: ReceiptSource): ReceiptModel {
     tendered: f.payments ? src.tendered : null,
     change: f.payments ? src.change : null,
     footer: src.invoice.footer,
-    eta: src.invoice.showQr && src.eta ? src.eta : null,
+    eta: src.invoice.showQr && src.eta && !z ? src.eta : null,
+    // ZATCA QR is mandatory on KSA tax invoices — printed regardless of the designer's QR toggle
+    zatca: z,
+    currency: src.currency ?? "EGP",
     issuedAt: src.issuedAt,
     promo: promoBlock(src),
   };
+}
+
+/** Arabic is mandatory on KSA tax invoices; the English line is a courtesy. */
+export function zatcaTitle(z: Pick<ReceiptZatca, "kind" | "docType">): Localized {
+  if (z.docType === "credit") return z.kind === "standard" ? L("إشعار دائن", "Credit note") : L("إشعار دائن مبسط", "Simplified credit note");
+  if (z.docType === "debit") return z.kind === "standard" ? L("إشعار مدين", "Debit note") : L("إشعار مدين مبسط", "Simplified debit note");
+  return z.kind === "standard" ? L("فاتورة ضريبية", "Tax invoice") : L("فاتورة ضريبية مبسطة", "Simplified tax invoice");
 }
 
 /** Extension point for marketing: the receipt promo block, if enabled and in its dates (not on returns). */

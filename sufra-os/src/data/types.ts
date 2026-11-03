@@ -28,6 +28,8 @@ import type { AccountingSettings, BankStatementLine, CashAccount, CashTransfer, 
 
 export type { Units, Currency, Role };
 export * from "./crmTypes";
+/* ZATCA (KSA e-invoicing) rows — 0014_zatca.sql, src/lib/zatca */
+export type { ZatcaEgsUnit, ZatcaInvoiceRow, ZatcaSettings } from "@/lib/zatca/model";
 export * from "./hrTypes";
 export * from "./inventoryTypes";
 export * from "./accountingTypes";
@@ -374,6 +376,8 @@ export interface Check extends TenantRow {
   paid: Units;
   receiptNo: string | null;
   etaUuid: string | null;
+  /** KSA B2B buyer for a standard (cleared) tax invoice. Optional: 0014_zatca.sql */
+  taxBuyer?: import("@/lib/zatca/model").ZatcaBuyer | null;
   openedAt: string;
   closedAt: string | null;
 }
@@ -578,6 +582,8 @@ export interface Settings extends TenantRow {
   delivery?: DeliverySettings;
   /** WhatsApp / customer messaging. Optional: 0007_messaging.sql (defaults in src/lib/notify/settings.ts) */
   messaging?: import("@/lib/notify/settings").MessagingSettings;
+  /** KSA ZATCA (FATOORA) e-invoicing. Optional: 0014_zatca.sql (defaults in src/lib/zatca/settings.ts) */
+  zatca?: import("@/lib/zatca/model").ZatcaSettings;
   /** HR, attendance & payroll rules. Optional: 0010_hr.sql (defaults in src/modules/hr/lib/settings.ts) */
   hr?: import("@/modules/hr/lib/settings").HrSettings;
   /** inventory & purchasing. Optional: 0012_inventory.sql (defaults in src/modules/inventory/settings.ts) */
@@ -1038,6 +1044,9 @@ export interface Collections {
   marketProfiles: MarketProfile;
   adSlots: AdSlot;
   adBookings: AdBooking;
+  /* ZATCA e-invoicing (0014_zatca.sql) */
+  zatcaEgsUnits: import("@/lib/zatca/model").ZatcaEgsUnit;
+  zatcaInvoices: import("@/lib/zatca/model").ZatcaInvoiceRow;
   /* HR, attendance & payroll (0010_hr.sql) */
   staffProfiles: StaffProfile;
   shiftTemplates: ShiftTemplate;
@@ -1142,6 +1151,8 @@ export const TABLE_NAMES: { [C in CollectionName]: string } = {
   marketProfiles: "market_profiles",
   adSlots: "ad_slots",
   adBookings: "ad_bookings",
+  zatcaEgsUnits: "zatca_egs_units",
+  zatcaInvoices: "zatca_invoices",
   staffProfiles: "staff_profiles",
   shiftTemplates: "shift_templates",
   rotaShifts: "rota_shifts",

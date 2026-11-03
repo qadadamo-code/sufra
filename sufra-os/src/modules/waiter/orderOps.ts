@@ -4,6 +4,7 @@
  * and the kitchen module so the POS, KDS and waiter app agree.
  */
 import type { Db } from "@/data/hooks";
+import { deductForItems } from "@/modules/inventory/deduct";
 import { activeOrderFor, recomputeCheck, resolveServiceCall } from "@/data/ops";
 import type { Check, DiningTable, MenuCategory, MenuItem, Modifier, Order, OrderItem } from "@/data/types";
 import { nowIso } from "@/lib/time";
@@ -64,7 +65,9 @@ export async function sendRound(
       firedAt: fire ? t : null, readyAt: null, servedAt: null, voidReason: null, voidedBy: null, createdBy: db.actorId,
     };
   });
-  for (const r of rows) await db.insert("orderItems", r);
+  const inserted = [];
+  for (const r of rows) inserted.push(await db.insert("orderItems", r));
+  await deductForItems(db, inserted.filter((r) => r.status === "sent"), { trigger: "send", branchId: check.branchId });
   if (!existing?.waiterId && db.actorId) await db.update("orders", order.id, { waiterId: db.actorId });
   await syncOrders(db, [order.id]);
   await recomputeCheck(db, check.id);
@@ -77,8 +80,9 @@ export async function sendRound(
 export async function fireItems(db: Db, items: Pick<OrderItem, "id" | "orderId" | "status">[]) {
   const t = nowIso();
   const held = items.filter((i) => i.status === "new");
-  await Promise.all(held.map((i) => db.update("orderItems", i.id, { status: "sent", firedAt: t })));
+  const fired = await Promise.all(held.map((i) => db.update("orderItems", i.id, { status: "sent", firedAt: t })));
   await syncOrders(db, [...new Set(held.map((i) => i.orderId))]);
+  await deductForItems(db, fired, { trigger: "send" });
 }
 
 /** A QR order confirmed by the waiter: take ownership and fire it. */

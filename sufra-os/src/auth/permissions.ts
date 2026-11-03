@@ -57,6 +57,7 @@ export const PERMISSIONS = [
   "staff.view",
   "staff.manage",
   "staff.payroll",
+  "hr.self", // my schedule, clock in/out, my leave/advances/payslips (/me) — every restaurant role (Wave 3 HR)
   "accounting.view",
   "accounting.post",
   "settings.view",
@@ -64,6 +65,12 @@ export const PERMISSIONS = [
   "settings.tax",
   "audit.view",
   "restaurant.billing",
+  // operations extras (Wave 3): cameras, walkie-talkie, support desk, alerts
+  "cameras.view", // live wall, POS ↔ video exceptions, occupancy (owner/admin/manager)
+  "radio.use", // walkie-talkie: every restaurant role
+  "tickets.handle", // guest complaints inbox (owner/admin/manager)
+  "help.view", // help center + "request Sufra support": every restaurant role
+  "alerts.view", // alerts center (owner/admin/manager)
   // Sufra platform (super-admin) — Sufra staff only, never a restaurant role
   "platform.admin",
 ] as const;
@@ -72,13 +79,15 @@ export type Permission = (typeof PERMISSIONS)[number];
 const without = (...xs: Permission[]) => new Set<Permission>(PERMISSIONS.filter((p) => !xs.includes(p)));
 const only = (...xs: Permission[]) => new Set<Permission>(xs);
 
+/** ops permissions every restaurant role has (walkie-talkie, help center). */
+const OPS_ALL_STAFF: Permission[] = ["radio.use", "help.view"];
 const SERVICE_BASE: Permission[] = ["floor.view", "service_calls.handle", "reservations.view", "customers.view", "kitchen.view"];
 
 export const MATRIX: Record<Role, ReadonlySet<Permission>> = {
   owner: without("platform.admin"),
   admin: without("restaurant.billing", "platform.admin"),
   manager: without("restaurant.billing", "staff.payroll", "settings.tax", "accounting.post", "platform.admin", "ads.buy"),
-  cashier: only(
+  cashier: only(...OPS_ALL_STAFF, "hr.self",
     ...SERVICE_BASE,
     "pos.use",
     "orders.create",
@@ -97,11 +106,11 @@ export const MATRIX: Record<Role, ReadonlySet<Permission>> = {
     "delivery.dispatch",
     "messages.use",
   ),
-  waiter: only(...SERVICE_BASE, "waiter.use", "orders.create", "orders.edit", "orders.transfer", "checks.split", "floor.manage", "reservations.manage", "customers.edit"),
-  chef: only("kitchen.view", "kitchen.bump", "menu.availability", "menu.edit", "reports.view", "staff.view", "inventory.view", "inventory.count", "inventory.manage"),
-  kitchen: only("kitchen.view", "kitchen.bump", "menu.availability", "inventory.count"),
-  delivery: only("delivery.view", "delivery.run", "customers.view"),
-  accountant: only("dashboard.view", "reports.view", "reports.financial", "accounting.view", "accounting.post", "audit.view", "staff.view", "staff.payroll", "settings.view", "customers.view", "marketing.view", "inventory.view", "purchasing.manage"),
+  waiter: only(...OPS_ALL_STAFF, "hr.self", ...SERVICE_BASE, "waiter.use", "orders.create", "orders.edit", "orders.transfer", "checks.split", "floor.manage", "reservations.manage", "customers.edit"),
+  chef: only(...OPS_ALL_STAFF, "hr.self", "kitchen.view", "kitchen.bump", "menu.availability", "menu.edit", "reports.view", "staff.view", "inventory.view", "inventory.count", "inventory.manage"),
+  kitchen: only(...OPS_ALL_STAFF, "hr.self", "kitchen.view", "kitchen.bump", "menu.availability", "inventory.count"),
+  delivery: only(...OPS_ALL_STAFF, "hr.self", "delivery.view", "delivery.run", "customers.view"),
+  accountant: only(...OPS_ALL_STAFF, "hr.self", "dashboard.view", "reports.view", "reports.financial", "accounting.view", "accounting.post", "audit.view", "staff.view", "staff.payroll", "settings.view", "customers.view", "marketing.view", "inventory.view", "purchasing.manage"),
   platform_admin: only("platform.admin"),
 };
 

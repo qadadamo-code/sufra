@@ -61,11 +61,11 @@ function Bi({ v, lang, inline }: { v: Localized | string; lang: ReceiptModel["la
   );
 }
 
-function Qr({ text, mm }: { text: string; mm: number }) {
+function Qr({ text, mm, label = "ETA QR" }: { text: string; mm: number; label?: string }) {
   const m = useMemo(() => qrMatrix(text, "M"), [text]);
   const q = 2;
   return (
-    <svg className="qr" viewBox={`${-q} ${-q} ${m.size + 2 * q} ${m.size + 2 * q}`} style={{ width: `${mm}mm`, height: `${mm}mm` }} shapeRendering="crispEdges" role="img" aria-label="ETA QR">
+    <svg className="qr" viewBox={`${-q} ${-q} ${m.size + 2 * q} ${m.size + 2 * q}`} style={{ width: `${mm}mm`, height: `${mm}mm` }} shapeRendering="crispEdges" role="img" aria-label={label}>
       <rect x={-q} y={-q} width={m.size + 2 * q} height={m.size + 2 * q} fill="#fff" />
       <path d={m.path} fill="#000" />
     </svg>
@@ -76,7 +76,7 @@ export function ReceiptView({ model, className, style }: { model: ReceiptModel; 
   const { design, language: lang } = model;
   const dir = lang === "en" ? "ltr" : "rtl";
   const moneyLang = lang === "en" ? "en" : "ar";
-  const M = (u: Units, opts: { bare?: boolean } = {}) => <span className="n">{formatMoney(u, { lang: moneyLang, bare: opts.bare ?? true })}</span>;
+  const M = (u: Units, opts: { bare?: boolean } = {}) => <span className="n">{formatMoney(u, { lang: moneyLang, bare: opts.bare ?? true, currency: model.currency })}</span>;
   const a4 = design.paper === "a4";
   const width = PAPER_MM[design.paper];
   const fs = a4 ? Math.round(design.fontSize * 1.05) : design.fontSize;
@@ -162,7 +162,14 @@ export function ReceiptView({ model, className, style }: { model: ReceiptModel; 
     </div>
   );
 
-  const eta = model.eta ? (
+  const zq = model.zatca;
+  const eta = zq ? (
+    <div className={a4 ? "" : "c"} data-zatca-qr>
+      <Qr text={zq.qr} mm={a4 ? 30 : design.paper === "58" ? 32 : 38} label="ZATCA QR" />
+      {!zq.signed ? <div className="tiny" style={{ marginTop: "0.5mm" }}>QR مؤقت — في انتظار الختم الإلكتروني · Provisional QR</div> : null}
+      {design.fields.etaUuid ? <div className="uuid n">{zq.uuid}</div> : null}
+    </div>
+  ) : model.eta ? (
     <div className={a4 ? "" : "c"}>
       <Qr text={model.eta.qr} mm={a4 ? 30 : design.paper === "58" ? 30 : 36} />
       {design.fields.etaUuid ? <div className="uuid n">{model.eta.uuid}</div> : null}

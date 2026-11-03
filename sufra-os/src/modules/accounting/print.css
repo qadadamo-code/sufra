@@ -1,0 +1,37 @@
+/* Reports & statements print as clean A4 pages: only the .print-area is visible, controls hidden. */
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+  html,
+  body {
+    background: #fff !important;
+  }
+  body * {
+    visibility: hidden;
+  }
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+  .print-area {
+    position: absolute;
+    inset: 0 0 auto 0;
+    color: #111 !important;
+  }
+  .print-area [data-noprint],
+  .print-area [data-noprint] * {
+    display: none !important;
+  }
+  .print-area .shadow-sf,
+  .print-area .shadow-sf-sm {
+    box-shadow: none !important;
+  }
+  .print-area table {
+    font-size: 11px;
+  }
+  .print-area .print-break {
+    break-before: page;
+  }
+}

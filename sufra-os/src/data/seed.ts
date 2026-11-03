@@ -17,7 +17,12 @@ import { demoMessagingRows } from "@/lib/notify/demoSeed";
 import { demoCrmRows } from "@/modules/marketing/seed";
 import { DEMO_DOORS, DEMO_ORIGIN, demoDeliveryRows, demoDispatch } from "@/modules/delivery/seed";
 import { DEFAULT_DELIVERY } from "@/modules/delivery/settings";
+// KSA demo tenant "سُفرة – الرياض" for the ZATCA path (Wave 3)
+import { addKsaDemo } from "@/lib/zatca/demoSeed";
 import { demoAccountingRows } from "@/modules/accounting/seed";
+import { demoInventoryRows } from "@/modules/inventory/seed";
+import { demoOpsRows } from "@/modules/ops/seed";
+import { demoHrRows } from "@/modules/hr/seed";
 
 export const DEMO_SLUG = "sufra-zamalek";
 export const DEMO_PASSWORD = "sufra2026";
@@ -569,19 +574,32 @@ export function buildSeed(now: Date = new Date()): Seed {
   ];
 
   const crm = demoCrmRows({ restaurantId: R, branchId: B, now, T, id, staffId: S, customers, checks, orders, menuItems, menuCategories, settings, created });
+  const ops = demoOpsRows({ R, B, T, id, S, created, table: tid, zone: (k) => id(`zone:${k}`), customer: cid, order: (k) => id(`order:${k}`), check: (k) => id(`check:${k}`) });
+  // HR, attendance & payroll (Wave 3): enriches staffCompensation + settings.hr in place
+  const hr = demoHrRows({ restaurantId: R, branchId: B, now, id, staffId: S, memberships, staffCompensation, settings, created, origin: DEMO_ORIGIN });
+  // inventory, recipes & purchasing (Wave 3): adds allergens/calories/channel prices to the menu + two combos
+  const inv = demoInventoryRows({ restaurantId: R, branchId: B, now, T, id, staffId: S, created, menuItems, modifiers, orderItems });
+  menuItems.push(...inv.menuItems);
   const data: SeedData = {
     restaurants: [restaurant, ...crm.restaurants], branches: [branch, ...crm.branches], memberships, staffCompensation, zones, tables, floorDecor, tableLinks: [], kitchenStations, printers,
     menuCategories, menuItems, modifierGroups: groups, modifiers, orders, orderItems, checks, payments, serviceCalls, reservations, customers: crm.customers, settings, auditLog: [
       { ...base("audit:1"), createdAt: T(74), updatedAt: T(74), branchId: B, actorId: S("waiter1"), action: "check.discount", entity: "checks", entityId: id("check:t7"), data: { pct: 10, reason: "عميل دائم" }, approvedBy: S("manager") },
       { ...base("audit:fb:d9"), createdAt: T(50), updatedAt: T(50), branchId: B, actorId: null, action: "guest.feedback", entity: "orders", entityId: id("order:d9"), data: { stars: 5, comment: "وصل سخن وبسرعة", tags: ["rider"] }, approvedBy: null },
       { ...base("audit:fb:d11"), createdAt: T(400), updatedAt: T(400), branchId: B, actorId: null, action: "guest.feedback", entity: "orders", entityId: id("order:d11"), data: { stars: 3, comment: "اتأخر شوية", tags: [] }, approvedBy: null },
+      ...ops.audit,
     ],
     shifts: [], cashMovements: [], receipts: [],
-    ...demoAccountingRows(),
+    zatcaEgsUnits: [], zatcaInvoices: [],
+    ...demoAccountingRows({ restaurantId: R, branchId: B, now, id, staffId: S, staffCompensation }),
     ...delivery,
     ...demoMessagingRows({ restaurantId: R, T, id, customerId: cid, staffId: S, orderId: (k) => id(`order:${k}`) }),
     ...crm.rows,
+    ...inv.rows,
+    ...hr.rows,
+    cameras: ops.cameras, peopleCounts: ops.peopleCounts, radioClips: ops.radioClips, supportTickets: ops.supportTickets, opsSettings: ops.opsSettings, opsAcks: ops.opsAcks,
     ...demoPaymentRows({ restaurantId: R, branchId: B, checks, payments, T, checkId: (k) => id(`check:${k}`), paymentId: (k) => id(k), staffId: S }),
   };
+  data.ledgerEntries = [...(data.ledgerEntries ?? []), ...hr.ledgerEntries];
+  addKsaDemo(data, { created, userId });
   return { data, users, pins, pinHashes };
 }

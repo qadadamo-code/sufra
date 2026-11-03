@@ -60,7 +60,7 @@ export class LocalRadioTransport implements RadioTransport {
   private bc: BroadcastChannel | null = null;
   private listeners = new Set<(a: OnAir | { who: string; off: true }) => void>();
 
-  constructor(private name = "sufra-os") {
+  constructor(name = "sufra-os") {
     if (typeof BroadcastChannel !== "undefined") {
       this.bc = new BroadcastChannel(`${name}:radio`);
       this.bc.onmessage = (e) => this.listeners.forEach((l) => l(e.data));

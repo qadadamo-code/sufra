@@ -18,56 +18,17 @@
  * (reason "void_after_send"). Before send nothing was deducted, so nothing happens.
  */
 import type { Db } from "@/data/hooks";
-import type { MenuItem, OrderItem, Recipe, StockItem, StorageLocation } from "@/data/types";
+import type { OrderItem } from "@/data/types";
 import { uuid } from "@/lib/id";
 import { ACC, postJournal, signedLines } from "@/modules/accounting/api";
-import { grossQty } from "./costing";
+import { explodeContext, explodeLine } from "./explode";
 import { addTo, COGS_CODE, postSaleCost, safePost, type ByAccount } from "./posting";
 import { inventorySettings } from "./settings";
-import { applyMoves, valueByAccount, type MoveInput } from "./stock";
-import { q3 } from "./units";
+import { applyMoves, homeLocation, valueByAccount, type MoveInput } from "./stock";
 
-export interface ExplodeContext {
-  menuItems: Map<string, MenuItem>;
-  stockItems: Map<string, StockItem>;
-  /** `${ownerType}:${ownerId}` → recipe */
-  recipes: Map<string, Recipe>;
-}
+export { homeLocation };
 
-export const recipeKey = (t: Recipe["ownerType"], id: string) => `${t}:${id}`;
-
-export function explodeContext(menuItems: MenuItem[], stockItems: StockItem[], recipes: Recipe[]): ExplodeContext {
-  return {
-    menuItems: new Map(menuItems.map((m) => [m.id, m])),
-    stockItems: new Map(stockItems.map((s) => [s.id, s])),
-    recipes: new Map(recipes.map((r) => [recipeKey(r.ownerType, r.ownerId), r])),
-  };
-}
-
-function addRecipe(out: Map<string, number>, r: Recipe | undefined, portions: number, ctx: ExplodeContext) {
-  if (!r) return;
-  const per = portions / Math.max(1, r.yieldQty || 1);
-  for (const l of r.lines) out.set(l.itemId, q3((out.get(l.itemId) ?? 0) + grossQty(l, ctx.stockItems.get(l.itemId)) * per));
-}
-
-/** Stock items (base units) one order line consumes. Negative totals (a "no X" on an item without X) are dropped. */
-export function explodeLine(line: Pick<OrderItem, "itemId" | "qty" | "modifiers">, ctx: ExplodeContext): Map<string, number> {
-  const out = new Map<string, number>();
-  const item = ctx.menuItems.get(line.itemId);
-  const own = ctx.recipes.get(recipeKey("menu_item", line.itemId));
-  if (own) addRecipe(out, own, line.qty, ctx);
-  else if (item?.comboOf?.length) for (const c of item.comboOf) addRecipe(out, ctx.recipes.get(recipeKey("menu_item", c.itemId)), line.qty * c.qty, ctx);
-  for (const m of line.modifiers) addRecipe(out, ctx.recipes.get(recipeKey("modifier", m.modifierId)), line.qty, ctx);
-  for (const [k, v] of out) if (v <= 0) out.delete(k);
-  return out;
-}
-
-/** Home location of a stock item in a branch. */
-export function homeLocation(item: StockItem | undefined, branchId: string, locations: StorageLocation[]): StorageLocation | null {
-  const inBranch = locations.filter((l) => l.branchId === branchId && l.active);
-  const home = item ? inBranch.find((l) => item.defaultLocationIds.includes(l.id)) : undefined;
-  return home ?? inBranch.find((l) => l.kind === "kitchen") ?? inBranch[0] ?? null;
-}
+export { explodeContext, explodeLine, recipeKey } from "./explode";
 
 type Line = Pick<OrderItem, "id" | "orderId" | "itemId" | "qty" | "modifiers" | "status" | "name">;
 

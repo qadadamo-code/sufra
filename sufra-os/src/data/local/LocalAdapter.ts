@@ -15,6 +15,7 @@ import { loadRaw, saveRaw } from "@/lib/storage";
 import { buildSeed, hashPassword, hashPin, type SeedUser } from "../seed";
 import { runQuery } from "../query";
 import { priceItems } from "../pricing";
+import { onSchedule, priceFor, sellable } from "@/modules/menu/rules";
 import type { AuthApi, AuthUser, ChangeEvent, GuestApi, GuestMenu, Insertable, Patch, Query, Repo, SyncStatus, Unsubscribe } from "../repo";
 import { COLLECTIONS, type CollectionName, type Membership, type Order, type OrderItem, type RowOf, type ServiceCallType } from "../types";
 import { openKV, MemoryKV, type KV } from "./store";
@@ -30,7 +31,7 @@ type Msg =
 const USERS = "_users";
 const PINS = "_pins";
 const META = "_meta";
-const SEED_VERSION = "3"; // bump when the demo seed changes shape (2: delivery riders, zones, dispatch · 3: CRM, loyalty, marketing, ads)
+const SEED_VERSION = "3+ops+inv"; // bump when the demo seed changes shape (2: delivery riders, zones, dispatch · 3: CRM, loyalty, marketing, ads) · +ops: cameras, support tickets, ops settings · +inv: inventory, recipes, purchasing
 
 export interface LocalAdapterOptions {
   /** IndexedDB database + BroadcastChannel name. Tests use unique names. */
@@ -386,9 +387,13 @@ export class LocalAdapter implements Repo {
         branch: branch ? { id: branch.id, name: branch.name } : null,
         table: table ? { id: table.id, label: table.label, code: table.code } : null,
         categories: this.peek("menuCategories", { where: { restaurantId: rid, active: true }, orderBy: [{ field: "sort" }] }).map((c) => ({ id: c.id, name: c.name, sort: c.sort, icon: c.icon })),
-        items: this.peek("menuItems", { where: { restaurantId: rid, active: true }, orderBy: [{ field: "sort" }] }).map((i) => ({
-          id: i.id, categoryId: i.categoryId, name: i.name, description: i.description, price: i.price, tags: i.tags, available: i.available, modifierGroupIds: i.modifierGroupIds, imageUrl: i.imageUrl,
-        })),
+        // menu manager rules (src/modules/menu/rules.ts): channel/branch price, breakfast hours, hidden on this channel
+        items: this.peek("menuItems", { where: { restaurantId: rid, active: true }, orderBy: [{ field: "sort" }] })
+          .filter((i) => !i.hiddenOn?.includes(table ? "qr" : "online"))
+          .map((i) => ({
+            id: i.id, categoryId: i.categoryId, name: i.name, description: i.description, price: priceFor(i, table ? "qr" : "online", branch?.id), tags: i.tags,
+            available: i.available && onSchedule(i), modifierGroupIds: i.modifierGroupIds, imageUrl: i.imageUrl,
+          })),
         modifierGroups: this.peek("modifierGroups", { where: { restaurantId: rid }, orderBy: [{ field: "sort" }] }).map((g) => ({ id: g.id, name: g.name, min: g.min, max: g.max })),
         modifiers: this.peek("modifiers", { where: { restaurantId: rid, available: true }, orderBy: [{ field: "sort" }] }).map((m) => ({ id: m.id, groupId: m.groupId, name: m.name, price: m.price, isDefault: m.isDefault })),
         qrOrdering: { enabled: settings?.qrOrdering.enabled ?? false, allowServiceCalls: settings?.qrOrdering.allowServiceCalls ?? false },
@@ -412,7 +417,7 @@ export class LocalAdapter implements Repo {
       // server-side pricing: look everything up, ignore anything the client claims about prices
       const items: OrderItem[] = input.lines.map((l) => {
         const it = this.peek("menuItems", { where: { id: l.itemId, restaurantId: rid } })[0];
-        if (!it || !it.available || !it.active) throw new Error("item_unavailable");
+        if (!it || !sellable(it, menu.table ? "qr" : "online").ok) throw new Error("item_unavailable");
         if (!Number.isInteger(l.qty) || l.qty < 1 || l.qty > 50) throw new Error("bad_qty");
         const mods = l.modifierIds.map((mid) => {
           const m = this.peek("modifiers", { where: { id: mid, restaurantId: rid } })[0];
@@ -421,7 +426,7 @@ export class LocalAdapter implements Repo {
         });
         const cat = this.peek("menuCategories", { where: { id: it.categoryId } })[0];
         return {
-          id: uuid(), restaurantId: rid, createdAt: now, updatedAt: now, orderId, itemId: it.id, name: it.name, qty: l.qty, unitPrice: it.price, modifiers: mods,
+          id: uuid(), restaurantId: rid, createdAt: now, updatedAt: now, orderId, itemId: it.id, name: it.name, qty: l.qty, unitPrice: priceFor(it, menu.table ? "qr" : "online", branchId), modifiers: mods,
           notes: (l.notes ?? "").slice(0, 200), seat: null, course: 1, status: "new", stationId: it.stationId ?? cat?.stationId ?? null, originTableId: tableIds[0] ?? null,
           discount: 0, firedAt: null, readyAt: null, servedAt: null, voidReason: null, voidedBy: null, createdBy: null,
         };

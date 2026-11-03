@@ -15,6 +15,7 @@ import { pickProvider } from "./pay";
 import { getNotifier } from "./notify/notifier";
 import { GuestProvider, useGuest } from "./ui/context";
 import { GuestToggles, Photo, TotalsList } from "./ui/bits";
+import { ContactRestaurant } from "@/modules/ops/support/ContactRestaurant";
 import { MenuBrowser } from "./ui/Menu";
 import { PromoStrip } from "@/modules/marketing/guest/PromoStrip";
 import { CouponBox } from "@/modules/marketing/guest/CouponBox";
@@ -285,7 +286,10 @@ function OnlineView() {
           <span className="rounded-full bg-black/30 p-1 backdrop-blur-md">
             <Mark className="size-8" />
           </span>
-          <GuestToggles glass />
+          <div className="flex items-center gap-1.5">
+            <ContactRestaurant glass slug={slug} fallbackPhone={venue.branch?.phone ?? venue.phone} />
+            <GuestToggles glass />
+          </div>
         </div>
         <div className="absolute inset-x-0 bottom-0 mx-auto max-w-6xl px-4 pb-6 text-white">
           <span className={cn("inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-[12.5px] font-bold backdrop-blur-md", st.open ? "bg-ok/85" : "bg-black/50")}>

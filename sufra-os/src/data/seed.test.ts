@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildSeed, DEMO_STAFF } from "./seed";
+import { buildSeed, DEMO_RESTAURANT_ID, DEMO_STAFF } from "./seed";
 import { priceItems } from "./pricing";
 import { COLLECTIONS } from "./types";
 import { ROLES } from "@/auth/roles";
@@ -30,11 +30,13 @@ describe("demo seed", () => {
     for (const s of data.serviceCalls) expect(has("tables", s.tableId)).toBe(true);
   });
 
+  // the brief is about the Zamalek tenant; other tenants (marketplace, KSA demo) live alongside it
+  const ofDemo = <T extends { restaurantId?: string }>(rows: T[]) => rows.filter((r) => !r.restaurantId || r.restaurantId === DEMO_RESTAURANT_ID);
   it("covers the brief", () => {
-    expect(data.zones).toHaveLength(2);
-    expect(data.tables).toHaveLength(18);
+    expect(ofDemo(data.zones)).toHaveLength(2);
+    expect(ofDemo(data.tables)).toHaveLength(18);
     expect(data.menuItems.length).toBeGreaterThanOrEqual(45);
-    expect(data.menuCategories.map((c) => c.name.ar)).toEqual(["مشويات", "طواجن", "محاشي", "سلطات", "مقبلات", "حلويات", "مشروبات سخنة", "مشروبات ساقعة"]);
+    expect(ofDemo(data.menuCategories).map((c) => c.name.ar)).toEqual(["مشويات", "طواجن", "محاشي", "سلطات", "مقبلات", "حلويات", "مشروبات سخنة", "مشروبات ساقعة"]);
     for (const r of ROLES) expect(DEMO_STAFF.some((s) => s.role === r), r).toBe(true);
     expect(Object.keys(pins)).toHaveLength(DEMO_STAFF.length);
     expect(data.orders.some((o) => o.status !== "closed")).toBe(true);

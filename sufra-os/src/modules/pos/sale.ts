@@ -21,8 +21,13 @@ import { loadRaw, saveRaw } from "@/lib/storage";
 import { nowIso } from "@/lib/time";
 import { freezeBill, toFinanceBill, toFinancePayments } from "@/lib/receipt/bill";
 import { etaConfig, etaSettingsOf, issueEtaReceipt, EtaValidationError } from "@/lib/receipt/eta";
+// KSA: ZATCA documents instead of ETA e-receipts (country switch in src/lib/zatca/settings.ts)
+import { buildZatcaDocument, type IssuedZatca } from "@/lib/zatca/issue";
+import { taxRegime } from "@/lib/zatca/settings";
+import type { ZatcaBuyer, ZatcaInvoiceRow } from "@/lib/zatca/model";
 import { loadTicket } from "./ops";
 import { onCheckPaid } from "@/modules/marketing/ops";
+import { deductForItems } from "@/modules/inventory/deduct";
 import { remaining, toPiastre } from "./math";
 
 /* ───────── device ───────── */
@@ -76,11 +81,13 @@ async function context(db: Db, branchId: string) {
 interface IssueOut {
   receipt: Receipt;
   etaError: string | null;
+  /** KSA only */
+  zatca: ZatcaInvoiceRow | null;
 }
 
 async function issueDocument(
   db: Db,
-  x: { kind: "SC" | "RC"; checkId: string; branchId: string; shiftId: string | null; device: string; bill: Bill; frozen: ReceiptBill; payments: { method: PaymentMethod; amount: Units; tip: Units }[]; refundOf: Receipt | null; orderRef: string | null },
+  x: { kind: "SC" | "RC"; checkId: string; branchId: string; shiftId: string | null; device: string; bill: Bill; frozen: ReceiptBill; payments: { method: PaymentMethod; amount: Units; tip: Units }[]; refundOf: Receipt | null; orderRef: string | null; buyer?: ZatcaBuyer | null; reason?: string },
 ): Promise<IssueOut> {
   const { settings, restaurant, branch } = await context(db, x.branchId);
   const prev = await lastReceipt(db, x.branchId, x.device);
@@ -88,7 +95,8 @@ async function issueDocument(
   const receiptNo = receiptNumber(x.device, seq);
   const issuedAt = new Date();
   issuedAt.setMilliseconds(0);
-  const eta = etaSettingsOf(settings);
+  const regime = taxRegime(restaurant, settings);
+  const eta = { ...etaSettingsOf(settings), enabled: etaSettingsOf(settings).enabled && regime === "eta" };
   let etaOut: { uuid: string; json: string; qr: string } | null = null;
   let etaError: string | null = null;
   if (eta.enabled) {
@@ -104,13 +112,26 @@ async function issueDocument(
       etaError = e instanceof EtaValidationError ? e.message : String((e as Error).message ?? e);
     }
   }
+  let zatcaDoc: IssuedZatca | null = null;
+  if (regime === "zatca") {
+    try {
+      const [original] = x.refundOf ? await db.list("zatcaInvoices", { where: { receiptId: x.refundOf.id } }) : [];
+      zatcaDoc = await buildZatcaDocument(db, {
+        settings, restaurant, branch, branchId: x.branchId, device: x.device, kind: x.kind, bill: x.bill, frozen: x.frozen, payments: x.payments, receiptNo, issuedAt,
+        checkId: x.checkId, original: original ?? null, reason: x.reason, buyer: x.buyer ?? null,
+      });
+    } catch (e) {
+      etaError = `ZATCA: ${String((e as Error).message ?? e)}`;
+    }
+  }
   const receipt = await db.insert("receipts", {
     branchId: x.branchId, checkId: x.checkId, shiftId: x.shiftId, device: x.device, kind: x.kind, seq, receiptNo, issuedAt: issuedAt.toISOString(), issuedBy: db.actorId,
     bill: x.frozen, payments: x.payments, refundOf: x.refundOf?.id ?? null, etaUuid: etaOut?.uuid ?? null, etaPreviousUuid: etaOut ? (prev?.etaUuid ?? "") : null,
     etaJson: etaOut?.json ?? null, etaQr: etaOut?.qr ?? null, etaStatus: !eta.enabled ? "not_required" : etaOut ? "pending" : "invalid", etaSubmissionUuid: null,
     etaErrors: etaError ? [etaError] : [],
   });
-  return { receipt, etaError };
+  const zatca = zatcaDoc ? await db.insert("zatcaInvoices", { ...zatcaDoc, receiptId: receipt.id }) : null;
+  return { receipt, etaError, zatca };
 }
 
 /** Menu sku (or item id) — the ETA internalCode a line is reported under. */
@@ -151,6 +172,7 @@ export const businessDate = (d = new Date()) => {
 export interface CloseResult {
   receipt: Receipt;
   etaError: string | null;
+  zatca?: ZatcaInvoiceRow | null;
   ledgerError: string | null;
 }
 
@@ -160,7 +182,7 @@ export async function closeCheck(db: Db, checkId: string, opts: { shift: Shift |
   if (!t) throw new Error("check not found");
   if (t.check.status === "paid") {
     const [r] = await db.list("receipts", { where: { checkId, kind: "SC" } });
-    if (r) return { receipt: r, etaError: null, ledgerError: null };
+    if (r) return { receipt: r, etaError: null, ledgerError: null, zatca: (await db.list("zatcaInvoices", { where: { receiptId: r.id } }))[0] ?? null };
   }
   const [settings] = await db.list("settings");
   const order = t.orders[0];
@@ -179,9 +201,9 @@ export async function closeCheck(db: Db, checkId: string, opts: { shift: Shift |
     const last = [...tenders].reverse().find((p) => p.amount > over);
     if (last) last.amount -= over;
   }
-  const { receipt, etaError } = await issueDocument(db, {
+  const { receipt, etaError, zatca } = await issueDocument(db, {
     kind: "SC", checkId, branchId: t.check.branchId, shiftId: opts.shift?.id ?? null, device: opts.device, bill, frozen, payments: tenders, refundOf: null,
-    orderRef: order ? `#${order.number}` : null,
+    orderRef: order ? `#${order.number}` : null, buyer: t.check.taxBuyer ?? null,
   });
   const now = nowIso();
   await db.update("checks", checkId, { status: "paid", closedAt: now, receiptNo: receipt.receiptNo, etaUuid: receipt.etaUuid, paid: frozen.payable });
@@ -193,13 +215,15 @@ export async function closeCheck(db: Db, checkId: string, opts: { shift: Shift |
     const others = (await db.list("checks", { where: { status: ["open", "bill_requested"] }, contains: { tableIds: tid } })).filter((c) => c.id !== checkId);
     if (!others.length) await setTableStatus(db, tid, "dirty");
   }
+  // inventory: lines that never went to the kitchen (counter drinks) are deducted now; sent ones already were (idempotent)
+  await deductForItems(db, live, { trigger: "paid", branchId: t.check.branchId });
   // CRM hook: visit + points (program rules, tiers, stamps), promo redemptions finalized, referral / campaign attribution
   await onCheckPaid(db, checkId, { total: frozen.payable }).catch((e) => db.audit("loyalty.error", "checks", checkId, { error: String((e as Error).message ?? e) }));
   const ledgerError = await post(db, t.check.branchId, (l) =>
     postSale(l, bill, toFinancePayments(tenders), { date: businessDate(), receiptId: receipt.receiptNo, branch: t.check.branchId, drawer: opts.device }),
   );
   await db.audit("check.close", "checks", checkId, { receiptNo: receipt.receiptNo, total: frozen.payable, eta: receipt.etaUuid });
-  return { receipt, etaError, ledgerError };
+  return { receipt, etaError, ledgerError, zatca };
 }
 
 /* ───────── returns ───────── */
@@ -229,8 +253,9 @@ export async function refundSale(db: Db, sale: Receipt, picks: { lineId: string;
   const lineMeta = sale.bill.lines.map((l) => ({ id: l.id, itemId: l.itemId, name: l.name, modifiers: l.modifiers.map((n) => ({ groupId: "", modifierId: "", name: n, price: 0 })), notes: l.notes }));
   const frozen = freezeBill(bill, lineMeta);
   const tenders = [{ method, amount: frozen.payable, tip: 0 }];
-  const { receipt, etaError } = await issueDocument(db, {
+  const { receipt, etaError, zatca } = await issueDocument(db, {
     kind: "RC", checkId: sale.checkId, branchId: sale.branchId, shiftId: opts.shift?.id ?? null, device: opts.device, bill, frozen, payments: tenders, refundOf: sale, orderRef: null,
+    reason: opts.reason,
   });
   const [orig] = await db.list("payments", { where: { checkId: sale.checkId, status: "captured" }, limit: 1 });
   await db.insert("payments", {
@@ -241,7 +266,7 @@ export async function refundSale(db: Db, sale: Receipt, picks: { lineId: string;
     postReturn(l, bill, toFinancePayments(tenders), { date: businessDate(), receiptId: receipt.receiptNo, originalReceiptId: sale.receiptNo, branch: sale.branchId, drawer: opts.device }),
   );
   await db.audit("payment.refund", "receipts", receipt.id, { of: sale.receiptNo, total: frozen.payable, method, reason: opts.reason, lines: picks }, opts.approvedBy);
-  return { receipt, etaError, ledgerError };
+  return { receipt, etaError, ledgerError, zatca };
 }
 
 /** What is still returnable on a sale (qty per line, after earlier returns). */

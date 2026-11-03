@@ -12,7 +12,9 @@ export const SEED_REF = new Date("2026-10-23T21:00:00+03:00");
 const JSONB = new Set(["name", "description", "address", "openingHours", "modifiers", "delivery", "discount", "tax", "invoice", "qrOrdering", "locale", "data", "addresses", "dispatch", "geometry", "hours", "settlement",
   // CRM / marketing / ads (0009_crm.sql)
   "tiers", "stampCards", "rewards", "terms", "consent", "stamps", "target", "bogo", "combo", "window", "limits", "lineDiscounts", "purchaser", "recipient", "variants", "stats", "text",
-  "title", "body", "creative", "payment", "daily", "targeting", "pricing", "items", "rules"]);
+  "title", "body", "creative", "payment", "daily", "targeting", "pricing", "items", "rules",
+  // inventory, recipes & purchasing + menu extras (0012_inventory.sql)
+  "packs", "levels", "branchLevels", "lines", "history", "marketplace", "packName", "area", "schedule", "channelPrices", "branchPrices", "comboOf"]);
 const SKIP: Record<string, string[]> = { memberships: ["hasPin"] };
 const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/;
 
@@ -70,19 +72,24 @@ export function seedSql(): string {
 
   const rows = (c: CollectionName) => data[c] as unknown as Record<string, unknown>[];
   const order: CollectionName[] = ["restaurants", "branches", "memberships", "staffCompensation", "zones", "tables", "floorDecor", "tableLinks"];
-  for (const c of order) out += insert(TABLE_NAMES[c], rows(c), SKIP[c], c === "memberships" ? (r) => ({ pin_hash: `extensions.crypt(${q(pins[r.id as string])}, extensions.gen_salt('bf'))` }) : undefined);
+  for (const c of order) out += insert(TABLE_NAMES[c], rows(c), SKIP[c], c === "memberships" ? (r) => ({ pin_hash: pins[r.id as string] ? `extensions.crypt(${q(pins[r.id as string])}, extensions.gen_salt('bf'))` : "null" }) : undefined);
   // stations ↔ printers reference each other: stations first without printer, then printers, then link
   out += insert("kitchen_stations", rows("kitchenStations"), ["printerId"]);
   out += insert("printers", rows("printers"));
   for (const s of data.kitchenStations) if (s.printerId) out += `update public.kitchen_stations set printer_id = ${q(s.printerId)} where id = ${q(s.id)};\n`;
   out += "\n";
-  for (const c of ["menuCategories", "modifierGroups", "modifiers", "menuItems"] as CollectionName[]) out += insert(TABLE_NAMES[c], rows(c));
+  for (const c of ["menuCategories", "modifierGroups", "modifiers"] as CollectionName[]) out += insert(TABLE_NAMES[c], rows(c));
+  // menu items carry optional menu-manager columns (channel prices, schedule, combo) on some rows only
+  out += insert(TABLE_NAMES.menuItems, rows("menuItems"), [], undefined, true);
   out += insert("customers", rows("customers"), [], undefined, true);
   for (const c of ["reservations", "checks", "orders", "orderItems", "payments", "serviceCalls", "settings", "auditLog", "deliveryZones", "driverShifts", "driverLocations"] as CollectionName[])
     out += insert(TABLE_NAMES[c], rows(c));
 
   // CRM, loyalty, marketing, Sufra sponsored ads (0009_crm.sql)
   for (const c of ["loyaltyPrograms", "promotions", "segments", "campaigns", "couponCodes", "promoRedemptions", "loyaltyLedger", "giftCards", "giftCardTxns", "campaignMessages", "journeys", "referrals", "promoBanners", "guestFeedback", "marketProfiles", "adSlots", "adBookings"] as CollectionName[])
+    out += insert(TABLE_NAMES[c], rows(c), [], undefined, true);
+  // inventory, recipes & purchasing (0012_inventory.sql)
+  for (const c of ["storageLocations", "suppliers", "stockItems", "supplierItems", "recipes", "purchaseOrders", "goodsReceipts", "supplierInvoices", "supplierPayments", "stockBatches", "stockLevels", "stockMoves", "stockCounts", "stockTransfers"] as CollectionName[])
     out += insert(TABLE_NAMES[c], rows(c), [], undefined, true);
   // Sufra staff with platform-wide access (is_platform_admin())
   for (const s of DEMO_STAFF.filter((x) => x.role === "platform_admin" && x.email)) out += `insert into public.platform_admins (user_id) values (${q(userId(s.key))}) on conflict do nothing;
