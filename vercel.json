@@ -5,6 +5,14 @@
   "outputDirectory": "sufra-web/dist",
   "rewrites": [
     {
+      "source": "/iclock/cdata",
+      "destination": "/api/attendance-push"
+    },
+    {
+      "source": "/iclock/getrequest",
+      "destination": "/api/attendance-push?cmd=getrequest"
+    },
+    {
       "source": "/app/((?!assets/).*)",
       "destination": "/app/index.html"
     }

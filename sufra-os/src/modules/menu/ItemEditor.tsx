@@ -119,7 +119,7 @@ export function ItemEditor({ item, categoryId, onClose }: { item: MenuItem | nul
               {cost != null ? (
                 <div className="grid gap-2 rounded-2xl border border-line bg-surface-2/60 p-3.5 text-[14px] sm:grid-cols-3">
                   <span>{L("تكلفة الحصة", "Portion cost")} <b className="num">{formatMoney(cost, { lang })}</b></span>
-                  {m ? <span>{L("تكلفة الأكل", "Food cost")} <b className={m.foodCostBp > 3500 ? "text-danger" : "text-ok"}>{pct(m.foodCostBp, lang)}</b></span> : null}
+                  {m ? <span>{L("تكلفة الأكل", "Food cost")} <b className={costTone(m.foodCostBp) === "danger" ? "text-danger" : costTone(m.foodCostBp) === "warn" ? "text-warn" : "text-ok"}>{pct(m.foodCostBp, lang)}</b></span> : null}
                   <span>{L("سعر لـ ٣٠٪", "Price for 30%")} <button type="button" className="num font-semibold text-primary" onClick={() => set("price", priceForTarget(cost, 3000, opts))}>{formatMoney(priceForTarget(cost, 3000, opts), { lang, whole: true })}</button></span>
                 </div>
               ) : <p className="text-[13px] text-warn">{L("مفيش وصفة — ضيفها عشان تشوف التكلفة والهامش", "No recipe yet — add one to see cost and margin")}</p>}

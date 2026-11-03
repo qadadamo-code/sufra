@@ -46,8 +46,8 @@ export default function ItemsPage() {
       ),
     },
     { key: "qty", header: L("الموجود", "On hand"), align: "end", cell: (r) => <Qty qty={r.qty} item={r.item} className="font-semibold" /> },
-    { key: "par", header: L("الحد / الـ par", "Min / par"), align: "end", hideOnMobile: true, cell: (r) => { const lv = inv.levelsFor(r.item); return <span className="num text-[13px] text-muted">{formatQty(lv.min, r.item, lang)} / {formatQty(lv.par, r.item, lang)}</span>; } },
-    { key: "avg", header: L("متوسط التكلفة", "Avg cost"), align: "end", hideOnMobile: true, cell: (r) => <span className="num text-[13px]">{formatMoney(perUnit(r.item, r.avg), { lang })} / {unitLabel(r.item)}</span> },
+    { key: "par", header: L("الحد / الـ par", "Min / par"), align: "end", hideOnMobile: true, cell: (r) => { const lv = inv.levelsFor(r.item); return <span className="num whitespace-nowrap text-[13px] text-muted">{formatQty(lv.min, r.item, lang)} / {formatQty(lv.par, r.item, lang)}</span>; } },
+    { key: "avg", header: L("متوسط التكلفة", "Avg cost"), align: "end", hideOnMobile: true, cell: (r) => <span className="num whitespace-nowrap text-[13px]">{formatMoney(perUnit(r.item, r.avg), { lang, whole: true })}/{unitLabel(r.item)}</span> },
     { key: "value", header: L("القيمة", "Value"), align: "end", hideOnMobile: true, cell: (r) => <Money value={r.value} whole /> },
     { key: "st", header: L("الحالة", "Status"), align: "end", cell: (r) => <Badge size="sm" tone={r.state.tone} dot>{r.state[lang]}</Badge> },
   ];

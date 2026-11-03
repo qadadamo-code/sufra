@@ -67,7 +67,7 @@ export default function CountSheet() {
               </ul>
             </section>
           ))}
-          <div className="sticky bottom-3 z-10">
+          <div className="sticky bottom-[calc(env(safe-area-inset-bottom)+92px)] z-10 md:bottom-3">
             <Button
               block
               size="lg"

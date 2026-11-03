@@ -341,7 +341,7 @@ function build(c: InventorySeedCtx, openingOverride: Map<string, number> | null)
   const mkItem = (k: string, x: { ar: string; en: string; cat: StockCategory; kind: "raw" | "prep"; base: BaseUnit; packs: PackUnit[]; acc: StockAccount; cost: Units; sup: Sup | null; loc: Loc; vat: number; batch?: number; yieldBp?: number; market?: string | null; allergens?: string[] }) => {
     stockItems.push({
       ...base(`stock:${k}`), name: L(x.ar, x.en), sku: k.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12), category: x.cat, kind: x.kind, baseUnit: x.base, packs: x.packs,
-      countUnit: x.packs[0]?.id ?? x.base, account: x.acc, levels: { min: 0, par: 0, max: 0 }, branchLevels: {}, supplierIds: x.sup ? [sid(x.sup)] : [], preferredSupplierId: x.sup ? sid(x.sup) : null,
+      countUnit: x.base === "g" ? "kg" : x.base === "ml" ? "L" : x.base, account: x.acc, levels: { min: 0, par: 0, max: 0 }, branchLevels: {}, supplierIds: x.sup ? [sid(x.sup)] : [], preferredSupplierId: x.sup ? sid(x.sup) : null,
       lastCost: x.cost, defaultLocationIds: [lid(x.loc)], trackBatches: !!x.batch, shelfLifeDays: x.batch ?? null, vatBp: x.vat * 100, yieldBp: x.yieldBp ?? 10_000,
       allergens: x.allergens ?? [], active: true, note: "", marketKey: x.market ?? null,
     });
