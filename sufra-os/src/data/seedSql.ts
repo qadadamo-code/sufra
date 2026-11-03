@@ -9,7 +9,10 @@ import { TABLE_NAMES, type CollectionName } from "./types";
 /** fixed reference instant: rows are emitted relative to it */
 export const SEED_REF = new Date("2026-10-23T21:00:00+03:00");
 
-const JSONB = new Set(["name", "description", "address", "openingHours", "modifiers", "delivery", "discount", "tax", "invoice", "qrOrdering", "locale", "data", "addresses", "dispatch", "geometry", "hours", "settlement"]);
+const JSONB = new Set(["name", "description", "address", "openingHours", "modifiers", "delivery", "discount", "tax", "invoice", "qrOrdering", "locale", "data", "addresses", "dispatch", "geometry", "hours", "settlement",
+  // CRM / marketing / ads (0009_crm.sql)
+  "tiers", "stampCards", "rewards", "terms", "consent", "stamps", "target", "bogo", "combo", "window", "limits", "lineDiscounts", "purchaser", "recipient", "variants", "stats", "text",
+  "title", "body", "creative", "payment", "daily", "targeting", "pricing", "items", "rules"]);
 const SKIP: Record<string, string[]> = { memberships: ["hasPin"] };
 const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/;
 
@@ -31,9 +34,10 @@ function lit(key: string, v: unknown): string {
   return q(JSON.stringify(v));
 }
 
-function insert(table: string, rows: Record<string, unknown>[], skip: string[] = [], extra?: (r: Record<string, unknown>) => Record<string, string>) {
+function insert(table: string, rows: Record<string, unknown>[], skip: string[] = [], extra?: (r: Record<string, unknown>) => Record<string, string>, union = false) {
   if (!rows.length) return "";
-  const keys = Object.keys(rows[0]).filter((k) => !skip.includes(k));
+  // union: rows with optional fields (CRM tables) — every key any row has
+  const keys = (union ? [...new Set(rows.flatMap((r) => Object.keys(r)))] : Object.keys(rows[0])).filter((k) => !skip.includes(k));
   const extraKeys = extra ? Object.keys(extra(rows[0])) : [];
   const cols = [...keys.map(snake), ...extraKeys].join(", ");
   const values = rows.map((r) => `  (${[...keys.map((k) => lit(k, r[k])), ...(extra ? Object.values(extra(r)) : [])].join(", ")})`).join(",\n");
@@ -65,8 +69,18 @@ export function seedSql(): string {
   out += insert("printers", rows("printers"));
   for (const s of data.kitchenStations) if (s.printerId) out += `update public.kitchen_stations set printer_id = ${q(s.printerId)} where id = ${q(s.id)};\n`;
   out += "\n";
-  for (const c of ["menuCategories", "modifierGroups", "modifiers", "menuItems", "customers", "reservations", "checks", "orders", "orderItems", "payments", "serviceCalls", "settings", "auditLog", "deliveryZones", "driverShifts", "driverLocations"] as CollectionName[])
+  for (const c of ["menuCategories", "modifierGroups", "modifiers", "menuItems"] as CollectionName[]) out += insert(TABLE_NAMES[c], rows(c));
+  out += insert("customers", rows("customers"), [], undefined, true);
+  for (const c of ["reservations", "checks", "orders", "orderItems", "payments", "serviceCalls", "settings", "auditLog", "deliveryZones", "driverShifts", "driverLocations"] as CollectionName[])
     out += insert(TABLE_NAMES[c], rows(c));
+
+  // CRM, loyalty, marketing, Sufra sponsored ads (0009_crm.sql)
+  for (const c of ["loyaltyPrograms", "promotions", "segments", "campaigns", "couponCodes", "promoRedemptions", "loyaltyLedger", "giftCards", "giftCardTxns", "campaignMessages", "journeys", "referrals", "promoBanners", "guestFeedback", "marketProfiles", "adSlots", "adBookings"] as CollectionName[])
+    out += insert(TABLE_NAMES[c], rows(c), [], undefined, true);
+  // Sufra staff with platform-wide access (is_platform_admin())
+  for (const s of DEMO_STAFF.filter((x) => x.role === "platform_admin" && x.email)) out += `insert into public.platform_admins (user_id) values (${q(userId(s.key))}) on conflict do nothing;
+
+`;
 
   // continue today's order numbers after the seeded ones
   const max = Math.max(...data.orders.map((o) => o.number));

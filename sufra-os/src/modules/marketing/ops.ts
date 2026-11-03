@@ -27,7 +27,7 @@ import {
 } from "@/lib/promo";
 import { clickToChatUrl } from "@/lib/notify/core";
 import { messagingSettingsOf } from "@/lib/notify/settings";
-import { notifierFor } from "@/lib/notify/notifier";
+import { MessagingService } from "@/lib/notify/service";
 
 /* ───────── loyalty program ───────── */
 
@@ -470,11 +470,34 @@ export async function campaignRecipients(db: Db, campaign: Pick<Campaign, "audie
   return { audience, eligible, noConsent: audience.filter((c) => !(c.consent ? c.consent[consentKey] : consentKey === "whatsapp")).length, capped: audience.length - eligible.length };
 }
 
+/**
+ * One marketing message through the messaging service (consent, opt-out, quiet hours, 24h window, logging): approved
+ * Meta marketing templates — win_back_offer when an offer code is attached, else campaign_generic.
+ */
+async function deliver(svc: MessagingService | null, db: Db, c: Customer, text: string, x: { code: string | null; offer: string; link: string; restaurant: string; lang: "ar" | "en"; channel: Campaign["channel"]; dedupeKey: string }): Promise<CampaignMessage["status"]> {
+  if (!svc || x.channel !== "whatsapp") return db.repo.kind === "local" ? "sent" : "queued";
+  try {
+    const m = await svc.send({
+      to: c.phone, name: c.name, customerId: c.id, lang: x.lang, dedupeKey: x.dedupeKey, sentBy: db.actorId,
+      ...(x.code
+        ? { template: "win_back_offer", vars: { name: c.name.split(" ")[0], offer: x.offer, restaurant: x.restaurant, code: x.code, until: "", link: x.link } }
+        : { template: "campaign_generic", vars: { name: c.name.split(" ")[0], message: text, link: x.link } }),
+    });
+    const s = m.status as string;
+    if (s === "skipped" || s === "failed") return "failed";
+    if (s === "sent" || s === "delivered" || s === "read") return s;
+    // click-to-chat / scheduled (quiet hours): waits for a tap or the send time; the local demo counts it as sent
+    return db.repo.kind === "local" ? "sent" : "queued";
+  } catch {
+    return "failed";
+  }
+}
+
 /** Sends (or queues click-to-chat links for) a campaign. Unique code per recipient when an offer is attached. */
 export async function sendCampaign(db: Db, campaign: Campaign, ctx: SendContext): Promise<{ sent: number; queued: number; failed: number }> {
   const { eligible } = await campaignRecipients(db, campaign, ctx.settings);
   const promo = campaign.promotionId ? await db.get("promotions", campaign.promotionId) : null;
-  const notifier = notifierFor(messagingSettingsOf(ctx.settings));
+  const svc = await MessagingService.load(db).catch(() => null);
   await db.update("campaigns", campaign.id, { status: "sending" });
   let sent = 0;
   let queued = 0;
@@ -488,15 +511,8 @@ export async function sendCampaign(db: Db, campaign: Campaign, ctx: SendContext)
       await db.insert("couponCodes", { promotionId: promo.id, code, customerId: c.id, campaignId: campaign.id, usedAt: null, checkId: null, expiresAt: promo.window?.endsAt ?? null });
     }
     const text = renderText(v.text[ctx.lang] || v.text.ar, { name: c.name.split(" ")[0], restaurant: ctx.restaurantName, code, points: c.loyaltyPoints, link: `${link}/me`, tier: c.tierId });
-    let status: CampaignMessage["status"] = "queued";
-    let url: string | null = null;
-    if (campaign.channel === "whatsapp") {
-      url = clickToChatUrl(c.phone, text);
-      if (notifier.automatic) {
-        const r = await notifier.sendText({ restaurantId: db.restaurantId, to: c.phone, text }).catch(() => ({ ok: false as const, status: "failed" as const, error: "send" }));
-        status = r.ok ? (r.status === "read" || r.status === "delivered" ? r.status : "sent") : "failed";
-      } else status = db.repo.kind === "local" ? "sent" : "queued"; // local demo: logged as sent; cloud click-to-chat: staff taps each link
-    } else status = db.repo.kind === "local" ? "sent" : "queued";
+    const url = campaign.channel === "whatsapp" ? clickToChatUrl(c.phone, text) : null;
+    const status = await deliver(svc, db, c, text, { code, offer: promo ? (promo.name[ctx.lang] || promo.name.ar) : "", link: `${link}/me`, restaurant: ctx.restaurantName, lang: ctx.lang, channel: campaign.channel, dedupeKey: `campaign:${campaign.id}:${c.id}` });
     if (status === "failed") failed++;
     else if (status === "queued") queued++;
     else sent++;
@@ -577,11 +593,13 @@ export async function runJourneys(db: Db, ctx: SendContext, now = new Date()): P
     const fresh = due.filter((c) => !prior.some((m) => m.customerId === c.id) && (c.consent ? (j.channel === "sms" ? c.consent.sms : c.consent.whatsapp) : true));
     if (!fresh.length) continue;
     const promo = j.promotionId ? await db.get("promotions", j.promotionId) : null;
+    const svc = await MessagingService.load(db).catch(() => null);
     for (const c of fresh) {
       const code = promo ? referralCode(`${j.id}:${c.id}:${now.toISOString().slice(0, 7)}`, j.trigger.slice(0, 2).toUpperCase()) : null;
       if (promo && code) await db.insert("couponCodes", { promotionId: promo.id, code, customerId: c.id, campaignId: camp.id, usedAt: null, checkId: null, expiresAt: new Date(now.getTime() + 14 * DAY).toISOString() });
       const text = renderText(j.text[ctx.lang] || j.text.ar, { name: c.name.split(" ")[0], restaurant: ctx.restaurantName, code, points: c.loyaltyPoints, link: `${ctx.origin}${import.meta.env?.BASE_URL ?? "/app/"}r/${ctx.slug}/me` });
-      await db.insert("campaignMessages", { campaignId: camp.id, variantId: "a", customerId: c.id, to: c.phone, text, code, status: "sent", link: clickToChatUrl(c.phone, text), sentAt: nowIso(), readAt: null, redeemedAt: null, revenue: 0 });
+      const status = await deliver(svc, db, c, text, { code, offer: promo ? (promo.name[ctx.lang] || promo.name.ar) : "", link: `${ctx.origin}${import.meta.env?.BASE_URL ?? "/app/"}r/${ctx.slug}/me`, restaurant: ctx.restaurantName, lang: ctx.lang, channel: j.channel, dedupeKey: `journey:${j.id}:${c.id}:${now.toISOString().slice(0, 7)}` });
+      await db.insert("campaignMessages", { campaignId: camp.id, variantId: "a", customerId: c.id, to: c.phone, text, code, status, link: clickToChatUrl(c.phone, text), sentAt: status === "queued" ? null : nowIso(), readAt: null, redeemedAt: null, revenue: 0 });
       if (j.trigger === "birthday") {
         const program = await loadProgram(db);
         const bonus = rulesOf(program).birthdayBonus;

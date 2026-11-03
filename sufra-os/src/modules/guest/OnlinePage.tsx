@@ -16,6 +16,10 @@ import { getNotifier } from "./notify/notifier";
 import { GuestProvider, useGuest } from "./ui/context";
 import { GuestToggles, Photo, TotalsList } from "./ui/bits";
 import { MenuBrowser } from "./ui/Menu";
+import { PromoStrip } from "@/modules/marketing/guest/PromoStrip";
+import { CouponBox } from "@/modules/marketing/guest/CouponBox";
+import { PromoPublic } from "@/modules/marketing/guest/api";
+import { useRepo } from "@/data/hooks";
 import { ItemSheet } from "./ui/ItemSheet";
 import { CartBar, CartSheet } from "./ui/Cart";
 import { formatMoney } from "@/lib/money";
@@ -98,6 +102,10 @@ function OnlineView() {
   };
   const fee = kind === "delivery" && zone ? zoneFee(zone, cartTotals(menu, cart, { mode, tax: venue.tax, deliveryFee: 0 }).subtotal) : 0;
   const totals = cartTotals(menu, cart, { mode, tax: venue.tax, deliveryFee: fee });
+  // marketing: coupon codes + automatic offers, applied to the order after it is placed (line discounts before tax)
+  const repo = useRepo();
+  const promoApi = useMemo(() => new PromoPublic(repo), [repo]);
+  const [codes, setCodes] = useState<string[]>([]);
   const minOk = kind !== "delivery" || !zone || totals.subtotal >= zone.minOrder;
   const phoneOk = !!normalizePhone(profile.phone);
   const online = !!pickProvider(svc.local ? "local" : "supabase");
@@ -126,6 +134,7 @@ function OnlineView() {
         pickupAt,
         payment,
       });
+      await promoApi.applyToOrder(slug, res.orderId, codes, profile.phone).catch(() => null);
       // consent for WhatsApp order updates (recorded with the exact wording; 0007_messaging.sql)
       void svc.recordConsent(slug, { phone: profile.phone, name: profile.name, source: "online_checkout", granted: waOptIn, wording: L(WA_WORDING.ar, WA_WORDING.en) }).catch(() => undefined);
       // WhatsApp "order received" (logged preview until the Cloud API is connected)
@@ -257,6 +266,7 @@ function OnlineView() {
           ))}
         </div>
       </div>
+      <CouponBox mode={mode} channel="online" deliveryFee={fee} phone={profile.phone} onChange={(c) => setCodes(c)} />
       {!minOk && zone ? (
         <p className="rounded-xl bg-warn-soft px-3 py-2 text-[13px] font-semibold text-warn">
           {L("أقل طلب للمنطقة دي", "Minimum order for this area is")} <Money value={zone.minOrder} compact /> — {L("زوّد", "add")} <Money value={zone.minOrder - totals.subtotal} />
@@ -318,7 +328,7 @@ function OnlineView() {
               </p>
             </div>
           ) : null}
-          <MenuBrowser onOpen={setItem} />
+          <MenuBrowser onOpen={setItem} header={<PromoStrip slug={slug} placement="online_top" mode={mode} className="mb-5" onItem={(id) => { const it = menu.items.find((x) => x.id === id); if (it) setItem(it); }} />} />
         </div>
 
         {/* desktop cart */}

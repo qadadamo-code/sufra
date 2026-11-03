@@ -28,7 +28,7 @@ export default function ReviewsPage() {
 
   const rows: Row[] = useMemo(() => {
     const fromAudit: Row[] = audit
-      .filter((a) => !fb.some((f) => f.orderId && f.orderId === a.entityId))
+      .filter((a) => !fb.some((f) => (f.orderId && f.orderId === a.entityId) || (f.checkId && f.checkId === a.entityId)))
       .map((a) => {
         const d = a.data as { stars?: number; comment?: string; tags?: string[] };
         return { id: a.id, restaurantId: a.restaurantId, createdAt: a.createdAt, updatedAt: a.updatedAt, branchId: a.branchId, checkId: a.entity === "checks" ? a.entityId : null, orderId: a.entity === "orders" ? a.entityId : null, tableId: null, stars: d.stars ?? 0, tags: d.tags ?? [], comment: d.comment ?? "", source: "audit" };

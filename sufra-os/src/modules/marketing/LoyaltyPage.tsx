@@ -31,8 +31,8 @@ export default function LoyaltyPage() {
 
   const save = async () => {
     if (saved) await db.update("loyaltyPrograms", saved.id, p);
-    else await db.insert("loyaltyPrograms", { ...p, id: db.restaurantId });
-    await db.audit("loyalty.settings", "loyaltyPrograms", db.restaurantId, {});
+    else await db.insert("loyaltyPrograms", p);
+    await db.audit("loyalty.settings", "loyaltyPrograms", saved?.id ?? null, {});
     toast({ title: L("إعدادات الولاء اتحفظت", "Loyalty settings saved"), tone: "success" });
   };
   const tierRow = (t: Tier, i: number) => (

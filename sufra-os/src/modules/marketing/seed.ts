@@ -71,7 +71,7 @@ export function demoCrmRows(c: Ctx) {
 
   /* ── loyalty program ── */
   const program: LoyaltyProgram = {
-    ...base("loyalty:program"), id: R, name: L("نادي سُفرة", "Sufra Club"), enabled: true, earnPoints: 1, earnSpend: E(10), pointValue: E("0.25"), minRedeem: 100,
+    ...base("loyalty:program"), name: L("نادي سُفرة", "Sufra Club"), enabled: true, earnPoints: 1, earnSpend: E(10), pointValue: E("0.25"), minRedeem: 100,
     expiryDays: 365, tiers: DEFAULT_TIERS,
     stampCards: [{ id: "coffee", name: L("كارت القهوة: اشرب ٩ والعاشرة علينا", "Coffee card: 9 + the 10th free"), itemIds: [itemId("turkish"), itemId("cappuccino"), itemId("nescafe")], categoryIds: [], required: 10, rewardItemId: itemId("turkish"), active: true }],
     rewards: [

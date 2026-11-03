@@ -36,7 +36,9 @@ PIN (shared devices — `/app/login/pin`, the device is already paired to the de
 | نورهان علي | waiter | 5200 | /waiter |
 | الشيف صابر | chef (شيف) | 6000 | /kitchen |
 | محمد ربيع | kitchen (مطبخ) | 7000 | /kitchen |
-| إسلام جمال | delivery (دليفري) | 8000 | /delivery |
+| إسلام جمال | delivery (دليفري) | 8000 | /driver (rider app) |
+| محمود سعيد | delivery | 8100 | /driver |
+| عمر خالد | delivery | 8200 | /driver |
 | هالة منصور | accountant (محاسب) | 9000 | /accounting |
 
 Guest pages (no login): `/app/r/sufra-zamalek` (online menu) and `/app/r/sufra-zamalek/t/ZM05` (table 5 QR menu with
@@ -137,6 +139,27 @@ Check totals are always computed by `@finance/tax` via `src/data/pricing.ts` (14
 `@finance/*` resolves to `../sufra-finance/src/*` (tsconfig `paths` + Vite alias). `eta-receipt.ts` imports `node:crypto` (server
 side); the browser imports `eta-receipt-core.ts` (WebCrypto wrapper in `src/lib/receipt/eta.ts`) and `money`, `tax`, `ledger`,
 `posting`, `shift`, `eta-client` freely.
+
+## Delivery & online-order operations (`src/modules/delivery`, `supabase/migrations/0006_delivery.sql`)
+
+- **Inbox** (`/delivery`): online/phone/app orders waiting for a decision — accept with a prep time (items fire to the kitchen,
+  customer gets the ETA) or reject with a reason (order voided, customer told why). Auto-accept per channel
+  (`settings.delivery.autoAccept`; default manual for online delivery/pickup, QR keeps waiter-confirm) and an auto-reject countdown
+  (`autoRejectMin`). The nav badge counts waiting orders and chimes on new ones. "Phone order" = customer by phone → address/pin →
+  a delivery ticket opened in the POS (`/pos?check=…`); "App order" = manual Talabat/elmenus/… entry with commission %.
+- **Dispatch** (`/delivery/dispatch`): preparing → ready → assigned → out → delivered, live map (Leaflet + OSM; drawn fallback when tiles
+  are blocked) with the kitchen, doors and riders, rider suggestions (`assign.ts`: idle/returning/batch, ETA = haversine × road factor ÷
+  speed + hand-over), batching of nearby orders, late alerts, delay notices.
+- **Rider app** (`/driver`, home of the delivery role): shift on/off, my orders, call/WhatsApp, navigate (Google Maps directions), amount to
+  collect vs paid, picked up → arrived → delivered (door code or photo proof) / failed, live GPS (`watchPosition`, throttled) into
+  `driverLocations`; the guest tracking page shows the rider, ETA and door code while out for delivery.
+- **Rider cash** (`/delivery/settle`): expected vs handed in per shift; settling closes the delivered checks on this POS (receipt + ETA +
+  `postSale`) and posts any short/over with finance `postCashMove` (6901).
+- **Zones** (`/settings/delivery`): polygons or radius rings on the map, fee, minimum, ETA, free-delivery threshold, hours — used by guest
+  checkout (local `deliveryZones`, cloud `delivery_zones`) + delivery rules. **Reports** (`/delivery/reports`): channel/zone/hour, prep and
+  ride times, late %, riders (deliveries, time, cash, rating), aggregator commission.
+- Every customer-facing stage goes through `notifyOrderStage(order, stage, { db })` (`src/modules/delivery/notify.ts`); the default sender
+  is the guest `LogNotifier`, `registerOrderNotifier()` plugs in WhatsApp. Stage rules live in `stages.ts` (illegal transitions throw).
 
 ## POS, receipts & ETA (`src/modules/pos`, `src/modules/orders`, `src/lib/receipt`)
 

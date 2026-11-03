@@ -363,6 +363,13 @@ export class GuestService {
       restaurantId: r.id, branchId: check?.branchId ?? null, actorId: null, action: "guest.feedback", entity: input.orderId ? "orders" : "checks",
       entityId: input.orderId ?? input.checkId ?? null, data: { stars, comment, tags: input.tags ?? [], table: input.tableCode ?? null }, approvedBy: null,
     });
+    // reviews dashboard row (marketing → reviews; cloud: guest_feedback via guest_feedback_submit)
+    const order = input.orderId ? await this.repo.get("orders", input.orderId) : check ? (await this.repo.list("orders", { where: { checkId: check.id }, limit: 1 }))[0] ?? null : null;
+    const table = input.tableCode ? (await this.repo.list("tables", { where: { restaurantId: r.id, code: input.tableCode.toUpperCase() } }))[0] ?? null : null;
+    await this.repo.insert("guestFeedback", {
+      restaurantId: r.id, branchId: check?.branchId ?? order?.branchId ?? null, checkId: check?.id ?? order?.checkId ?? null, orderId: order?.id ?? null, tableId: table?.id ?? check?.tableIds[0] ?? null,
+      customerId: check?.customerId ?? order?.customerId ?? null, waiterId: order?.waiterId ?? null, stars, tags: input.tags ?? [], comment, reply: null, repliedAt: null, repliedBy: null,
+    });
   }
 
   async joinLoyalty(slug: string, input: { name: string; phone: string; checkId?: string | null }): Promise<{ points: number }> {

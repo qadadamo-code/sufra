@@ -15,11 +15,14 @@ import { useGuestService } from "@/modules/guest/ui/context";
 import { QrSvg } from "@/modules/guest/qr/QrSvg";
 import { attachDemoRepo, providerFor } from "@/modules/guest/pay";
 import { normalizePhone } from "@/modules/guest/api/service";
-import { createPaymentIntent } from "@/modules/payments/api";
+import { createPaymentIntent, onIntentSucceeded } from "@/modules/payments/api";
+import { giftCardCode } from "@/lib/promo/giftcards";
 import { PromoPublic } from "./api";
 
 const DRAFT = (slug: string) => `sufra-guest.gift.${slug}`;
 interface Draft {
+  /** card code reserved before paying (the intent's purposeRef) */
+  code?: string;
   amount: Units;
   buyer: { name: string; phone: string };
   to: { name: string; phone: string; message: string };
@@ -43,6 +46,17 @@ export default function GiftPage() {
   useEffect(() => {
     svc.venue(restaurantSlug).then((v) => v && setVenue({ id: v.restaurantId, name: loc(v.name), color: v.brandColor }), () => undefined);
   }, [svc, restaurantSlug]); // eslint-disable-line react-hooks/exhaustive-deps
+  // payments API hook: the card is issued as soon as the gift_card intent succeeds (idempotent by intent id)
+  useEffect(
+    () =>
+      onIntentSucceeded("gift_card", async (row) => {
+        if (row.restaurantId !== venue?.id) return;
+        const draft = loadJSON<Draft | null>(DRAFT(restaurantSlug), null);
+        const c = await api.issueGiftCard(restaurantSlug, { amount: row.amount, purchaser: row.customer ?? { name: "", phone: "" }, recipient: draft?.to.name ? draft.to : null, intentId: row.id, code: row.purposeRef ?? undefined });
+        setCard(c);
+      }),
+    [api, restaurantSlug, venue?.id],
+  );
   useEffect(() => {
     const pi = params.get("pi");
     if (!pi) return;
@@ -52,7 +66,7 @@ export default function GiftPage() {
         const intent = await providerFor(pi).retrieve(pi);
         if (intent?.status === "succeeded") {
           const draft = loadJSON<Draft | null>(DRAFT(restaurantSlug), null) ?? d;
-          const c = await api.issueGiftCard(restaurantSlug, { amount: intent.amount, purchaser: draft.buyer, recipient: draft.to.name ? draft.to : null, intentId: pi });
+          const c = await api.issueGiftCard(restaurantSlug, { amount: intent.amount, purchaser: draft.buyer, recipient: draft.to.name ? draft.to : null, intentId: pi, code: (intent.request.purposeRef as string | null | undefined) ?? draft.code });
           setCard(c);
           saveJSON(DRAFT(restaurantSlug), null);
         } else if (intent) toast({ title: L("الدفع ماتمش", "The payment didn't go through"), tone: "error" });
@@ -67,9 +81,10 @@ export default function GiftPage() {
     if (!d.buyer.name.trim() || !normalizePhone(d.buyer.phone) || d.amount < major(100) || !venue) return;
     setBusy(true);
     try {
-      saveJSON(DRAFT(restaurantSlug), d);
+      const code = giftCardCode();
+      saveJSON(DRAFT(restaurantSlug), { ...d, code });
       const pi = await createPaymentIntent(repo, {
-        restaurantId: venue.id, restaurantSlug, kind: "gift_card", amount: d.amount, currency: "EGP", customer: { name: d.buyer.name, phone: normalizePhone(d.buyer.phone)! }, note: L("كارت هدية", "Gift card"),
+        restaurantId: venue.id, restaurantSlug, kind: "gift_card", purposeRef: code, amount: d.amount, currency: "EGP", customer: { name: d.buyer.name, phone: normalizePhone(d.buyer.phone)! }, note: L("كارت هدية", "Gift card"),
         returnUrl: `${window.location.origin}${import.meta.env.BASE_URL}r/${restaurantSlug}/gift?pi={pi}`, lang,
       });
       if (pi.redirectUrl) window.location.assign(pi.redirectUrl);

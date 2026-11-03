@@ -13,6 +13,7 @@ import { pipeline } from "./stages";
 import { GuestProvider, useGuest } from "./ui/context";
 import { GuestToggles, Photo } from "./ui/bits";
 import { MenuBrowser } from "./ui/Menu";
+import { PromoStrip } from "@/modules/marketing/guest/PromoStrip";
 import { ItemSheet } from "./ui/ItemSheet";
 import { CartBar, CartSheet } from "./ui/Cart";
 import { CallWaiterSheet, SentStatus, chipFor } from "./ui/CallWaiter";
@@ -133,6 +134,7 @@ function TableView() {
         onOpen={(i) => (ordering ? setItem(i) : undefined)}
         header={
           <div className="grid gap-3 empty:hidden [&:has(>*)]:mb-6">
+            <PromoStrip slug={slug} placement="table" mode="dine_in" onItem={(id) => { const it = menu.items.find((x) => x.id === id); if (it && ordering) setItem(it); }} />
             {!ordering ? (
               <div className="rounded-2xl border border-line bg-surface-2 px-4 py-3 text-[13.5px] text-muted">{L("المنيو للعرض بس — اطلب من الجرسون.", "Menu is view-only — order with your waiter.")}</div>
             ) : null}

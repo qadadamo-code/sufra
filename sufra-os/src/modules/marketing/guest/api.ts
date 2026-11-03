@@ -256,11 +256,11 @@ export class PromoPublic {
   }
 
   /** Online e-gift card: issued once the (demo) payment intent succeeded — idempotent by the intent id. */
-  async issueGiftCard(slug: string, x: { amount: Units; purchaser: { name: string; phone: string }; recipient: { name: string; phone: string; message: string } | null; intentId: string }): Promise<GiftCard> {
+  async issueGiftCard(slug: string, x: { amount: Units; purchaser: { name: string; phone: string }; recipient: { name: string; phone: string; message: string } | null; intentId: string; code?: string }): Promise<GiftCard> {
     if (!this.local) return this.rpc("guest_gift_card_status", { p_slug: slug, p_intent_id: x.intentId });
     const r = await this.restaurant(slug);
     const db = makeDb(this.repo, r.id, null, null);
-    return sellGiftCard(db, { amount: x.amount, purchaser: x.purchaser, recipient: x.recipient, via: "online", method: "online", reference: x.intentId });
+    return sellGiftCard(db, { amount: x.amount, purchaser: x.purchaser, recipient: x.recipient, via: "online", method: "online", reference: x.intentId, code: x.code });
   }
 
   /** Sponsored placements for the Sufra marketplace (sufra-web reads the same through public_sponsored). */
