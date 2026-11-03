@@ -81,7 +81,7 @@ export default function TreasuryPage() {
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader icon={<ArrowLeftRight />} title={L("حركة النقدية", "Cash movements")} subtitle={L("الدرج → الخزنة → البنك، وتعويض العهدة", "Till → safe → bank, petty cash top-ups")} action={<Button size="sm" icon={<Plus />} onClick={() => setCompose(true)}>{L("تحويل جديد", "New transfer")}</Button>} />
-          <Table columns={cols} rows={transfers.slice(0, 120)} rowKey={(t) => t.id} dense empty={<EmptyState compact title={L("مفيش تحويلات", "No transfers")} />} />
+          <Table columns={cols} rows={transfers.slice(0, 40)} rowKey={(t) => t.id} dense empty={<EmptyState compact title={L("مفيش تحويلات", "No transfers")} />} />
         </Card>
         <div className="grid content-start gap-4">
           {pettyAcc ? (

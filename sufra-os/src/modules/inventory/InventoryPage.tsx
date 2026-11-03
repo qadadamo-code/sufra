@@ -15,11 +15,10 @@ import { stockAlerts, type Alert } from "./reports";
 import { supplierBalances } from "./purchasing";
 import { useInventory } from "./useInventory";
 import { pct } from "./bits";
-import { ProduceDialog, TransferDialog, WasteDialog } from "./MovesPage";
+import MovesPage, { ProduceDialog, TransferDialog, WasteDialog } from "./MovesPage";
 
 const ItemsPage = lazy(() => import("./ItemsPage"));
 const RecipesPage = lazy(() => import("./RecipesPage"));
-const MovesPage = lazy(() => import("./MovesPage"));
 const CountsPage = lazy(() => import("./CountsPage"));
 const CountSheet = lazy(() => import("./CountSheet"));
 const PurchasingPage = lazy(() => import("./PurchasingPage"));

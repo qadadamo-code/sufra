@@ -119,7 +119,7 @@ export function CameraTile({ cam, big }: { cam: Camera; big?: boolean }) {
         <StatusChip s={status} />
         <span className="truncate text-[12.5px] font-semibold text-white">{loc(cam.name)}</span>
       </div>
-      <button type="button" onClick={() => void toggleFull()} aria-label={full ? L("صغّر", "Exit fullscreen") : L("ملء الشاشة", "Fullscreen")} className="absolute end-2 bottom-2 grid size-9 place-items-center rounded-full bg-black/50 text-white opacity-80 hover:opacity-100 md:opacity-0 md:group-hover:opacity-100">
+      <button type="button" onClick={() => void toggleFull()} aria-label={full ? L("صغّر", "Exit fullscreen") : L("ملء الشاشة", "Fullscreen")} className="absolute end-2 top-2 grid size-9 place-items-center rounded-full bg-black/50 text-white opacity-80 hover:opacity-100 md:opacity-0 md:group-hover:opacity-100">
         {full ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
       </button>
     </div>

@@ -59,6 +59,8 @@ export interface ReceiptZatca {
   docType: "invoice" | "credit" | "debit";
   /** false = Phase-1 QR (tags 1–5) until the server stamps the document */
   signed: boolean;
+  /** stamped with a DEMO browser key — never sent to ZATCA */
+  demo?: boolean;
   vatNumber: string;
   crn: string;
   /** standard invoices: buyer shown on the invoice */

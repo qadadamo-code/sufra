@@ -167,6 +167,7 @@ export function ReceiptView({ model, className, style }: { model: ReceiptModel; 
     <div className={a4 ? "" : "c"} data-zatca-qr>
       <Qr text={zq.qr} mm={a4 ? 30 : design.paper === "58" ? 32 : 38} label="ZATCA QR" />
       {!zq.signed ? <div className="tiny" style={{ marginTop: "0.5mm" }}>QR مؤقت — في انتظار الختم الإلكتروني · Provisional QR</div> : null}
+      {zq.demo ? <div className="tiny" style={{ marginTop: "0.5mm" }}>تجريبي — ختم غير معتمد · DEMO stamp, not ZATCA</div> : null}
       {design.fields.etaUuid ? <div className="uuid n">{zq.uuid}</div> : null}
     </div>
   ) : model.eta ? (

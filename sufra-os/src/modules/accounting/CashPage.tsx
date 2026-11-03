@@ -59,7 +59,7 @@ export default function CashPage() {
       if (sup) out.push({ date: d.date, label: L("موردين", "Suppliers"), amount: sup, kind: "supplier" });
       for (const f of d.flows) if (f.amount < 0 && f.kind !== "supplier") out.push({ date: d.date, label: flowLabel(f), amount: f.amount, kind: f.kind });
     }
-    return out.filter((x) => x.amount <= -1_000 * 100_000).slice(0, 12);
+    return out.filter((x) => x.amount <= -1_000 * 100_000).slice(0, 8);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [forecast, lang]);
 
@@ -139,13 +139,13 @@ export default function CashPage() {
         </Card>
       ) : null}
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label={L("الفلوس فين", "Where the money is")}>
+      <section className="grid grid-cols-2 gap-3 xl:grid-cols-4" aria-label={L("الفلوس فين", "Where the money is")}>
         {position.rows.map((r) => {
           const Icon = KIND_ICON[r.account.kind];
           return (
-            <Card key={r.account.id} className="p-4">
+            <Card key={r.account.id} className="min-w-0 p-3 sm:p-4">
               <div className="flex items-center gap-3">
-                <span className={cn("grid size-10 place-items-center rounded-xl text-ink-2", KIND_BG[r.account.kind])}>
+                <span className={cn("grid size-9 shrink-0 place-items-center rounded-xl text-ink-2 sm:size-10", KIND_BG[r.account.kind])}>
                   <Icon className="size-5" aria-hidden />
                 </span>
                 <div className="min-w-0 flex-1">
@@ -153,7 +153,7 @@ export default function CashPage() {
                   <div className="truncate text-[12px] text-muted">{[r.account.institution, r.account.last4 ? `•••• ${r.account.last4}` : ""].filter(Boolean).join(" · ") || " "}</div>
                 </div>
               </div>
-              <div className={cn("mt-3 font-mono text-[22px] font-semibold tabular-nums", r.balance < 0 && "text-danger")} dir="ltr">
+              <div className={cn("mt-3 font-mono text-[17px] font-semibold tabular-nums sm:text-[22px]", r.balance < 0 && "text-danger")} dir="ltr">
                 <Money value={r.balance} whole />
               </div>
               {r.account.limit ? (

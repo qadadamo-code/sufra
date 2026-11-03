@@ -13,6 +13,7 @@ export function receiptZatca(z: ZatcaInvoiceRow | null | undefined, settings: Se
     kind: z.kind,
     docType: z.docType,
     signed: !!z.signedBy || z.status === "cleared",
+    demo: z.status === "demo",
     vatNumber: s.seller.vatNumber,
     crn: s.seller.idValue,
     buyer: z.kind === "standard" && z.buyer ? { name: z.buyer.name, vatNumber: z.buyer.vatNumber } : null,

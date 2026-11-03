@@ -190,8 +190,14 @@ export function parseCertificate(input: string): CertInfo {
  * signed invoice + QR (tags 8/9) before any CSID exists. It is NOT a ZATCA CSID and ZATCA will reject it.
  */
 export function demoSelfSignedCertificate(k: EgsKeyPair, x: { commonName: string; vatNumber: string; serial?: bigint; now?: Date }): string {
+  return issueCertificate(k.publicKey, k, x);
+}
+
+/** Certificate for `subjectPublicKey` signed by `ca` — the demo CA above, and test doubles of ZATCA's CA. */
+export function issueCertificate(subjectPublicKey: Uint8Array, ca: EgsKeyPair, x: { commonName: string; vatNumber: string; serial?: bigint; now?: Date; issuerCn?: string }): string {
+  const k = { publicKey: subjectPublicKey, secretKey: ca.secretKey };
   const now = x.now ?? new Date();
-  const issuer = name([[OID.C, "SA"], [OID.O, "Sufra OS DEMO (not ZATCA)"], [OID.CN, "SUFRA-DEMO-CA"]]);
+  const issuer = name([[OID.C, "SA"], [OID.O, "Sufra OS DEMO (not ZATCA)"], [OID.CN, x.issuerCn ?? "SUFRA-DEMO-CA"]]);
   const subject = name([[OID.C, "SA"], [OID.O, "DEMO"], [OID.CN, x.commonName]]);
   const notAfter = new Date(now.getTime() + 365 * 86_400_000);
   const tbs = seq(

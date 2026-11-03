@@ -1,4 +1,4 @@
-/** Ops settings row (one per restaurant, id = restaurant id) with defaults + save. */
+/** Ops settings row (one per restaurant, unique restaurant_id) with defaults + save. */
 import { useMemo } from "react";
 import { useDb, useLive, type Db } from "@/data/hooks";
 import type { OpsSettings } from "./types";
@@ -43,9 +43,9 @@ export function useOpsSettings(): { cfg: OpsConfig; row: OpsSettings | null; loa
 }
 
 export async function saveOpsSettings(db: Db, patch: Partial<OpsConfig>) {
-  const cur = await db.get("opsSettings", db.restaurantId);
+  const [cur] = await db.list("opsSettings", { limit: 1 });
   if (cur) return db.update("opsSettings", cur.id, patch);
-  return db.insert("opsSettings", { id: db.restaurantId, ...DEFAULT_OPS, ...patch });
+  return db.insert("opsSettings", { ...DEFAULT_OPS, ...patch });
 }
 
 export function useSaveOps() {

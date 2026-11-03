@@ -251,6 +251,49 @@ design + sources: `src/modules/guest/pay/DESIGN.md`; schema `supabase/migrations
   `src/modules/marketing/DESIGN.md`).
 - Schema: `supabase/migrations/0009_crm.sql`; SQL checks: `supabase/tests/crm_run.sh`; screenshots: `scripts/shots-crm.mjs`.
 
+## Operations extras: cameras, walkie-talkie, support desk, alerts (`src/modules/ops`, Wave 3)
+
+- **Cameras** (`/cameras`, owner/admin/manager): camera registry per branch (zone, NVR brand Hikvision/Dahua/Uniview/other,
+  channel, stream HLS / WebRTC page / MJPEG / snapshot polling / demo placeholder, linked POS devices, drawers, tables),
+  live wall 1/4/9/16 with fullscreen and status, **POS ↔ video exceptions** derived from `audit_log` (void, refund,
+  discount above limit, no-sale drawer, cash over/short, manual 86) with device + staff + mapped cameras and “open clip”
+  (per-brand playback URL templates, ± seconds), occupancy estimate per zone (**BETA**, manual + counter cameras).
+  Browsers can't play RTSP: run go2rtc / MediaMTX on site (Setup generates the config). Demo cameras are an animated,
+  labelled placeholder — never real footage.
+- **Walkie-talkie** (`/radio`, every role; floating button on phones / top-bar pill on desktop for manager, waiter,
+  kitchen, chef, delivery; dispatch card in the rider app): hold-to-talk (`MediaRecorder` Opus/WebM, AAC/MP4 on Safari),
+  clips < 0.4 s discarded, 30 s cut, channels الكل/الصالة/المطبخ/الدليفري/الإدارة + 1:1, auto-play after the first tap
+  (vibrate + toast when blocked), unread badges, who's on air, quick messages. Local = IndexedDB + BroadcastChannel (open
+  two tabs as two people); cloud = Supabase Storage `radio` + Realtime. Live voice (LiveKit/Agora/Zello) = adapter interface.
+- **Guest hotline** (`/support`): “كلّم المطعم” on the QR / online / tracking pages (call, WhatsApp, complaint) → tickets
+  with the guest's orders/payments/calls/feedback, priority, SLA + escalation, assignee, internal notes, resolution,
+  WhatsApp follow-up. **Help** (`/help`): 27 AR/EN articles with Arabic-normalised search, “اطلب دعم” with scrubbed
+  diagnostics, my requests, live status. **Sufra desk** (`/sufra-desk`, `platform_admin`): every restaurant's tickets.
+- **Alerts center** (`/alerts`): escalated calls, late deliveries, low stock (inventory plugs in with
+  `registerLowStockSource`), cash over/short, camera exceptions, failed payments, tickets past SLA + rules (who is
+  notified). Settings → Operations (`/settings/ops`): hotline numbers, SLAs, radio limits.
+- Schema `supabase/migrations/0013_ops.sql` (`supabase/tests/ops_run.sh`); server `api/support-ticket.ts`
+  (`SUPPORT_WEBHOOK_URL`, `SUPPORT_WEBHOOK_SECRET`, `RESEND_API_KEY` + `SUPPORT_EMAIL_TO`) and `api/radio-token.ts`
+  (interface). Design, URL patterns and sources: `src/modules/ops/DESIGN.md`.
+
+## Accounting, cash & reports (`src/modules/accounting`, `src/modules/reports`, `supabase/migrations/0011_accounting.sql`)
+
+- **Posting API for every module** — `src/modules/accounting/api.ts`: `postJournal(db, { date, branchId, sourceType, sourceId, memo, lines })`
+  (balanced Units lines, chart check, period lock, idempotent per source), `reverseJournal`, `closePeriod`, `ACC` account codes, `SOURCE` types,
+  helpers `postPayroll` / `postPayrollPayment` / `postPurchaseInvoice` / `postSupplierPayment` / `postCogs` / `postWaste` / `postPayout`. Entries are
+  append-only (a DB trigger rejects unbalanced lines, edits and postings on or before `accounting_settings.closed_through`).
+- **Chart of accounts** (`chart.ts`, Egyptian numbering 1–6, Arabic names, built on sufra-finance `ACCOUNTS`), editable; cost centres per branch.
+- **/accounting**: السيولة (cash on hand by till / safe / petty / bank / wallet / pending gateway & app settlements, 30-day forecast, alerts,
+  daily cash-up) · journal (filters, drill-down, manual journals with maker/checker approval, reversals) · expenses (receipt photo, input VAT,
+  paid from cash/bank or on credit, recurring) · safe & petty (transfers with counts → over/short) · bank reconciliation (CSV import, auto-match
+  ±3 days, manual match, book unknown lines) · VAT return (file + lock) · chart · period close + settings · export (generic / Odoo / QuickBooks /
+  Zoho CSV — design in `src/modules/accounting/INTEGRATIONS.md`).
+- **/reports**: sales (item, category, hour, day, channel, order type, table, payment, discounts, voids, refunds, covers, avg check, table turns),
+  menu engineering (stars / plowhorses / puzzles / dogs), staff, P&L (branch, compare), balance sheet, trial balance, cash flow, service/tips &
+  liabilities. CSV + print/PDF. Tax and forecast figures are marked “تقديري — يراجعه المحاسب”.
+- Owner overview shows today's profit estimate, cash on hand and upcoming obligations. Seed: ~3 months of books (`accounting/seed.ts`).
+- SQL checks: `supabase/tests/accounting_run.sh`; screenshots: `node scripts/shots-accounting.mjs <base> <dir>`.
+
 ## Design system (`src/ui`)
 
 Tokens in `src/styles/index.css` (same identity as sufra-web: sage-stone neutrals, deep teal, brass; Reem Kufi / IBM Plex Sans Arabic /

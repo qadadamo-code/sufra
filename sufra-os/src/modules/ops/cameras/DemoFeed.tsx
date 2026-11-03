@@ -34,6 +34,7 @@ export function DemoFeed({ seed, label, at, className }: { seed: string; label: 
       const W = (cv.width = cv.clientWidth * Math.min(2, devicePixelRatio || 1));
       const H = (cv.height = cv.clientHeight * Math.min(2, devicePixelRatio || 1));
       if (!W || !H) return;
+      ctx.direction = "ltr"; // the page is RTL; canvas text would inherit it
       const g = ctx.createLinearGradient(0, 0, 0, H);
       g.addColorStop(0, `hsl(${hue} 12% 16%)`);
       g.addColorStop(1, `hsl(${hue} 14% 9%)`);
@@ -86,17 +87,11 @@ export function DemoFeed({ seed, label, at, className }: { seed: string; label: 
       ctx.textBaseline = "top";
       const now = new Date(at !== undefined ? at + (Date.now() - start) : Date.now());
       const stamp = now.toLocaleString("en-GB", { hour12: false });
-      ctx.fillStyle = "rgba(0,0,0,0.45)";
-      ctx.fillRect(fs * 0.5, fs * 0.5, ctx.measureText(stamp).width + fs, fs * 1.6);
+      // timestamp just above the banner (bottom-left); the camera name is the HTML overlay
+      ctx.fillStyle = "rgba(0,0,0,0.5)";
+      ctx.fillRect(fs * 0.5, H - fs * 3.9, ctx.measureText(stamp).width + fs, fs * 1.6);
       ctx.fillStyle = "#e9efe9";
-      ctx.fillText(stamp, fs, fs * 0.8);
-      ctx.textAlign = "end";
-      ctx.fillStyle = "rgba(0,0,0,0.45)";
-      const lw = ctx.measureText(label).width + fs;
-      ctx.fillRect(W - lw - fs * 0.5, H - fs * 2.1, lw, fs * 1.6);
-      ctx.fillStyle = "#e9efe9";
-      ctx.fillText(label, W - fs, H - fs * 1.8);
-      ctx.textAlign = "start";
+      ctx.fillText(stamp, fs, H - fs * 3.6);
       // the DEMO banner (always)
       const banner = "DEMO · ليس بثاً حقيقياً";
       ctx.font = `700 ${fs}px "IBM Plex Sans Arabic", system-ui, sans-serif`;
@@ -110,5 +105,5 @@ export function DemoFeed({ seed, label, at, className }: { seed: string; label: 
     raf = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(raf);
   }, [seed, label, reduced, at]);
-  return <canvas ref={ref} className={className ?? "size-full"} role="img" aria-label={`${label} — demo placeholder, not real footage`} />;
+  return <canvas ref={ref} dir="ltr" className={className ?? "size-full"} role="img" aria-label={`${label} — demo placeholder, not real footage`} />;
 }

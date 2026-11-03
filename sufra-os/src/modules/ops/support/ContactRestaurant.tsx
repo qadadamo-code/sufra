@@ -26,7 +26,7 @@ export async function guestContact(repo: Repo, slug: string): Promise<{ phone: s
     }
     const [r] = await repo.list("restaurants", { where: { slug } });
     if (!r) return { phone: "", whatsapp: "" };
-    const s = await repo.get("opsSettings", r.id);
+    const [s] = await repo.list("opsSettings", { where: { restaurantId: r.id }, limit: 1 });
     return { phone: s?.hotlinePhone || "", whatsapp: s?.whatsappPhone || "" };
   } catch {
     return { phone: "", whatsapp: "" };

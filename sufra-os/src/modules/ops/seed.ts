@@ -92,7 +92,7 @@ export function demoOpsRows(c: Ctx): OpsSeed {
   ];
 
   const opsSettings: OpsSettings[] = [{
-    ...base("ops-settings"), id: c.R,
+    ...base("ops-settings"),
     hotlinePhone: "0227350000", whatsappPhone: "01005550103", sufraSupportPhone: "", sufraSupportWhatsapp: "",
     gatewayUrl: "", playbackTemplates: {}, nvrHost: "192.168.1.64:554", clipPadSec: 30,
     zoneCapacity: { [c.zone("hall")]: 60, [c.zone("terrace")]: 36 },

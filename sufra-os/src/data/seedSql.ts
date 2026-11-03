@@ -14,13 +14,19 @@ const JSONB = new Set(["name", "description", "address", "openingHours", "modifi
   "tiers", "stampCards", "rewards", "terms", "consent", "stamps", "target", "bogo", "combo", "window", "limits", "lineDiscounts", "purchaser", "recipient", "variants", "stats", "text",
   "title", "body", "creative", "payment", "daily", "targeting", "pricing", "items", "rules",
   // inventory, recipes & purchasing + menu extras (0012_inventory.sql)
-  "packs", "levels", "branchLevels", "lines", "history", "marketplace", "packName", "area", "schedule", "channelPrices", "branchPrices", "comboOf"]);
+  "packs", "levels", "branchLevels", "lines", "history", "marketplace", "packName", "area", "schedule", "channelPrices", "branchPrices", "comboOf",
+  // accounting (0011_accounting.sql)
+  "closeHistory", "denominations",
+  // HR & payroll (0010_hr.sql)
+  "hr", "position", "emergencyContact", "documents", "allowances", "totals", "snapshot", "earnings", "deductions", "employer"]);
+/** business-day columns ("YYYY-MM-DD") stay relative to "today" like the timestamps */
+const DATE_KEYS = new Set(["startsOn", "endsOn", "date", "dueDate", "closedThrough", /* leave_requests (0010_hr) */ "from", "to"]);
 const SKIP: Record<string, string[]> = { memberships: ["hasPin"] };
 const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/;
 
 const snake = (k: string) => k.replace(/[A-Z]/g, (c) => "_" + c.toLowerCase());
 /** reserved words used as column names (promotions."window") */
-const col = (k: string) => (["window"].includes(snake(k)) ? `"${snake(k)}"` : snake(k));
+const col = (k: string) => (["window", "group", "limit", "end", "from", "to"].includes(snake(k)) ? `"${snake(k)}"` : snake(k));
 const q = (s: string) => `'${s.replace(/'/g, "''")}'`;
 
 function lit(key: string, v: unknown): string {
@@ -35,7 +41,7 @@ function lit(key: string, v: unknown): string {
     return s === 0 ? "now()" : `now() ${s < 0 ? "-" : "+"} interval '${Math.abs(s)} seconds'`;
   }
   // booking dates (ad_bookings.starts_on/ends_on) stay relative to "today" like the timestamps
-  if ((key === "startsOn" || key === "endsOn") && typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v)) {
+  if (DATE_KEYS.has(key) && typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v)) {
     const d = Math.round((Date.parse(`${v}T00:00:00Z`) - Date.parse(`${SEED_REF.toISOString().slice(0, 10)}T00:00:00Z`)) / 86_400_000);
     return d === 0 ? "current_date" : `current_date ${d < 0 ? "-" : "+"} ${Math.abs(d)}`;
   }
@@ -90,6 +96,12 @@ export function seedSql(): string {
     out += insert(TABLE_NAMES[c], rows(c), [], undefined, true);
   // inventory, recipes & purchasing (0012_inventory.sql)
   for (const c of ["storageLocations", "suppliers", "stockItems", "supplierItems", "recipes", "purchaseOrders", "goodsReceipts", "supplierInvoices", "supplierPayments", "stockBatches", "stockLevels", "stockMoves", "stockCounts", "stockTransfers"] as CollectionName[])
+    out += insert(TABLE_NAMES[c], rows(c), [], undefined, true);
+  // Accounting (0011_accounting.sql): journal before the settings row (the period-lock trigger reads closed_through)
+  for (const c of ["glAccounts", "costCentres", "cashAccounts", "ledgerEntries", "accountingSettings", "journalDrafts", "cashTransfers", "expenses", "recurringExpenses", "bankLines"] as CollectionName[])
+    out += insert(TABLE_NAMES[c], rows(c), [], undefined, true);
+  // HR, attendance & payroll (0010_hr.sql)
+  for (const c of ["staffProfiles", "shiftTemplates", "rotaShifts", "shiftSwaps", "attendanceDevices", "attendancePunches", "leaveRequests", "leaveBalances", "advances", "payrollAdjustments", "payrollRuns", "payslips"] as CollectionName[])
     out += insert(TABLE_NAMES[c], rows(c), [], undefined, true);
   // Sufra staff with platform-wide access (is_platform_admin())
   for (const s of DEMO_STAFF.filter((x) => x.role === "platform_admin" && x.email)) out += `insert into public.platform_admins (user_id) values (${q(userId(s.key))}) on conflict do nothing;

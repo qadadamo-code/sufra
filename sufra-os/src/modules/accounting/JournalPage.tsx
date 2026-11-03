@@ -67,7 +67,8 @@ export default function JournalPage() {
       .filter((e) => e.date >= period.from && e.date <= period.to && (!type || e.sourceType === type) && (!account || e.lines.some((l) => l.account === account)) && (!s || `${e.memo} ${e.sourceId} ${entryNo(e)}`.toLowerCase().includes(s)))
       .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
   }, [entries, period, type, account, q]);
-  const shown = rows.slice(0, 400);
+  const [limit, setLimit] = useState(60);
+  const shown = rows.slice(0, limit);
   const types = useMemo(() => [...new Set(entries.map((e) => e.sourceType))].sort(), [entries]);
   const total = rows.reduce((a, e) => a + (account ? e.lines.filter((l) => l.account === account).reduce((b, l) => b + l.debit - l.credit, 0) : entryTotal(e)), 0);
 
@@ -109,7 +110,12 @@ export default function JournalPage() {
           <Input aria-label={L("بحث", "Search")} icon={<Search />} placeholder={L("بحث في البيان أو المرجع", "Search memo or reference")} value={q} onChange={(e) => setQ(e.target.value)} wrapClassName="min-w-56 flex-1" />
         </div>
         <Table columns={cols} rows={shown} rowKey={(e) => e.id} onRowClick={setOpen} dense empty={<EmptyState compact title={L("مفيش قيود في الفترة دي", "No entries in this period")} />} />
-        {rows.length > shown.length ? <p className="px-5 py-3 text-[12.5px] text-muted">{L(`بيظهر أول ${shown.length} — ضيّق الفلتر أو صدّر CSV`, `Showing the first ${shown.length} — narrow the filter or export CSV`)}</p> : null}
+        {rows.length > shown.length ? (
+          <div className="flex flex-wrap items-center gap-3 px-5 py-3 text-[12.5px] text-muted">
+            <span>{L(`بيظهر ${shown.length} من ${rows.length}`, `Showing ${shown.length} of ${rows.length}`)}</span>
+            <Button size="sm" variant="outline" onClick={() => setLimit((n) => n + 100)}>{L("اعرض أكتر", "Show more")}</Button>
+          </div>
+        ) : null}
       </Card>
       <EntrySheet entry={open} onClose={() => setOpen(null)} onOpen={setOpen} />
       <ManualJournalDialog open={compose} onClose={() => setCompose(false)} />

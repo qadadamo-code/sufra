@@ -5,7 +5,8 @@
 import { describe, expect, it } from "vitest";
 import { clearanceRequest, complianceCsidRequest, parseCsidResponse, parseSubmitResponse, reportingRequest, reportingTriage, ZATCA_BASE } from "./api";
 import { fromBase64, fromUtf8, toBase64, utf8 } from "./bytes";
-import { demoSelfSignedCertificate, keyPairFromSecret } from "./crypto";
+import { demoSelfSignedCertificate, issueCertificate, keyPairFromSecret, publicKeyFromSpki } from "./crypto";
+import { parseDer } from "./asn1";
 import { CLEARED_200, COMPLIANCE_CHECK_200, CSID_200, CSID_400_OTP, NOT_REPORTED_400, REPORTED_200, REPORTED_WITH_WARNINGS_202 } from "./fixtures";
 import { signInvoice, stampXml, verifyInvoiceXml } from "./sign";
 import { FIRST_PIH } from "./ubl";
@@ -69,7 +70,6 @@ describe("API responses", () => {
 const RID = "11111111-1111-4111-8111-111111111111";
 const ZATCA_KEY = keyPairFromSecret(new Uint8Array(32).fill(7)); // plays ZATCA's CA in the fake
 const zatcaCert = demoSelfSignedCertificate(ZATCA_KEY, { commonName: "TSTZATCA", vatNumber: "399999999900003", serial: 99n, now: new Date("2026-01-01T00:00:00Z") });
-const token = toBase64(utf8(zatcaCert)); // binarySecurityToken = Base64(Base64 DER)
 
 function world() {
   const egs: EgsRow = {
@@ -95,9 +95,15 @@ function world() {
     calls.push({ url, headers: init.headers, body: init.body });
     const path = url.replace(/^https:\/\/[^/]+\/e-invoicing\/[^/]+/, "");
     const reply = (status: number, body: unknown) => new Response(JSON.stringify(body), { status });
-    if (path === "/compliance") return init.headers.OTP === "123345" ? reply(200, CSID_200(token)) : reply(400, CSID_400_OTP);
+    // the fake CA certifies the public key inside the CSR, like ZATCA does
+    const issueFor = (csrPem: string) => {
+      const der = fromBase64(csrPem.replace(/-----[^-]+-----/g, ""));
+      const pub = publicKeyFromSpki(parseDer(der).children[0].children[2].raw);
+      return toBase64(utf8(issueCertificate(pub, ZATCA_KEY, { commonName: "EGS", vatNumber: "399999999900003", serial: 99n, issuerCn: "TSZEINVOICE-SubCA-1", now: new Date("2026-01-01T00:00:00Z") })));
+    };
+    if (path === "/compliance") return init.headers.OTP === "123345" ? reply(200, CSID_200(issueFor(fromUtf8(fromBase64(JSON.parse(init.body).csr))))) : reply(400, CSID_400_OTP);
     if (path === "/compliance/invoices") return reply(200, COMPLIANCE_CHECK_200);
-    if (path === "/production/csids") return reply(200, CSID_200(token));
+    if (path === "/production/csids") return reply(200, CSID_200(issueFor(egs.csr_pem!)));
     if (path === "/invoices/reporting/single") {
       // the fake ZATCA recomputes the hash from the XML like the real one
       const b = JSON.parse(init.body);

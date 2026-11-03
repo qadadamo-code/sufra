@@ -87,6 +87,11 @@ export function usePeriod(initial: PeriodPreset = "month") {
 
 /** Previous period of the same length (for "compare"). */
 export function previousPeriod(p: { from: string; to: string }) {
+  // whole calendar month → the previous calendar month
+  if (p.from.endsWith("-01") && p.to === monthEnd(p.from)) {
+    const end = addDays(p.from, -1);
+    return { from: monthStart(end), to: end };
+  }
   const len = Math.round((Date.parse(p.to) - Date.parse(p.from)) / 86_400_000) + 1;
   return { from: addDays(p.from, -len), to: addDays(p.from, -1) };
 }

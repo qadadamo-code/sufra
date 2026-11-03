@@ -113,7 +113,12 @@ export function demoHrRows(c: Ctx) {
   /* compensation */
   for (const comp of c.staffCompensation) {
     const k = keyOf.get(comp.membershipId);
-    if (k && COMP[k]) Object.assign(comp, { salaryType: "monthly", insured: true, tipsEligible: false, ...COMP[k] });
+    // every row gets every column (seed.sql inserts by the first row's keys)
+    if (k && COMP[k])
+      Object.assign(comp, {
+        salaryType: "monthly", dailyRate: null, allowances: { housing: 0, transport: 0, meal: 0, other: 0 }, insurableWage: null, insured: true, gosiScheme: "legacy", servicePoints: 0,
+        tipsEligible: false, payMethod: "cash", bankName: null, iban: null, walletNumber: null, ...COMP[k],
+      });
   }
   const compBy = new Map(c.staffCompensation.map((x) => [x.membershipId, x]));
 
@@ -319,8 +324,12 @@ export function demoHrRows(c: Ctx) {
     lastSeenAt: new Date(nowMs - 3 * 60_000).toISOString(), lastStamp: "9999", allowedIps: [],
   }];
 
+  // keep the browser seed light: the last 30 days of rota + punches are stored (last month's payroll above used the full month)
+  const keepFrom = addDays(today, -30);
+  const keptRota = rotaShifts.filter((s) => s.date >= keepFrom);
+  const keptPunches = attendancePunches.filter((p) => businessDate(Date.parse(p.at), TZ) >= keepFrom);
   return {
-    rows: { staffProfiles, shiftTemplates, rotaShifts, shiftSwaps, attendancePunches, attendanceDevices, leaveRequests, leaveBalances, advances, payrollAdjustments, payrollRuns, payslips },
+    rows: { staffProfiles, shiftTemplates, rotaShifts: keptRota, shiftSwaps, attendancePunches: keptPunches, attendanceDevices, leaveRequests, leaveBalances, advances, payrollAdjustments, payrollRuns, payslips },
     ledgerEntries: [advanceJe, accrual, payment],
   };
 }

@@ -106,7 +106,7 @@ export default function ExpensesPage() {
             <PeriodPicker value={period} onChange={setPeriod} />
             <Select aria-label={L("البند", "Category")} value={cat} onChange={(e) => setCat(e.target.value)} options={[{ value: "", label: L("كل البنود", "All categories") }, ...CATS.map((c) => ({ value: c, label: loc(CATEGORY[c]) }))]} className="min-w-40" />
           </div>
-          <Table columns={cols} rows={rows.slice(0, 300)} rowKey={(e) => e.id} onRowClick={setOpen} dense empty={<EmptyState compact title={L("مفيش مصروفات", "No expenses")} />} />
+          <Table columns={cols} rows={rows.slice(0, 80)} rowKey={(e) => e.id} onRowClick={setOpen} dense empty={<EmptyState compact title={L("مفيش مصروفات", "No expenses")} />} />
         </Card>
         <Card>
           <CardHeader title={L("حسب البند", "By category")} />

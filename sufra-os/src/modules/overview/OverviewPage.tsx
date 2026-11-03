@@ -12,6 +12,7 @@ import { formatMoney, sumUnits } from "@/lib/money";
 import { cn } from "@/lib/cn";
 import { AnimatedMoney, AnimatedNumber, Badge, BarChart, Button, Card, CardHeader, EmptyState, Meter, Money, StatTile, useReduced, type Tone } from "@/ui";
 import { PageHeader } from "@/shell/PageHeader";
+import { OwnerMoney } from "@/modules/accounting/OwnerMoney";
 
 const TABLE_TONE: Record<TableStatus, string> = {
   free: "border-line bg-surface text-muted",
@@ -26,7 +27,7 @@ const PAY_TONE: Record<PaymentMethod, Tone> = { cash: "ok", card: "primary", wal
 
 export default function OverviewPage() {
   const { t, lang, loc, L } = useT();
-  const { staff } = useSession();
+  const { staff, can } = useSession();
   const branch = useBranch();
   const db = useDb();
   const reduced = useReduced();
@@ -107,6 +108,9 @@ export default function OverviewPage() {
         <StatTile index={2} icon={<Users />} tone="info" label={t("overview.covers")} value={<AnimatedNumber value={covers} />} sub={t("overview.tablesBusy", { busy: busy.length, total: tables.length })} />
         <StatTile index={3} icon={<Wallet />} tone="ok" label={t("overview.avgCheck")} value={<AnimatedMoney value={avg} whole />} sub={t("overview.tips", { v: formatMoney(tips, { lang, whole: true }) })} />
       </section>
+
+      {/* money: today's profit estimate, cash on hand, upcoming obligations (accounting module) */}
+      {can("reports.financial") ? <OwnerMoney branchId={branch?.id ?? null} /> : null}
 
       <div className="grid gap-4 lg:grid-cols-3 lg:gap-5">
         {/* sales by hour */}

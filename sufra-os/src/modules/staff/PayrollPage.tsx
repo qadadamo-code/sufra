@@ -1,20 +1,20 @@
 import { useMemo, useState } from "react";
 import { Link, Route, Routes, useNavigate, useParams } from "react-router-dom";
-import { ArrowRight, BellRing, Calculator, CheckCircle2, Download, FileText, Landmark, Printer, RefreshCw, Wallet } from "lucide-react";
+import { ArrowRight, BellRing, Calculator, CheckCircle2, Download, FileText, Landmark, Plus, Printer, RefreshCw, Trash2, Wallet } from "lucide-react";
 import { useDb, useLive } from "@/data/hooks";
-import type { PayMethod, Payslip, PayrollRun } from "@/data/types";
+import type { AdjustmentKind, PayMethod, Payslip, PayrollRun } from "@/data/types";
 import { useT } from "@/i18n/i18n";
 import { formatMoney } from "@/lib/money";
 import { printNode } from "@/lib/receipt/print";
 import { accountName } from "@/modules/hr/accounts";
-import { Badge, Button, Card, Dialog, EmptyState, Input, Select, StatTile, Table, useToast } from "@/ui";
+import { Badge, Button, Card, Dialog, EmptyState, IconButton, Input, Select, StatTile, Table, useToast } from "@/ui";
 import { useHr } from "@/modules/hr/useHr";
 import { approveRun, bankCsv, buildRun, markRunPaid, saveRun, slipsToDrafts, HrError } from "@/modules/hr/ops";
 import { payDate } from "@/modules/hr/lib/settings";
 import { daysBetween } from "@/modules/hr/lib/tz";
 import { payrollJournalLines } from "@/modules/hr/lib/payroll";
 import { PAY_METHOD, RUN_STATUS } from "@/modules/hr/labels";
-import { EstimateNote, PersonCell, Section, useDateFmt } from "@/modules/hr/ui";
+import { EstimateNote, MoneyInput, PersonCell, Section, useDateFmt } from "@/modules/hr/ui";
 import { PayslipView } from "@/modules/hr/PayslipView";
 
 export default function PayrollPage() {
@@ -122,6 +122,8 @@ function RunDetail() {
   const slips = useLive("payslips", { where: { runId }, orderBy: [{ field: "name" }] }).data;
   const [busy, setBusy] = useState<string | null>(null);
   const [pay, setPay] = useState(false);
+  const [adj, setAdj] = useState(false);
+  const adjustments = useLive("payrollAdjustments", { where: { period: run?.period ?? "-" } }).data;
   const money = (u: number) => formatMoney(u, { lang, currency: hr.currency });
   const journal = useMemo(() => payrollJournalLines(slipsToDrafts(slips)), [slips]);
   if (!run) return <EmptyState title={L("مش لاقيين الشهر ده", "Run not found")} />;
@@ -168,6 +170,7 @@ function RunDetail() {
         <span className="flex-1" />
         {run.status === "draft" ? (
           <>
+            <Button variant="secondary" icon={<Plus />} onClick={() => setAdj(true)}>{L("حافز / جزاء", "Bonus / penalty")}</Button>
             <Button variant="secondary" icon={<RefreshCw />} loading={busy === "re"} onClick={() => act("re", async () => saveRun(db, await buildRun(db, run.period, run.branchId)), L("اتحسبت تاني بآخر حضور", "Recalculated with the latest attendance"))}>{L("احسب تاني", "Recalculate")}</Button>
             <Button icon={<CheckCircle2 />} loading={busy === "ap"} onClick={() => act("ap", () => approveRun(db, run), L("اتعتمد — القيود اتسجلت في الحسابات", "Approved — journal posted to accounting"))}>{L("اعتمد", "Approve")}</Button>
           </>
@@ -215,8 +218,71 @@ function RunDetail() {
         </p>
       </Section>
       {run.country === "SA" ? <p className="text-[13px] text-muted">{L("السعودية: ملف البنك ده بيتحوّل لملف WPS/مدد (SIF) من بوابة البنك؛ لازم الأرقام تطابق عقود قوى عشان نطاقات.", "KSA: your bank's portal converts this into the WPS/Mudad (SIF) file; figures must match the Qiwa contracts (Nitaqat).")}</p> : null}
+      {adjustments.length ? (
+        <Section title={L("حوافز وجزاءات الشهر", "This month's bonuses & penalties")} bodyClass="px-0 pb-2">
+          <Table
+            rows={adjustments}
+            rowKey={(a) => a.id}
+            dense
+            columns={[
+              { key: "w", header: L("الموظف", "Staff"), cell: (a) => hr.memberOf(a.membershipId)?.name ?? "" },
+              { key: "k", header: L("النوع", "Kind"), cell: (a) => <Badge tone={a.kind === "bonus" || a.kind === "allowance" ? "ok" : "danger"}>{ADJ_KIND[a.kind][lang]}</Badge> },
+              { key: "r", header: L("السبب", "Reason"), cell: (a) => a.reason, hideOnMobile: true },
+              { key: "a", header: L("المبلغ", "Amount"), cell: (a) => <span className="num">{money(a.amount)}</span>, align: "end" },
+              { key: "x", header: "", cell: (a) => (run.status === "draft" ? <IconButton size="sm" label={L("امسح", "Remove")} onClick={() => db.remove("payrollAdjustments", a.id)}><Trash2 className="size-4" /></IconButton> : null), align: "end" },
+            ]}
+          />
+        </Section>
+      ) : null}
+      {adj ? <AdjustmentDialog period={run.period} onClose={() => setAdj(false)} /> : null}
       {pay ? <PayRunDialog run={run} onClose={() => setPay(false)} /> : null}
     </div>
+  );
+}
+
+const ADJ_KIND: Record<AdjustmentKind, { ar: string; en: string }> = {
+  bonus: { ar: "حافز", en: "Bonus" },
+  allowance: { ar: "بدل", en: "Allowance" },
+  penalty: { ar: "جزاء", en: "Penalty" },
+  deduction: { ar: "خصم", en: "Deduction" },
+};
+
+function AdjustmentDialog({ period, onClose }: { period: string; onClose: () => void }) {
+  const { L, lang } = useT();
+  const db = useDb();
+  const hr = useHr();
+  const { toast } = useToast();
+  const [who, setWho] = useState("");
+  const [kind, setKind] = useState<AdjustmentKind>("bonus");
+  const [amount, setAmount] = useState(0);
+  const [reason, setReason] = useState("");
+  return (
+    <Dialog
+      open
+      onClose={onClose}
+      title={L("حافز أو جزاء", "Bonus or penalty")}
+      footer={
+        <Button
+          block
+          disabled={!who || amount <= 0 || !reason.trim()}
+          onClick={async () => {
+            const a = await db.insert("payrollAdjustments", { membershipId: who, period, kind, amount, reason: reason.trim(), createdBy: db.actorId });
+            await db.audit("payroll.adjustment", "payrollAdjustments", a.id, { kind, amount, membershipId: who });
+            toast({ title: L("اتضاف — دوس «احسب تاني»", "Added — press Recalculate"), tone: "success" });
+            onClose();
+          }}
+        >
+          {L("أضف", "Add")}
+        </Button>
+      }
+    >
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Select label={L("الموظف", "Staff")} value={who} onChange={(e) => setWho(e.target.value)} options={[{ value: "", label: "—" }, ...hr.active.map((m) => ({ value: m.id, label: m.name }))]} />
+        <Select label={L("النوع", "Kind")} value={kind} onChange={(e) => setKind(e.target.value as AdjustmentKind)} options={(Object.keys(ADJ_KIND) as AdjustmentKind[]).map((k) => ({ value: k, label: ADJ_KIND[k][lang] }))} />
+        <MoneyInput label={L("المبلغ", "Amount")} value={amount} onChange={setAmount} />
+        <Input label={L("السبب", "Reason")} value={reason} onChange={(e) => setReason(e.target.value)} />
+      </div>
+    </Dialog>
   );
 }
 

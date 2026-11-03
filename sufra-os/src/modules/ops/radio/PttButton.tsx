@@ -25,7 +25,7 @@ export function usePttNotices() {
   }, [snap.notice, L, toast]);
 }
 
-export function PttButton({ channel, size = "lg", label, className }: { channel: RadioChannelId; size?: "md" | "lg" | "fab"; label?: string; className?: string }) {
+export function PttButton({ channel, size = "lg", label, className }: { channel: RadioChannelId; size?: "md" | "lg" | "fab" | "pill"; label?: string; className?: string }) {
   const snap = useRadioEngine();
   const { L } = useT();
   const phase = snap.ptt.phase;
@@ -46,6 +46,38 @@ export function PttButton({ channel, size = "lg", label, className }: { channel:
     radio.release();
   };
 
+  if (size === "pill")
+    return (
+      <button
+        type="button"
+        aria-label={label ?? L("اضغط مطوّل واتكلم", "Hold to talk")}
+        aria-pressed={live}
+        data-ptt={channel}
+        data-phase={live ? phase : "idle"}
+        className={cn("flex h-10 touch-none select-none items-center gap-2 rounded-full px-3.5 text-[13.5px] font-bold outline-none transition-colors focus-visible:ring-4 focus-visible:ring-primary/30", live ? "bg-danger text-white" : "bg-primary-soft text-primary hover:brightness-95", className)}
+        onPointerDown={down}
+        onPointerUp={up}
+        onPointerCancel={() => radio.cancel()}
+        onContextMenu={(e) => e.preventDefault()}
+        onKeyDown={(e) => {
+          if ((e.key === " " || e.key === "Enter") && !keyDown.current) {
+            e.preventDefault();
+            keyDown.current = true;
+            void radio.press(channel);
+          }
+        }}
+        onKeyUp={(e) => {
+          if (e.key === " " || e.key === "Enter") {
+            e.preventDefault();
+            keyDown.current = false;
+            radio.release();
+          }
+        }}
+      >
+        {live ? <Radio className="size-4 animate-pulse" /> : <Mic className="size-4" />}
+        <span className="num">{live ? `${secs}s` : busy ? busy.name : label ?? L("اضغط واتكلم", "Push to talk")}</span>
+      </button>
+    );
   const dim = size === "fab" ? "size-16" : size === "md" ? "size-24" : "size-40 sm:size-44";
   const R = 46;
   const C = 2 * Math.PI * R;

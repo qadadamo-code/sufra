@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { onSchedule, scheduleLabel } from "@/modules/menu/rules";
 import { Link, useSearchParams } from "react-router-dom";
 import { motion } from "motion/react";
-import { Bike, ChevronDown, ClipboardList, LayoutGrid, Plus, ReceiptText, ShoppingBag, Store, Timer, UserRound, Users, Utensils, Wallet } from "lucide-react";
+import { Bike, Building2, ChevronDown, ClipboardList, LayoutGrid, Plus, ReceiptText, ShoppingBag, Store, Timer, UserRound, Users, Utensils, Wallet } from "lucide-react";
 import { useApproval } from "@/auth/approval";
 import { useSession } from "@/auth/session";
 import { useDb, useLive, useRow } from "@/data/hooks";
@@ -29,6 +29,7 @@ import { TablePicker } from "./components/TablePicker";
 import { CustomerDialog, type CustomerResult } from "./components/CustomerDialog";
 import { PaymentDialog, type TenderInput } from "./components/PaymentDialog";
 import { ReceiptDialog } from "./components/ReceiptDialog";
+import { BuyerDialog } from "@/modules/settings/zatca/BuyerDialog";
 import { OpenChecksDialog, TransferDialog, useCheckRows } from "./components/Checks";
 import { OpenShiftDialog } from "./components/OpenShiftDialog";
 import { Stepper } from "./components/bits";
@@ -49,6 +50,7 @@ export default function Register() {
   const approve = useApproval();
   const { toast } = useToast();
   const session = useSession();
+  const [buyerOpen, setBuyerOpen] = useState(false); // KSA B2B buyer (ZATCA standard invoice)
   const reduced = useReduced();
   const isMobile = useIsMobile();
   const menu = useMenu();
@@ -539,9 +541,24 @@ export default function Register() {
             {L("افتح وردية", "Open shift")}
           </Button>
         )}
-        <Link to="/pos/eta" className="hidden items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-[13px] font-semibold text-ink-2 hover:bg-surface-2 sm:flex">
-          <ReceiptText className="size-4" /> ETA
-        </Link>
+        {/* KSA: ZATCA queue + B2B buyer instead of the ETA queue (country switch) */}
+        {session.restaurant?.country === "SA" ? (
+          <>
+            {check ? (
+              <button type="button" onClick={() => setBuyerOpen(true)} className={cn("hidden items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] font-semibold sm:flex", check.taxBuyer ? "border-primary bg-primary-soft text-primary" : "border-line bg-surface text-ink-2 hover:bg-surface-2")}>
+                <Building2 className="size-4" /> {check.taxBuyer ? check.taxBuyer.name.slice(0, 18) : "B2B"}
+              </button>
+            ) : null}
+            <Link to="/pos/zatca" className="hidden items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-[13px] font-semibold text-ink-2 hover:bg-surface-2 sm:flex">
+              <ReceiptText className="size-4" /> ZATCA
+            </Link>
+          </>
+        ) : (
+          <Link to="/pos/eta" className="hidden items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-[13px] font-semibold text-ink-2 hover:bg-surface-2 sm:flex">
+            <ReceiptText className="size-4" /> ETA
+          </Link>
+        )}
+        <BuyerDialog open={buyerOpen} onClose={() => setBuyerOpen(false)} check={check ?? null} />
       </div>
 
       <div className="flex min-h-0 flex-1">

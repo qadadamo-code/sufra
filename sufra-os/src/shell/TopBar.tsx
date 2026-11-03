@@ -7,6 +7,7 @@ import { NotificationsBell } from "./Notifications";
 import { SyncIndicator } from "./SyncIndicator";
 import { UserMenu } from "./UserMenu";
 import { InstallApp } from "./InstallApp";
+import { OpsTopBarPtt } from "@/modules/ops/shell";
 import { matchPath, useLocation } from "react-router-dom";
 import { modules } from "@/modules/registry";
 import { useBranch } from "@/auth/session";
@@ -42,6 +43,8 @@ export function TopBar({ title }: { title?: string }) {
           </span>
         </button>
         <div className="ms-auto flex items-center gap-1">
+          {/* desktop push-to-talk (phones get the floating button) — src/modules/ops */}
+          <OpsTopBarPtt />
           <IconButton label={t("common.search")} onClick={() => palette.setOpen(true)} className="lg:hidden">
             <Search />
           </IconButton>

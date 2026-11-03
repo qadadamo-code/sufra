@@ -31,7 +31,7 @@ type Msg =
 const USERS = "_users";
 const PINS = "_pins";
 const META = "_meta";
-const SEED_VERSION = "3+ops+inv"; // bump when the demo seed changes shape (2: delivery riders, zones, dispatch · 3: CRM, loyalty, marketing, ads) · +ops: cameras, support tickets, ops settings · +inv: inventory, recipes, purchasing
+const SEED_VERSION = "3+ops+inv+acct+hr"; // bump when the demo seed changes shape (2: delivery riders, zones, dispatch · 3: CRM, loyalty, marketing, ads) · +ops: cameras, support tickets, ops settings · +inv: inventory, recipes, purchasing · +acct: accounting history, cash accounts, bank statement · +hr: staff files, rota, attendance, leave, advances, payroll
 
 export interface LocalAdapterOptions {
   /** IndexedDB database + BroadcastChannel name. Tests use unique names. */

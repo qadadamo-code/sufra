@@ -15,12 +15,14 @@ export default defineModule({
     { path: "/settings", title: { ar: "عام", en: "General" } },
     { path: "/settings/invoice", title: { ar: "الفاتورة", en: "Invoice" }, element: lazy(() => import("./invoice/InvoiceDesigner")) },
     { path: "/settings/tax", title: { ar: "الضرايب", en: "Tax" }, permission: "settings.tax", element: lazy(() => import("./tax/TaxSettings")) },
+    { path: "/settings/zatca", title: { ar: "هيئة الزكاة", en: "ZATCA" }, permission: "settings.tax", element: lazy(() => import("./zatca/ZatcaSettings")) },
     { path: "/settings/users", title: { ar: "المستخدمين", en: "Users" }, permission: "staff.manage" },
   ],
   tabs: [
     { path: "/settings", title: { ar: "عام", en: "General" } },
     { path: "/settings/invoice", title: { ar: "الفاتورة", en: "Invoice" } },
     { path: "/settings/tax", title: { ar: "الضرايب", en: "Tax" } },
+    { path: "/settings/zatca", title: { ar: "هيئة الزكاة", en: "ZATCA" } },
     { path: "/settings/payments", title: { ar: "الدفع", en: "Payments" } }, // route lives in src/modules/payments
     { path: "/settings/delivery", title: { ar: "التوصيل", en: "Delivery" } },
     { path: "/settings/messaging", title: { ar: "الرسايل", en: "Messaging" } }, // route lives in src/modules/messaging

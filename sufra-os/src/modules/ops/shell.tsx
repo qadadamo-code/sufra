@@ -69,12 +69,25 @@ function PttFab() {
   if (hidden || !staff) return null;
   const incoming = snap.onAir.find((a) => a.who !== staff.id && (a.channel === channel || (isDm(a.channel) && dmPeer(a.channel, staff.id))));
   return (
-    <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] end-4 z-40 flex flex-col items-center gap-1.5 md:bottom-6 md:end-6" data-ptt-fab>
+    <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] end-4 z-40 flex flex-col items-center gap-1.5 md:hidden" data-ptt-fab>
       {incoming ? <span className="max-w-36 truncate rounded-full bg-danger px-2.5 py-1 text-[11.5px] font-bold text-white shadow-sf">{incoming.name}</span> : null}
       <PttButton channel={channel} size="fab" label={L(`اضغط واتكلم — ${label}`, `Hold to talk — ${label}`)} />
       <Link to={`/radio?ch=${channel}`} className="rounded-full bg-surface px-2.5 py-0.5 text-[11.5px] font-semibold text-muted shadow-sf-sm">
         {label}
       </Link>
+    </div>
+  );
+}
+
+/** md+ : a hold-to-talk pill in the top bar instead of a floating button over the content. */
+export function OpsTopBarPtt() {
+  const { role, staff, can } = useSession();
+  const { loc } = useT();
+  if (!role || !staff || !FAB_ROLES.includes(role) || !can("radio.use") || !recorderSupported()) return null;
+  const channel: RadioChannelId = FAB_CHANNEL[role] || "all";
+  return (
+    <div className="me-1 hidden md:flex" data-ptt-topbar>
+      <PttButton channel={channel} size="pill" label={loc(channelDef(channel)?.name)} />
     </div>
   );
 }

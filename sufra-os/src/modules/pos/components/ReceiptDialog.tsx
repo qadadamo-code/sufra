@@ -39,6 +39,16 @@ export function ReceiptDialog({ open, onClose, model, title, etaError, actions }
             <ShieldCheck className="size-4 shrink-0" /> {L("إيصال إلكتروني متسلسل — في طابور الإرسال لمصلحة الضرائب", "Chained e-receipt — queued for the Tax Authority")}
           </p>
         ) : null}
+        {m?.zatca ? (
+          <p className={`flex items-center gap-2 rounded-xl px-3 py-2 text-[13px] font-medium ${m.zatca.signed && !m.zatca.demo ? "bg-ok-soft text-ok" : "bg-warn-soft text-warn"}`}>
+            <ShieldCheck className="size-4 shrink-0" />{" "}
+            {m.zatca.demo
+              ? L("وضع تجريبي: الفاتورة مختومة بمفتاح على الجهاز ومش هتتبعت لهيئة الزكاة", "Demo: stamped with an on-device key, never sent to ZATCA")
+              : m.zatca.signed
+              ? L("فاتورة مختومة ومربوطة بالسلسلة — في طابور هيئة الزكاة", "Stamped, chained invoice — queued for ZATCA")
+              : L("فاتورة مربوطة بالسلسلة — QR مؤقت لحد ما السيرفر يختمها", "Chained invoice — provisional QR until the server stamps it")}
+          </p>
+        ) : null}
         {etaError ? (
           <p className="flex items-start gap-2 rounded-xl bg-warn-soft px-3 py-2 text-[13px] font-medium text-warn">
             <ShieldAlert className="mt-0.5 size-4 shrink-0" /> {L("الإيصال الإلكتروني ماتعملش:", "E-receipt not issued:")} {etaError}

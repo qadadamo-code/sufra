@@ -23,5 +23,7 @@ export default defineConfig({
     include: ["src/**/*.test.{ts,tsx}"],
     environment: "node",
     setupFiles: ["src/test/setup.ts"],
+    // the demo seed (3 months of books, inventory moves, HR punches) takes a few seconds to write into fake-indexeddb
+    testTimeout: 60_000,
   },
 });

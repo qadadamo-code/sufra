@@ -72,7 +72,7 @@ export class LocalRadioTransport implements RadioTransport {
     return this.db;
   }
 
-  async putAudio(clip: Pick<RadioClip, "id" | "mime">, blob: Blob): Promise<string> {
+  async putAudio(clip: Pick<RadioClip, "id" | "restaurantId" | "mime">, blob: Blob): Promise<string> {
     const buf = await toBuf(blob);
     const rec = { buf, mime: clip.mime || blob.type, at: Date.now() };
     try {

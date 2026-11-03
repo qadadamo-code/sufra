@@ -108,7 +108,7 @@ export const MATRIX: Record<Role, ReadonlySet<Permission>> = {
   ),
   waiter: only(...OPS_ALL_STAFF, "hr.self", ...SERVICE_BASE, "waiter.use", "orders.create", "orders.edit", "orders.transfer", "checks.split", "floor.manage", "reservations.manage", "customers.edit"),
   chef: only(...OPS_ALL_STAFF, "hr.self", "kitchen.view", "kitchen.bump", "menu.availability", "menu.edit", "reports.view", "staff.view", "inventory.view", "inventory.count", "inventory.manage"),
-  kitchen: only(...OPS_ALL_STAFF, "hr.self", "kitchen.view", "kitchen.bump", "menu.availability", "inventory.count"),
+  kitchen: only(...OPS_ALL_STAFF, "hr.self", "kitchen.view", "kitchen.bump", "menu.availability", "inventory.view", "inventory.count"),
   delivery: only(...OPS_ALL_STAFF, "hr.self", "delivery.view", "delivery.run", "customers.view"),
   accountant: only(...OPS_ALL_STAFF, "hr.self", "dashboard.view", "reports.view", "reports.financial", "accounting.view", "accounting.post", "audit.view", "staff.view", "staff.payroll", "settings.view", "customers.view", "marketing.view", "inventory.view", "purchasing.manage"),
   platform_admin: only("platform.admin"),

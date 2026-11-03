@@ -134,8 +134,8 @@ create index if not exists support_tickets_sufra_idx on public.support_tickets (
 
 -- ───────────────────────────── settings & acks ─────────────────────────────
 create table if not exists public.ops_settings (
-  id                     uuid primary key references public.restaurants (id) on delete cascade,  -- = restaurant_id
-  restaurant_id          uuid not null unique references public.restaurants (id) on delete cascade check (id = restaurant_id),
+  id                     uuid primary key default gen_random_uuid(),
+  restaurant_id          uuid not null unique references public.restaurants (id) on delete cascade,   -- one row per restaurant
   hotline_phone          text not null default '',
   whatsapp_phone         text not null default '',
   sufra_support_phone    text not null default '',

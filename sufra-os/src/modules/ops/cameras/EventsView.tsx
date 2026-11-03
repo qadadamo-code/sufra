@@ -142,8 +142,8 @@ function ClipDialog({ ev, cams, onClose }: { ev: VideoEvent | null; cams: Camera
           </div>
         ) : null}
         {demo ? (
-          <div className="overflow-hidden rounded-2xl">
-            <div className="aspect-video">
+          <div>
+            <div className="aspect-video overflow-hidden rounded-2xl">
               <CameraPlayer cam={cam} at={Date.parse(ev.at) - cfg.clipPadSec * 1000} />
             </div>
             <p className="mt-1 text-[12.5px] text-muted">{L("كاميرا تجريبية: ده رسم توضيحي بالوقت بتاع الحدث، مش تسجيل حقيقي. مع NVR حقيقي الرابط اللي تحت بيفتح التسجيل.", "Demo camera: an illustration at the event time, not a recording. With a real NVR the link below opens the recording.")}</p>
