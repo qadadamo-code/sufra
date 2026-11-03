@@ -1,0 +1,20 @@
+{
+  // Type-check for the Vercel serverless functions (no root package.json; uses sufra-os's TypeScript + @types/node):
+  //   sufra-os/node_modules/.bin/tsc -p api
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "types": ["node"],
+    "typeRoots": ["../sufra-os/node_modules/@types"]
+  },
+  "include": ["*.ts", "_lib/**/*.ts"],
+  // ask.ts re-exports sufra-web/api/ask (type-checked by sufra-web)
+  "exclude": ["ask.ts"]
+}

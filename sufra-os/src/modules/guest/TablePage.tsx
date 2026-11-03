@@ -44,7 +44,7 @@ function TableView() {
   const [placing, setPlacing] = useState(false);
   const calls = useTableCalls(svc, slug, code, venue.restaurantId);
   const bill = useLiveFetch(svc, venue.restaurantId, () => svc.tableBill(slug, code), [svc, slug, code]);
-  const pay = usePayment(svc, slug);
+  const pay = usePayment(svc, slug, venue.restaurantId);
   const ordering = menu.qrOrdering.enabled;
   const canCall = menu.qrOrdering.allowServiceCalls;
 
@@ -92,7 +92,7 @@ function TableView() {
 
   const payOnline = (p: PayChoice) => {
     if (!bill.data) return;
-    void pay.start({ purpose: "check", checkId: bill.data.checkId, orderId: null, tableCode: code, amount: p.amount, tip: p.tip, currency: venue.currency, splitLabel: p.splitLabel, customer: null, lang });
+    void pay.start({ purpose: "check", checkId: bill.data.checkId, orderId: null, tableCode: code, amount: p.amount, tip: p.tip, currency: venue.currency, splitLabel: p.splitLabel, customer: null, lang, method: p.method ?? null });
   };
 
   const orders = bill.data?.orders ?? [];
@@ -221,6 +221,7 @@ function TableView() {
         paying={pay.state.s === "creating" || pay.state.s === "redirect"}
         onPayOnline={payOnline}
         onWaiter={toWaiter}
+        methods={pay.methods}
       />
 
       <Dialog open={sheet === "orders"} onClose={() => setSheet(null)} title={L("طلباتكم", "Your orders")} size="md">

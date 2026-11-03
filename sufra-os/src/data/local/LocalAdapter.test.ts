@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { LocalAdapter } from "./LocalAdapter";
-import { DEMO_PASSWORD, DEMO_RESTAURANT_ID, DEMO_SLUG, staffId } from "../seed";
+import { DEMO_PASSWORD, DEMO_RESTAURANT_ID, DEMO_SLUG, DEMO_STAFF, staffId } from "../seed";
 import type { ChangeEvent } from "../repo";
 
 let n = 0;
@@ -103,7 +103,7 @@ describe("LocalAdapter", () => {
     await a.auth.setPin(DEMO_RESTAURANT_ID, staffId("cashier1"), "2468");
     expect(await a.auth.verifyPin(DEMO_RESTAURANT_ID, staffId("cashier1"), "2468")).not.toBeNull();
     const roster = await a.auth.pinRoster(DEMO_RESTAURANT_ID);
-    expect(roster.length).toBe(12);
+    expect(roster.length).toBe(DEMO_STAFF.length);
     expect(JSON.stringify(roster)).not.toMatch(/sha256/);
     await a.auth.signOut();
     expect(await a.auth.current()).toBeNull();

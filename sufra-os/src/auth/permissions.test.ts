@@ -3,8 +3,12 @@ import { authorize, can, canApprove, MATRIX, PERMISSIONS, permissionsOf } from "
 import { ROLES, ROLE_HOME } from "./roles";
 
 describe("permissions matrix", () => {
-  it("owner can do everything; every role has at least one permission", () => {
-    expect(permissionsOf("owner")).toEqual([...PERMISSIONS]);
+  it("owner can do everything in the restaurant; every role has at least one permission", () => {
+    expect(permissionsOf("owner")).toEqual(PERMISSIONS.filter((p) => p !== "platform.admin"));
+    // Sufra platform staff: the platform console only, nothing inside a restaurant
+    expect(permissionsOf("platform_admin")).toEqual(["platform.admin"]);
+    expect(can("manager", "ads.buy")).toBe(false);
+    expect(can("owner", "ads.buy")).toBe(true);
     for (const r of ROLES) expect(MATRIX[r].size).toBeGreaterThan(0);
   });
 

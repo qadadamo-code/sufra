@@ -7,11 +7,14 @@ import { AnimatedMoney, Button, Dialog, EmptyState, Money, Segmented, Skeleton }
 import type { TableBill } from "../api/service";
 import { myShare, tipFor, type SplitMode } from "../split";
 import { QtyStepper, TotalsList } from "./bits";
+import type { OnlineMethod } from "@/data/types";
+import { MethodPicker } from "../pay/MethodPicker";
 
 export interface PayChoice {
   amount: Units;
   tip: Units;
   splitLabel: string | null;
+  method?: OnlineMethod | null;
 }
 
 const TIPS = [0, 500, 1000, 1500];
@@ -29,6 +32,7 @@ export function BillSheet({
   paying,
   onPayOnline,
   onWaiter,
+  methods = [],
 }: {
   open: boolean;
   onClose: () => void;
@@ -41,6 +45,8 @@ export function BillSheet({
   paying: boolean;
   onPayOnline: (p: PayChoice) => void;
   onWaiter: (method: "cash" | "card", p: PayChoice) => void;
+  /** online methods the restaurant enabled (Settings → Payments) */
+  methods?: OnlineMethod[];
 }) {
   const { L, loc } = useT();
   const [mode, setMode] = useState<SplitMode>("full");
@@ -50,6 +56,8 @@ export function BillSheet({
   const [custom, setCustom] = useState("");
   const [tipBp, setTipBp] = useState(1000);
   const [tipCustom, setTipCustom] = useState<string | null>(null);
+  const [method, setMethod] = useState<OnlineMethod | null>(null);
+  const payMethod = method && methods.includes(method) ? method : methods[0] ?? null;
 
   useEffect(() => {
     if (open) setPicked({});
@@ -68,7 +76,7 @@ export function BillSheet({
   const share = bill ? myShare({ mode, total, paid, people, shares, lines: bill.lines.map((l) => ({ id: l.id, qty: l.qty, gross: l.gross })), picked, custom: customUnits }) : 0;
   const tip = !tipsEnabled ? 0 : tipCustom !== null ? (() => { try { return tipCustom.trim() ? major(tipCustom.trim()) : 0; } catch { return 0; } })() : tipFor(share, tipBp);
   const label = mode === "even" ? L(`${shares} من ${people}`, `${shares} of ${people}`) : mode === "items" ? L("أصنافي", "My items") : mode === "custom" ? L("مبلغ محدد", "Custom amount") : null;
-  const choice: PayChoice = { amount: share, tip, splitLabel: label };
+  const choice: PayChoice = { amount: share, tip, splitLabel: label, method: payMethod };
 
   return (
     <Dialog open={open} onClose={onClose} title={L("الحساب", "The bill")} size="lg" variant="auto"
@@ -78,6 +86,7 @@ export function BillSheet({
             <span className="text-muted">{tip ? L("نصيبك + البقشيش", "Your share + tip") : L("هتدفع", "You pay")}</span>
             <AnimatedMoney value={share + tip} className="text-[20px] font-bold" />
           </div>
+          {canPayOnline ? <MethodPicker methods={methods} value={payMethod} onChange={setMethod} /> : null}
           {canPayOnline ? (
             <Button size="lg" block icon={<Smartphone className="size-5" />} disabled={share <= 0} loading={paying} onClick={() => onPayOnline(choice)}>
               {L("ادفع أونلاين", "Pay online")}

@@ -648,6 +648,12 @@ export default function Register() {
         onTender={tender}
         onVoid={(p) => void voidTender(p)}
         onComplete={() => void finish()}
+        onLinkPaid={async () => {
+          // pay-by-link: the gateway webhook (or the demo) already recorded the payment — close once it covers the check
+          if (!check) return;
+          const fresh = await db.get("checks", check.id);
+          if (fresh && fresh.status !== "paid" && fresh.paid >= fresh.total) await finish();
+        }}
       />
       <ReceiptDialog
         open={!!receipt}

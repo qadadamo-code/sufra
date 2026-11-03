@@ -1,6 +1,6 @@
 import type { Localized } from "@/data/types";
 
-export const ROLES = ["owner", "admin", "manager", "cashier", "waiter", "chef", "kitchen", "delivery", "accountant"] as const;
+export const ROLES = ["owner", "admin", "manager", "cashier", "waiter", "chef", "kitchen", "delivery", "accountant", "platform_admin"] as const;
 export type Role = (typeof ROLES)[number];
 
 export const ROLE_LABEL: Record<Role, Localized> = {
@@ -13,6 +13,7 @@ export const ROLE_LABEL: Record<Role, Localized> = {
   kitchen: { ar: "مطبخ", en: "Kitchen" },
   delivery: { ar: "دليفري", en: "Delivery" },
   accountant: { ar: "محاسب", en: "Accountant" },
+  platform_admin: { ar: "إدارة منصة سُفرة", en: "Sufra platform admin" },
 };
 
 /** Where each role lands after login. Modules can claim a role with `homeFor` in their definition. */
@@ -26,6 +27,8 @@ export const ROLE_HOME: Record<Role, string> = {
   kitchen: "/kitchen",
   delivery: "/delivery",
   accountant: "/accounting",
+  /** Sufra staff (not a restaurant role): the platform console */
+  platform_admin: "/platform",
 };
 
 /** Roles that typically sign in with email (own device); everyone can also use a PIN on shared devices. */
@@ -42,4 +45,6 @@ export const ROLE_RANK: Record<Role, number> = {
   waiter: 20,
   kitchen: 20,
   delivery: 10,
+  // Sufra staff never approve restaurant actions (discounts, voids) — rank below every restaurant role
+  platform_admin: 0,
 };

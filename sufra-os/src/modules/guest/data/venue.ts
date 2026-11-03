@@ -4,7 +4,7 @@
  * the local demo uses DEMO_ZONES.
  */
 import { major, type Units } from "@/lib/money";
-import type { Localized } from "@/data/types";
+import type { Localized, ZoneGeometry } from "@/data/types";
 
 export interface DeliveryZone {
   id: string;
@@ -14,6 +14,10 @@ export interface DeliveryZone {
   /** minutes, door to door */
   etaMin: number;
   etaMax: number;
+  /** free delivery at/above this subtotal; shape + hours from the delivery-zones editor (0006_delivery.sql) */
+  freeOver?: Units | null;
+  geometry?: ZoneGeometry | null;
+  hours?: { open: string; close: string } | null;
 }
 
 export const DEMO_ZONES: DeliveryZone[] = [

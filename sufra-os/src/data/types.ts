@@ -12,8 +12,13 @@
  */
 import type { Units, Currency } from "@/lib/money";
 import type { Role } from "@/auth/roles";
+import type {
+  AdBooking, AdSlot, Campaign, CampaignMessage, Consent, CouponCode, GiftCard, GiftCardTxn, GuestFeedback, Journey, LeadSource, LoyaltyEntry, LoyaltyProgram,
+  MarketProfile, PromoBanner, PromoRedemption, Promotion, ReceiptPromoBlock, Referral, Segment,
+} from "./crmTypes";
 
 export type { Units, Currency, Role };
+export * from "./crmTypes";
 
 export interface Localized {
   ar: string;
@@ -262,6 +267,8 @@ export interface Order extends TenantRow {
   closedAt: string | null;
   /** kitchen priority flag (rush / VIP). Optional: 0004_kitchen_waiter.sql */
   priority?: OrderPriority;
+  /** delivery/online-order workflow: accept, prep ETA, driver hand-off, proof, aggregator. Optional: 0006_delivery.sql */
+  dispatch?: DispatchInfo | null;
 }
 export type OrderPriority = "normal" | "rush" | "vip";
 
@@ -328,7 +335,7 @@ export interface Check extends TenantRow {
   closedAt: string | null;
 }
 
-export type PaymentMethod = "cash" | "card" | "wallet" | "instapay" | "online";
+export type PaymentMethod = "cash" | "card" | "wallet" | "instapay" | "online" | "gift_card";
 export type PaymentStatus = "captured" | "refunded" | "void";
 
 export interface Payment extends TenantRow {
@@ -410,6 +417,22 @@ export interface Customer extends TenantRow {
   notes: string;
   birthday: string | null; // YYYY-MM-DD
   addresses: DeliveryInfo[];
+  /* CRM (0009_crm.sql) — optional so older rows stay valid */
+  gender?: "m" | "f" | null;
+  consent?: Consent;
+  /** how we first got the lead */
+  source?: LeadSource | null;
+  /** loyalty tier id (cached from lifetime points) */
+  tierId?: string | null;
+  lifetimePoints?: number;
+  /** stamp card id → stamps */
+  stamps?: Record<string, number>;
+  referralCode?: string | null;
+  referredBy?: string | null;
+  /** set on a duplicate merged into another profile */
+  mergedInto?: string | null;
+  allergies?: string;
+  noShows?: number;
 }
 
 /* ───────────── Settings & audit ───────────── */
@@ -443,6 +466,8 @@ export interface InvoiceTemplate {
   paperWidth: 58 | 80;
   /** receipt designer (src/modules/settings/invoice). Optional: older rows fall back to DEFAULT_DESIGN in src/lib/receipt. */
   design?: InvoiceDesign;
+  /** promo / QR block under the totals (marketing → own promos). Optional: 0009_crm.sql */
+  promo?: ReceiptPromoBlock;
 }
 
 export interface InvoiceDesign {
@@ -504,6 +529,12 @@ export interface Settings extends TenantRow {
   locale: { defaultLang: "ar" | "en"; currency: Currency; timezone: string };
   /** ETA e-receipts. Optional: 0002_pos.sql (defaults in src/lib/receipt/eta.ts) */
   eta?: EtaSettings;
+  /** online payments. Optional: 0008_payments.sql (defaults in src/modules/payments/config.ts) */
+  payments?: PaymentSettings;
+  /** online-order inbox + dispatch. Optional: 0006_delivery.sql (defaults in src/modules/delivery/settings.ts) */
+  delivery?: DeliverySettings;
+  /** WhatsApp / customer messaging. Optional: 0007_messaging.sql (defaults in src/lib/notify/settings.ts) */
+  messaging?: import("@/lib/notify/settings").MessagingSettings;
 }
 
 export interface AuditEntry extends TenantRow {
@@ -624,6 +655,285 @@ export interface LedgerEntry extends TenantRow {
   lines: { account: string; debit: Units; credit: Units; dims?: Record<string, string> }[];
 }
 
+/* ───────────── Online payments (0005_guest.sql + 0008_payments.sql; src/modules/payments) ───────────── */
+
+export type PayProviderId = "demo" | "paymob" | "kashier" | "moyasar" | "fawry" | "geidea" | "hyperpay" | "tap";
+export type OnlineMethod = "card" | "wallet" | "kiosk" | "applepay" | "mada" | "stcpay" | "meeza" | "valu";
+export type PaymentIntentStatus = "requires_action" | "processing" | "succeeded" | "failed" | "cancelled" | "expired";
+/** guest = pay at table · link = pay-by-link (POS/WhatsApp) · online_order = web order prepay · gift_card / wallet_topup / deposit = no check */
+export type PaymentIntentKind = "guest" | "link" | "online_order" | "gift_card" | "wallet_topup" | "deposit";
+
+/** One online payment attempt (our id "pi_…"). Written by the payment server functions (service role) — or the DemoProvider locally. */
+export interface PaymentIntentRow extends TenantRow {
+  branchId: string | null;
+  checkId: string | null;
+  orderId: string | null;
+  kind: PaymentIntentKind;
+  provider: PayProviderId;
+  mode: "test" | "live";
+  method: OnlineMethod | null;
+  status: PaymentIntentStatus;
+  /** bill share (units), without tip */
+  amount: Units;
+  tip: Units;
+  currency: Currency;
+  /** provider fee (units) once known; null = not reported (estimated from settings in the UI) */
+  fee: Units | null;
+  /** refunded so far (units) */
+  refunded: Units;
+  splitLabel: string | null;
+  redirectUrl: string | null;
+  /** provider transaction id (set by the verified webhook) */
+  providerRef: string | null;
+  /** provider-side order/intention/session/invoice id */
+  providerOrderId: string | null;
+  failureReason: string | null;
+  request: Record<string, unknown>;
+  /** payments row created when it succeeded (null for check-less kinds) */
+  paymentId: string | null;
+  /** gift card id / customer id / reservation id for check-less kinds */
+  purposeRef: string | null;
+  note: string;
+  customer: { name: string; phone: string; email?: string | null } | null;
+  createdBy: string | null;
+  expiresAt: string;
+  payoutId: string | null;
+}
+
+export interface PaymentRefund extends TenantRow {
+  intentId: string;
+  paymentId: string | null;
+  amount: Units;
+  reason: string;
+  status: "pending" | "succeeded" | "failed";
+  providerRef: string | null;
+  error: string | null;
+  requestedBy: string | null;
+  approvedBy: string | null;
+}
+
+/** A provider settlement (bank payout) — entered by the accountant or imported from the provider report. */
+export interface PaymentPayout extends TenantRow {
+  provider: PayProviderId;
+  periodStart: string;
+  periodEnd: string;
+  gross: Units;
+  fees: Units;
+  net: Units;
+  reference: string;
+  paidAt: string | null;
+  note: string;
+}
+
+/** settings.payments (0008_payments.sql). Never holds secrets — keys live in Vercel env / Supabase Vault. */
+export interface PaymentSettings {
+  country: "EG" | "SA";
+  provider: PayProviderId;
+  mode: "test" | "live";
+  methods: OnlineMethod[];
+  /** true = the restaurant absorbs gateway fees; false = add surchargeBp to online payments */
+  absorbFees: boolean;
+  surchargeBp: number;
+  /** pay-by-link default expiry */
+  linkExpiryMin: number;
+  /** fee estimate for the settlement view when the provider doesn't report it: basis points + fixed units */
+  feeBp: number;
+  feeFixed: Units;
+  /** days from payment to bank payout (T+n) */
+  payoutDays: number;
+}
+
+/* ───────────── Delivery & online-order operations (0006_delivery.sql, src/modules/delivery) ───────────── */
+
+export interface LatLng {
+  lat: number;
+  lng: number;
+}
+
+/** Where an order is in the hand-off workflow. Kitchen readiness is `readyAt` (items), not a stage. */
+export type DispatchStage = "received" | "accepted" | "assigned" | "picked_up" | "arrived" | "delivered" | "failed" | "rejected" | "cancelled";
+/** Who the order came through (inbox auto-accept is per channel). */
+export type OrderChannel = "online_delivery" | "online_takeaway" | "qr" | "phone" | "pos" | "aggregator";
+export type AggregatorId = "talabat" | "elmenus" | "hungerstation" | "jahez" | "keeta" | "other";
+
+export interface DispatchInfo {
+  stage: DispatchStage;
+  channel: OrderChannel;
+  receivedAt: string;
+  /** unanswered by then → auto-rejected (null = never) */
+  expiresAt: string | null;
+  acceptedAt: string | null;
+  acceptedBy: string | null;
+  /** kitchen prep minutes promised at accept */
+  prepMin: number | null;
+  /** promised hand-over time (pickup ready / door) */
+  promisedAt: string | null;
+  readyAt: string | null;
+  assignedAt: string | null;
+  pickedUpAt: string | null;
+  arrivedAt: string | null;
+  deliveredAt: string | null;
+  failedAt: string | null;
+  failReason: string | null;
+  rejectReason: string | null;
+  /** 4-digit code the customer reads to the driver (proof of delivery) */
+  otp: string | null;
+  proof: { kind: "photo" | "otp" | "none"; photo?: string | null; at: string } | null;
+  /** what the driver collected at the door */
+  collected: { method: "cash" | "card" | "prepaid"; amount: Units } | null;
+  driverShiftId: string | null;
+  /** orders sent out together (same driver, one trip) */
+  batchId: string | null;
+  /** zone slug the address fell in */
+  zone: string | null;
+  /** aggregator orders (manual entry) */
+  aggregator: { id: AggregatorId; ref: string; commissionBps: number; theirRider: boolean } | null;
+  /** last "delayed" notice sent */
+  delayedAt: string | null;
+}
+
+export interface DeliverySettings {
+  /** accept without staff action, per channel (QR follows qrOrdering.requireWaiterConfirm) */
+  autoAccept: { online_delivery: boolean; online_takeaway: boolean; phone: boolean; aggregator: boolean };
+  /** unanswered online orders are rejected after this many minutes (0 = never) */
+  autoRejectMin: number;
+  defaultPrepMin: number;
+  /** average rider speed in town, km/h (ETA estimates) */
+  speedKmh: number;
+  /** minutes past the promise before an order counts as late */
+  lateGraceMin: number;
+  proof: "none" | "photo" | "otp" | "either";
+  /** orders whose doors are this close (km) can go out together */
+  batchRadiusKm: number;
+  maxBatch: number;
+  sound: boolean;
+  /** the kitchen door (restaurant pin) */
+  origin: LatLng;
+}
+
+export type ZoneGeometry = { kind: "polygon"; points: LatLng[] } | { kind: "ring"; center: LatLng; radiusKm: number };
+
+export interface DeliveryZoneRow extends TenantRow {
+  branchId: string | null;
+  /** what guests send as zoneId (stable) */
+  slug: string;
+  name: Localized;
+  fee: Units;
+  minOrder: Units;
+  /** free delivery at or above this subtotal (null = never) */
+  freeOver: Units | null;
+  etaMin: number;
+  etaMax: number;
+  geometry: ZoneGeometry | null;
+  /** active hours (null = whenever the branch is open) */
+  hours: { open: string; close: string } | null;
+  color: string;
+  sort: number;
+  active: boolean;
+}
+
+/** A rider's time on duty. Cash they collect is settled against it at the till. */
+export interface DriverShift extends TenantRow {
+  branchId: string;
+  driverId: string;
+  status: "on" | "off" | "settled";
+  startedAt: string;
+  endedAt: string | null;
+  settlement: {
+    expected: Units;
+    handedIn: Units;
+    /** handedIn − expected (over > 0, short < 0) */
+    difference: Units;
+    orders: number;
+    settledBy: string | null;
+    settledAt: string;
+    posShiftId: string | null;
+    note: string;
+  } | null;
+}
+
+/** Last known position of a rider (one row per rider, id = membership id). */
+export interface DriverLocation extends TenantRow {
+  driverId: string;
+  lat: number;
+  lng: number;
+  accuracy: number | null;
+  heading: number | null;
+  speed: number | null;
+  at: string;
+  onShift: boolean;
+}
+
+/* ───────────── Messaging (WhatsApp) — 0007_messaging.sql, src/lib/notify, src/modules/messaging ───────────── */
+
+export type MessageChannel = "whatsapp" | "click_to_chat" | "sms" | "log";
+/**
+ * scheduled → queued → sent → delivered → read   (Cloud API / BSP)
+ * pending_tap → opened                            (click-to-chat: waiting for staff to tap / opened in WhatsApp)
+ * received (inbound) · failed · skipped (off / opted out)
+ */
+export type MessageStatus = "scheduled" | "queued" | "pending_tap" | "opened" | "sent" | "delivered" | "read" | "failed" | "received" | "skipped";
+export type MessageCategory = "utility" | "marketing" | "authentication" | "service";
+
+export interface Conversation extends TenantRow {
+  /** E.164 */
+  phone: string;
+  name: string;
+  customerId: string | null;
+  status: "open" | "closed";
+  /** membership id */
+  assignedTo: string | null;
+  unread: number;
+  lastMessageAt: string | null;
+  /** last message FROM the customer — opens the 24h window */
+  lastInboundAt: string | null;
+  lastPreview: string;
+  lastAutoReplyAt: string | null;
+  tags: string[];
+}
+
+export interface Message extends TenantRow {
+  conversationId: string;
+  direction: "in" | "out";
+  channel: MessageChannel;
+  kind: "text" | "template" | "media" | "interactive" | "system";
+  template: string | null;
+  lang: "ar" | "en";
+  category: MessageCategory | null;
+  body: string;
+  params: Record<string, string>;
+  media: { kind: "image" | "document" | "video"; link: string; caption?: string } | null;
+  status: MessageStatus;
+  /** WhatsApp message id (wamid…) */
+  providerId: string | null;
+  error: string | null;
+  sentBy: string | null;
+  /** scheduled send time */
+  sendAt: string | null;
+  sentAt: string | null;
+  deliveredAt: string | null;
+  readAt: string | null;
+  orderId: string | null;
+  dedupeKey: string | null;
+  /** estimated Meta charge, micro-USD */
+  costMicros: number;
+}
+
+export type ConsentSource = "online_checkout" | "qr_loyalty" | "reservation" | "staff" | "inbound_keyword" | "import";
+export interface MessagingConsent extends TenantRow {
+  /** E.164 */
+  phone: string;
+  customerId: string | null;
+  channel: "whatsapp" | "sms";
+  status: "opted_in" | "opted_out";
+  source: ConsentSource;
+  /** the exact wording the customer agreed to */
+  wording: string;
+  capturedAt: string;
+  capturedBy: string | null;
+  history: { status: "opted_in" | "opted_out"; source: ConsentSource; at: string }[];
+}
+
 /* ───────────── Collections ───────────── */
 
 export interface Collections {
@@ -654,6 +964,33 @@ export interface Collections {
   cashMovements: CashMovement;
   receipts: Receipt;
   ledgerEntries: LedgerEntry;
+  paymentIntents: PaymentIntentRow;
+  paymentRefunds: PaymentRefund;
+  paymentPayouts: PaymentPayout;
+  deliveryZones: DeliveryZoneRow;
+  driverShifts: DriverShift;
+  driverLocations: DriverLocation;
+  conversations: Conversation;
+  messages: Message;
+  messagingConsents: MessagingConsent;
+  /* CRM, loyalty, marketing, platform ads (0009_crm.sql) */
+  loyaltyPrograms: LoyaltyProgram;
+  loyaltyLedger: LoyaltyEntry;
+  promotions: Promotion;
+  couponCodes: CouponCode;
+  promoRedemptions: PromoRedemption;
+  giftCards: GiftCard;
+  giftCardTxns: GiftCardTxn;
+  segments: Segment;
+  campaigns: Campaign;
+  campaignMessages: CampaignMessage;
+  journeys: Journey;
+  referrals: Referral;
+  promoBanners: PromoBanner;
+  guestFeedback: GuestFeedback;
+  marketProfiles: MarketProfile;
+  adSlots: AdSlot;
+  adBookings: AdBooking;
 }
 export type CollectionName = keyof Collections;
 export type RowOf<C extends CollectionName> = Collections[C];
@@ -687,5 +1024,31 @@ export const TABLE_NAMES: { [C in CollectionName]: string } = {
   cashMovements: "cash_movements",
   receipts: "receipts",
   ledgerEntries: "ledger_entries",
+  paymentIntents: "payment_intents",
+  paymentRefunds: "payment_refunds",
+  paymentPayouts: "payment_payouts",
+  deliveryZones: "delivery_zones",
+  driverShifts: "driver_shifts",
+  driverLocations: "driver_locations",
+  conversations: "wa_conversations",
+  messages: "wa_messages",
+  messagingConsents: "messaging_consents",
+  loyaltyPrograms: "loyalty_programs",
+  loyaltyLedger: "loyalty_ledger",
+  promotions: "promotions",
+  couponCodes: "coupon_codes",
+  promoRedemptions: "promo_redemptions",
+  giftCards: "gift_cards",
+  giftCardTxns: "gift_card_txns",
+  segments: "segments",
+  campaigns: "campaigns",
+  campaignMessages: "campaign_messages",
+  journeys: "journeys",
+  referrals: "referrals",
+  promoBanners: "promo_banners",
+  guestFeedback: "guest_feedback",
+  marketProfiles: "market_profiles",
+  adSlots: "ad_slots",
+  adBookings: "ad_bookings",
 };
 export const COLLECTIONS = Object.keys(TABLE_NAMES) as CollectionName[];

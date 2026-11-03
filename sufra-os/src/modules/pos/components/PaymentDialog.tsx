@@ -1,7 +1,7 @@
 /** Tenders: cash (quick notes, change), card, wallet, InstaPay, pay link; split tender and shares; tips on non-cash. */
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Banknote, Check as CheckIcon, CreditCard, Link2, QrCode, Smartphone, X } from "lucide-react";
+import { Banknote, Check as CheckIcon, CreditCard, Gift, Link2, QrCode, Smartphone, X } from "lucide-react";
 import type { Check, Payment, PaymentMethod } from "@/data/types";
 import { useT } from "@/i18n/i18n";
 import { cn } from "@/lib/cn";
@@ -10,8 +10,9 @@ import { METHOD_LABEL } from "@/lib/receipt/model";
 import { AnimatedMoney, Badge, Button, Dialog, IconButton, spring, useHotkeys, useReduced } from "@/ui";
 import { changeDue, quickTenders, remaining, toPiastre, TENDERS } from "../math";
 import { MoneyKeypad } from "./bits";
+import { PayLinkPanel } from "@/modules/payments/PayLinkPanel";
 
-const ICON: Record<PaymentMethod, typeof Banknote> = { cash: Banknote, card: CreditCard, wallet: Smartphone, instapay: QrCode, online: Link2 };
+const ICON: Record<PaymentMethod, typeof Banknote> = { cash: Banknote, card: CreditCard, wallet: Smartphone, instapay: QrCode, online: Link2, gift_card: Gift };
 
 export interface TenderInput {
   method: PaymentMethod;
@@ -22,7 +23,7 @@ export interface TenderInput {
   splitLabel: string | null;
 }
 
-export function PaymentDialog({ open, onClose, check, payments, shares, tipsEnabled, busy, onTender, onVoid, onComplete }: {
+export function PaymentDialog({ open, onClose, check, payments, shares, tipsEnabled, busy, onTender, onVoid, onComplete, onLinkPaid }: {
   open: boolean;
   onClose: () => void;
   check: Check | null;
@@ -33,6 +34,8 @@ export function PaymentDialog({ open, onClose, check, payments, shares, tipsEnab
   onTender: (t: TenderInput) => Promise<void>;
   onVoid: (p: Payment) => void;
   onComplete: () => void;
+  /** pay-by-link confirmed by the gateway (payment already recorded server-side / by the demo webhook) */
+  onLinkPaid?: () => void;
 }) {
   const { L, lang } = useT();
   const reduced = useReduced();
@@ -55,10 +58,11 @@ export function PaymentDialog({ open, onClose, check, payments, shares, tipsEnab
   useEffect(() => setTip(0), [method]);
 
   const isCash = method === "cash";
+  const isLink = method === "online";
   const apply = Math.min(toPiastre(amount), due);
   const change = isCash ? changeDue(apply, amount) : 0;
   const quick = useMemo(() => quickTenders(shareDue), [shareDue]);
-  const canTake = !busy && due > 0 && amount > 0 && (isCash || amount <= due);
+  const canTake = !busy && due > 0 && amount > 0 && (isCash || amount <= due) && method !== "online";
 
   const take = async () => {
     if (!canTake) return;
@@ -181,7 +185,7 @@ export function PaymentDialog({ open, onClose, check, payments, shares, tipsEnab
             </div>
           ) : (
             <>
-              {tipsEnabled ? (
+              {tipsEnabled && !isLink ? (
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-[13px] font-semibold text-muted">{L("إكرامية", "Tip")}</span>
                   {[0, 500, 1000, 1500].map((bp) => {
@@ -199,13 +203,16 @@ export function PaymentDialog({ open, onClose, check, payments, shares, tipsEnab
                   ))}
                 </div>
               ) : null}
-              <input value={ref} onChange={(e) => setRef(e.target.value)} placeholder={method === "card" ? L("رقم الموافقة / آخر ٤ أرقام (اختياري)", "Auth code / last 4 (optional)") : method === "online" ? L("رقم العملية من لينك الدفع", "Pay-link transaction id") : L("رقم المرجع (اختياري)", "Reference (optional)")} aria-label={L("رقم المرجع", "Reference")} className="h-11 rounded-xl border border-line bg-surface px-3.5 outline-none focus:border-primary focus:shadow-[var(--sf-glow)]" />
-              {method === "online" ? <p className="rounded-xl bg-info-soft px-3 py-2 text-[13px] text-info">{L("لينك الدفع (Paymob/Kashier) جاي مع بوابة الدفع. دلوقتي سجّل الدفع بعد ما العميل يدفع.", "Pay links (Paymob/Kashier) arrive with the payment gateway. For now, record the payment once the guest has paid.")}</p> : null}
+              {isLink && check ? (
+                <PayLinkPanel check={check} amount={apply} onPaid={() => onLinkPaid?.()} />
+              ) : (
+                <input value={ref} onChange={(e) => setRef(e.target.value)} placeholder={method === "card" ? L("رقم الموافقة / آخر ٤ أرقام (اختياري)", "Auth code / last 4 (optional)") : L("رقم المرجع (اختياري)", "Reference (optional)")} aria-label={L("رقم المرجع", "Reference")} className="h-11 rounded-xl border border-line bg-surface px-3.5 outline-none focus:border-primary focus:shadow-[var(--sf-glow)]" />
+              )}
             </>
           )}
 
           <MoneyKeypad value={amount} onChange={setAmount} />
-          <Button size="xl" variant="brass" block disabled={!canTake} loading={busy} onClick={take}>
+          <Button size="xl" variant="brass" block disabled={!canTake || isLink} loading={busy} onClick={take} className={isLink ? "hidden" : undefined}>
             {due ? (
               <>
                 {L("خد", "Take")} {formatMoney(apply + (isCash ? 0 : tip), { lang })}

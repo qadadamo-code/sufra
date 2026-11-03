@@ -19,6 +19,7 @@ export const METHOD_LABEL: Record<PaymentMethod, Localized> = {
   wallet: L("محفظة", "Wallet"),
   instapay: L("إنستاباي", "InstaPay"),
   online: L("لينك دفع", "Pay link"),
+  gift_card: L("كارت هدية", "Gift card"),
 };
 
 export interface ReceiptSource {

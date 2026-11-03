@@ -39,6 +39,11 @@ export const PERMISSIONS = [
   "reservations.manage",
   "customers.view",
   "customers.edit",
+  "messages.use", // WhatsApp inbox, templates, consent, message log (Wave 2)
+  // CRM & marketing (Wave 2)
+  "marketing.view",
+  "marketing.manage",
+  "ads.buy", // buy Sufra sponsored placements (spends money)
   // management
   "dashboard.view",
   "reports.view",
@@ -54,19 +59,20 @@ export const PERMISSIONS = [
   "settings.tax",
   "audit.view",
   "restaurant.billing",
+  // Sufra platform (super-admin) — Sufra staff only, never a restaurant role
+  "platform.admin",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
-const ALL = new Set<Permission>(PERMISSIONS);
 const without = (...xs: Permission[]) => new Set<Permission>(PERMISSIONS.filter((p) => !xs.includes(p)));
 const only = (...xs: Permission[]) => new Set<Permission>(xs);
 
 const SERVICE_BASE: Permission[] = ["floor.view", "service_calls.handle", "reservations.view", "customers.view", "kitchen.view"];
 
 export const MATRIX: Record<Role, ReadonlySet<Permission>> = {
-  owner: ALL,
-  admin: without("restaurant.billing"),
-  manager: without("restaurant.billing", "staff.payroll", "settings.tax", "accounting.post"),
+  owner: without("platform.admin"),
+  admin: without("restaurant.billing", "platform.admin"),
+  manager: without("restaurant.billing", "staff.payroll", "settings.tax", "accounting.post", "platform.admin", "ads.buy"),
   cashier: only(
     ...SERVICE_BASE,
     "pos.use",
@@ -84,12 +90,14 @@ export const MATRIX: Record<Role, ReadonlySet<Permission>> = {
     "customers.edit",
     "delivery.view",
     "delivery.dispatch",
+    "messages.use",
   ),
   waiter: only(...SERVICE_BASE, "waiter.use", "orders.create", "orders.edit", "orders.transfer", "checks.split", "floor.manage", "reservations.manage", "customers.edit"),
   chef: only("kitchen.view", "kitchen.bump", "menu.availability", "menu.edit", "reports.view", "staff.view"),
   kitchen: only("kitchen.view", "kitchen.bump", "menu.availability"),
   delivery: only("delivery.view", "delivery.run", "customers.view"),
-  accountant: only("dashboard.view", "reports.view", "reports.financial", "accounting.view", "accounting.post", "audit.view", "staff.view", "staff.payroll", "settings.view", "customers.view"),
+  accountant: only("dashboard.view", "reports.view", "reports.financial", "accounting.view", "accounting.post", "audit.view", "staff.view", "staff.payroll", "settings.view", "customers.view", "marketing.view"),
+  platform_admin: only("platform.admin"),
 };
 
 export function can(role: Role | null | undefined, p: Permission): boolean {

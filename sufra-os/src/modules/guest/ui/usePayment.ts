@@ -1,7 +1,9 @@
 import { startTransition, useCallback, useEffect, useReducer, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useRepo } from "@/data/hooks";
 import type { GuestService } from "../api/service";
-import { payReducer, pickProvider, providerFor, type PaymentIntent, type PaymentRequest } from "../pay";
+import { attachDemoRepo, payReducer, pickProvider, providerFor, type PaymentIntent, type PaymentRequest } from "../pay";
+import { useGuestPayConfig, visibleMethods } from "../pay/config";
 
 const BASE = (import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? "/app/";
 
@@ -9,11 +11,15 @@ const BASE = (import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BA
  * Drives the payment state machine: create intent → hosted checkout → back with ?pi= → poll → record → done.
  * Works the same for the DemoProvider (internal route) and real providers (full-page redirect).
  */
-export function usePayment(svc: GuestService, slug: string) {
+export function usePayment(svc: GuestService, slug: string, restaurantId?: string) {
   const [state, dispatch] = useReducer(payReducer, { s: "idle" });
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
-  const provider = pickProvider(svc.local ? "local" : "supabase");
+  const repo = useRepo();
+  useEffect(() => attachDemoRepo(repo), [repo]);
+  const config = useGuestPayConfig(repo, slug);
+  const provider = pickProvider(svc.local ? "local" : "supabase", config?.provider);
+  const methods = visibleMethods(config?.methods ?? provider?.methods ?? []).filter((m) => !provider || provider.methods.includes(m));
   const recorded = useRef(new Set<string>());
 
   // returning from the provider
@@ -61,7 +67,7 @@ export function usePayment(svc: GuestService, slug: string) {
       try {
         const here = new URL(window.location.href);
         here.searchParams.delete("pi");
-        const intent: PaymentIntent = await provider.createIntent({ ...req, restaurantSlug: slug, returnUrl: here.toString() });
+        const intent: PaymentIntent = await provider.createIntent({ ...req, restaurantSlug: slug, restaurantId: req.restaurantId ?? restaurantId, returnUrl: here.toString() });
         dispatch({ t: "CREATED", intent });
         if (!intent.redirectUrl) return;
         if (intent.redirectUrl.startsWith(BASE)) startTransition(() => navigate(intent.redirectUrl!.slice(BASE.length - 1)));
@@ -70,7 +76,7 @@ export function usePayment(svc: GuestService, slug: string) {
         dispatch({ t: "FAILED", error: (e as Error).message });
       }
     },
-    [provider, slug, navigate],
+    [provider, slug, navigate, restaurantId],
   );
 
   const reset = useCallback(() => {
@@ -81,5 +87,5 @@ export function usePayment(svc: GuestService, slug: string) {
     }
   }, [params, setParams]);
 
-  return { state, start, reset, provider, available: !!provider };
+  return { state, start, reset, provider, methods, config, available: !!provider };
 }

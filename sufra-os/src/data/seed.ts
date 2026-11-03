@@ -12,6 +12,11 @@ import type {
 } from "./types";
 import type { Role } from "@/auth/roles";
 import { priceItems } from "./pricing";
+import { demoPaymentRows } from "@/modules/payments/seed";
+import { demoMessagingRows } from "@/lib/notify/demoSeed";
+import { demoCrmRows } from "@/modules/marketing/seed";
+import { DEMO_DOORS, DEMO_ORIGIN, demoDeliveryRows, demoDispatch } from "@/modules/delivery/seed";
+import { DEFAULT_DELIVERY } from "@/modules/delivery/settings";
 
 export const DEMO_SLUG = "sufra-zamalek";
 export const DEMO_PASSWORD = "sufra2026";
@@ -56,7 +61,11 @@ export const DEMO_STAFF: { key: string; name: string; role: Role; pin: string; e
   { key: "chef", name: "الشيف صابر", role: "chef", pin: "6000", color: "#7a5a12", phone: "01005550109" },
   { key: "kitchen", name: "محمد ربيع", role: "kitchen", pin: "7000", color: "#4b6b3a", phone: "01005550110" },
   { key: "delivery", name: "إسلام جمال", role: "delivery", pin: "8000", color: "#3a5f7a", phone: "01005550111" },
+  { key: "delivery2", name: "محمود سعيد", role: "delivery", pin: "8100", color: "#7a3a5f", phone: "01005550113" },
+  { key: "delivery3", name: "عمر خالد", role: "delivery", pin: "8200", color: "#5f7a3a", phone: "01005550114" },
   { key: "accountant", name: "هالة منصور", role: "accountant", pin: "9000", email: "accountant@sufra.demo", color: "#5b6a64", phone: "01005550112" },
+  // Sufra staff (platform super-admin, not a restaurant role): the platform console at /platform
+  { key: "platform", name: "فريق منصة سُفرة", role: "platform_admin", pin: "0000", email: "platform@sufra.demo", color: "#16211e", phone: "01005550199" },
 ];
 
 export const staffId = (key: string) => id(`staff:${key}`);
@@ -92,7 +101,7 @@ export function buildSeed(now: Date = new Date()): Seed {
       color: s.color, hasPin: true, active: true, lastSeenAt: null,
     };
   });
-  const salaries: Record<string, number> = { owner: 0, admin: 32000, manager: 26000, cashier1: 14500, cashier2: 14000, waiter1: 11000, waiter2: 11000, waiter3: 11000, chef: 30000, kitchen: 13500, delivery: 10500, accountant: 22000 };
+  const salaries: Record<string, number> = { owner: 0, admin: 32000, manager: 26000, cashier1: 14500, cashier2: 14000, waiter1: 11000, waiter2: 11000, waiter3: 11000, chef: 30000, kitchen: 13500, delivery: 10500, delivery2: 10000, delivery3: 10000, accountant: 22000 };
   const staffCompensation: StaffCompensation[] = DEMO_STAFF.filter((s) => salaries[s.key]).map((s) => ({
     ...base(`comp:${s.key}`), membershipId: staffId(s.key), monthlySalary: major(salaries[s.key]), hourlyRate: major(Math.round(salaries[s.key] / 208)),
   }));
@@ -261,6 +270,7 @@ export function buildSeed(now: Date = new Date()): Seed {
     },
     discountApprovalPct: 10, autoLockMinutes: 5, tipsEnabled: true,
     qrOrdering: { enabled: true, requireWaiterConfirm: true, allowServiceCalls: true },
+    delivery: { ...DEFAULT_DELIVERY, origin: DEMO_ORIGIN },
     locale: { defaultLang: "ar", currency: "EGP", timezone: "Africa/Cairo" },
   }];
 
@@ -300,7 +310,7 @@ export function buildSeed(now: Date = new Date()): Seed {
     const order: Order = {
       ...base(`order:${k}`), createdAt: opened, updatedAt: opened, branchId: B, number: orderNo, mode: "dine_in", source: "pos", status: "open", tableIds: [], checkId: null,
       customerId: null, guests: 2, openedBy: S("cashier1"), waiterId: null, note: "", delivery: null, deliveryStatus: null, driverId: null, deliveryFee: 0, openedAt: opened, closedAt: null,
-      ...rest,
+      dispatch: null, ...rest,
     };
     orders.push(order);
     lines.forEach(([key, qty, status, mods = [], extra = {}], i) => {
@@ -428,18 +438,102 @@ export function buildSeed(now: Date = new Date()): Seed {
   const ta2 = openCheck("ta2", ["ta2"], { minutesAgo: 12 });
   pay("ta2", ta2, "cash", 11, 0, "cashier2");
 
+  // Delivery & online orders in every stage (dispatch board, rider app, inbox, settlement, reports). Doors: Zamalek/Dokki/Mohandessin.
+  const door = (k: keyof typeof DEMO_DOORS, notes = "") => { const d = DEMO_DOORS[k]; return { address: d.address, area: d.area, notes, lat: d.lat, lng: d.lng }; };
+  const shiftOf = (k: string) => id(`dshift:${k}`);
+  // out for delivery with إسلام (cash on delivery)
   addOrder("d1", {
-    minutesAgo: 33, mode: "delivery", status: "ready", guests: 1, customerId: cid("8"), openedBy: S("cashier1"), source: "phone", deliveryStatus: "picked_up", driverId: S("delivery"), deliveryFee: major(35),
-    delivery: { address: "١٤ شارع أبو الفدا، الدور الرابع", area: "الزمالك", notes: "رن الجرس مرتين", lat: null, lng: null },
+    minutesAgo: 33, mode: "delivery", status: "ready", guests: 1, customerId: cid("8"), openedBy: S("cashier1"), source: "phone", deliveryStatus: "picked_up", driverId: S("delivery"), deliveryFee: major(25),
+    delivery: door("abuElFeda", "رن الجرس مرتين"),
+    dispatch: demoDispatch(T, "phone", { stage: "picked_up", received: 33, accepted: 33, prep: 18, promised: -6, ready: 14, assigned: 15, picked: 7, otp: "4821", zone: "zamalek", shift: shiftOf("islam") }),
   }, [["kofta", 2, "ready", [["portion", "quarter"], ["side", "bread"]]], ["tahini", 2, "ready"], ["kunafa", 1, "ready"]]);
   openCheck("d1", ["d1"], { minutesAgo: 33 });
 
+  // accepted online, in the kitchen, paid online
   addOrder("d2", {
-    minutesAgo: 8, mode: "delivery", status: "sent", guests: 1, customerId: null, openedBy: S("cashier1"), source: "online", deliveryStatus: "pending", deliveryFee: major(45),
-    delivery: { address: "٣ شارع حسن صبري، شقة ٧", area: "الزمالك", notes: "", lat: null, lng: null },
+    minutesAgo: 8, mode: "delivery", status: "sent", guests: 1, customerId: cid("7"), openedBy: null, source: "online", deliveryStatus: "pending", deliveryFee: major(25),
+    delivery: door("hassanSabri"),
+    dispatch: demoDispatch(T, "online_delivery", { stage: "accepted", received: 8, accepted: 7, prep: 20, promised: -40, otp: "7310", zone: "zamalek" }),
   }, [["mixed-grill", 1, "preparing", [["side", "fries"]]], ["hummus", 1, "sent"], ["strawberry", 2, "sent", [["size", "regular"]]]]);
   const d2 = openCheck("d2", ["d2"], { minutesAgo: 8 });
   pay("d2", d2, "online", 8, 0, "cashier1");
+
+  // NEW online delivery waiting in the inbox (auto-rejects if nobody answers)
+  addOrder("d3", {
+    minutesAgo: 2, mode: "delivery", status: "open", guests: 1, customerId: cid("5"), openedBy: null, source: "online", deliveryStatus: "pending", deliveryFee: major(40),
+    delivery: door("mesaha", "جنب البنك الأهلي"), note: "💵 كاش عند الاستلام / cash on delivery",
+    dispatch: demoDispatch(T, "online_delivery", { stage: "received", received: 2, expires: -6, zone: "dokki" }),
+  }, [["mixed-grill", 1, "new", [["side", "rice"]]], ["fattoush", 1, "new"], ["om-ali", 2, "new"], ["soda", 2, "new"]]);
+  openCheck("d3", ["d3"], { minutesAgo: 2 });
+
+  // NEW online takeaway waiting in the inbox
+  addOrder("d4", {
+    minutesAgo: 1, mode: "takeaway", status: "open", guests: 1, customerId: cid("3"), openedBy: null, source: "online", note: "💵 كاش في الفرع / cash at pickup",
+    dispatch: demoDispatch(T, "online_takeaway", { stage: "received", received: 1, expires: -7 }),
+  }, [["kofta", 1, "new", [["portion", "half"], ["side", "bread"]]], ["baba", 1, "new"]]);
+  openCheck("d4", ["d4"], { minutesAgo: 1 });
+
+  // ready at the pass, no rider yet — Mohandessin (phone order, cash)
+  addOrder("d5", {
+    minutesAgo: 26, mode: "delivery", status: "ready", guests: 1, customerId: cid("2"), openedBy: S("cashier2"), source: "phone", deliveryStatus: "pending", deliveryFee: major(40),
+    delivery: door("shehab", "الدور السادس — الأسانسير عطلان"),
+    dispatch: demoDispatch(T, "phone", { stage: "accepted", received: 26, accepted: 26, prep: 20, promised: -16, ready: 3, otp: "1958", zone: "mohandessin" }),
+  }, [["half-chicken", 1, "ready", [["side", "rice"]]], ["molokhia", 1, "ready", [["side", "rice"]]], ["tahini", 1, "ready"]]);
+  openCheck("d5", ["d5"], { minutesAgo: 26 });
+
+  // ready, also Mohandessin — batchable with d5
+  addOrder("d6", {
+    minutesAgo: 22, mode: "delivery", status: "ready", guests: 1, customerId: cid("10"), openedBy: null, source: "online", deliveryStatus: "pending", deliveryFee: major(40),
+    delivery: door("lebanon"),
+    dispatch: demoDispatch(T, "online_delivery", { stage: "accepted", received: 23, accepted: 22, prep: 18, promised: -14, ready: 2, otp: "6604", zone: "mohandessin" }),
+  }, [["tawook", 2, "ready", [["side", "fries"], ["spice", "mild"]]], ["fries", 1, "ready"], ["mango", 2, "ready", [["size", "regular"]]]]);
+  const d6 = openCheck("d6", ["d6"], { minutesAgo: 22 });
+  pay("d6", d6, "online", 22, 0, "cashier1");
+
+  // assigned to محمود, still at the kitchen — Dokki (paid online)
+  addOrder("d7", {
+    minutesAgo: 30, mode: "delivery", status: "ready", guests: 1, customerId: cid("9"), openedBy: null, source: "online", deliveryStatus: "assigned", driverId: S("delivery2"), deliveryFee: major(40),
+    delivery: door("tahrirDokki"),
+    dispatch: demoDispatch(T, "online_delivery", { stage: "assigned", received: 30, accepted: 29, prep: 20, promised: -8, ready: 4, assigned: 2, otp: "3047", zone: "dokki" }),
+  }, [["fattah", 1, "ready"], ["warak-enab", 1, "ready"], ["karkade", 2, "ready", [["size", "large"]]]]);
+  const d7 = openCheck("d7", ["d7"], { minutesAgo: 30 });
+  pay("d7", d7, "online", 30, 0, "cashier1");
+
+  // Talabat order, their rider collects at the counter (manual aggregator entry, 22% commission)
+  addOrder("d8", {
+    minutesAgo: 11, mode: "delivery", status: "sent", guests: 1, customerId: null, openedBy: S("cashier1"), source: "aggregator", deliveryStatus: "pending", deliveryFee: 0, note: "Talabat #TB-58213",
+    delivery: { address: "طلبات — مندوب طلبات هيستلم", area: "طلبات", notes: "", lat: null, lng: null },
+    dispatch: demoDispatch(T, "aggregator", { stage: "accepted", received: 11, accepted: 11, prep: 15, promised: -4, aggregator: { id: "talabat", ref: "TB-58213", commissionBps: 2200, theirRider: true } }),
+  }, [["kebab", 1, "preparing", [["side", "bread"]]], ["hummus", 1, "ready"], ["soda", 1, "ready"]]);
+  const d8 = openCheck("d8", ["d8"], { minutesAgo: 11 });
+  pay("d8", d8, "online", 11, 0, "cashier1");
+
+  // delivered earlier on إسلام's shift: cash collected, waiting for settlement at the till
+  addOrder("d9", {
+    minutesAgo: 95, mode: "delivery", status: "ready", guests: 1, customerId: cid("6"), openedBy: S("cashier1"), source: "phone", deliveryStatus: "delivered", driverId: S("delivery"), deliveryFee: major(25),
+    delivery: door("july26"),
+  }, [["lamb-chops", 1, "ready", [["side", "freekeh"]]], ["fattoush", 1, "ready"], ["turkish", 2, "ready", [["coffee-size", "single"], ["sugar", "medium"]]]]);
+  const d9 = openCheck("d9", ["d9"], { minutesAgo: 95 });
+  orders[orders.length - 1].dispatch = demoDispatch(T, "phone", { stage: "delivered", received: 95, accepted: 95, prep: 20, promised: 50, ready: 76, assigned: 78, picked: 74, delivered: 61, otp: "5512", zone: "zamalek", shift: shiftOf("islam"), collected: { method: "cash", amount: d9.total } });
+
+  // delivered by محمود, paid online (closes at settlement)
+  addOrder("d10", {
+    minutesAgo: 70, mode: "delivery", status: "ready", guests: 1, customerId: cid("4"), openedBy: null, source: "online", deliveryStatus: "delivered", driverId: S("delivery2"), deliveryFee: major(40),
+    delivery: door("gameatDowal"),
+    dispatch: demoDispatch(T, "online_delivery", { stage: "delivered", received: 70, accepted: 69, prep: 22, promised: 22, ready: 46, assigned: 47, picked: 44, delivered: 19, otp: "8890", zone: "mohandessin", shift: shiftOf("mahmoud"), collected: { method: "prepaid", amount: 0 } }),
+  }, [["mixed-mahshi", 1, "ready"], ["bechamel", 1, "ready"], ["roz-bel-laban", 2, "ready"]]);
+  const d10 = openCheck("d10", ["d10"], { minutesAgo: 70 });
+  pay("d10", d10, "online", 70, 0, "cashier1");
+
+  // lunch: delivered late by عمر, settled and closed
+  addOrder("d11", {
+    minutesAgo: 480, mode: "delivery", status: "closed", guests: 1, customerId: cid("1"), openedBy: S("cashier2"), source: "phone", deliveryStatus: "delivered", driverId: S("delivery3"), deliveryFee: major(40), closedAt: T(278),
+    delivery: door("mesaha"),
+  }, [["kofta", 2, "served", [["portion", "half"], ["side", "rice"]]], ["orzo-soup", 2, "served"], ["kunafa", 2, "served"]]);
+  const d11 = openCheck("d11", ["d11"], { minutesAgo: 480, status: "paid", closedAt: T(278), receiptNo: "ZM-1053" });
+  pay("d11", d11, "cash", 278, 0, "cashier2");
+  orders[orders.length - 1].dispatch = demoDispatch(T, "phone", { stage: "delivered", received: 480, accepted: 480, prep: 20, promised: 440, ready: 455, assigned: 456, picked: 452, delivered: 418, otp: "2201", zone: "dokki", shift: shiftOf("omar"), collected: { method: "cash", amount: d11.total } });
+  const delivery = demoDeliveryRows({ R, B, T, id, S, created }, { cash: d11.total });
 
   /* ── service calls ── */
   const call = (k: string, table: number, type: ServiceCall["type"], minutesAgo: number, status: ServiceCall["status"] = "open", text = "", ackBy: string | null = null): ServiceCall => ({
@@ -473,12 +567,19 @@ export function buildSeed(now: Date = new Date()): Seed {
     res("6", { name: "حسام الدين رضا", phone: "01005551206", party: 2, startsAt: at(1, 20, 0), customerId: cid("6"), tags: ["vip", "quiet"] }),
   ];
 
+  const crm = demoCrmRows({ restaurantId: R, branchId: B, now, T, id, staffId: S, customers, checks, orders, menuItems, menuCategories, settings, created });
   const data: SeedData = {
-    restaurants: [restaurant], branches: [branch], memberships, staffCompensation, zones, tables, floorDecor, tableLinks: [], kitchenStations, printers,
-    menuCategories, menuItems, modifierGroups: groups, modifiers, orders, orderItems, checks, payments, serviceCalls, reservations, customers, settings, auditLog: [
+    restaurants: [restaurant, ...crm.restaurants], branches: [branch, ...crm.branches], memberships, staffCompensation, zones, tables, floorDecor, tableLinks: [], kitchenStations, printers,
+    menuCategories, menuItems, modifierGroups: groups, modifiers, orders, orderItems, checks, payments, serviceCalls, reservations, customers: crm.customers, settings, auditLog: [
       { ...base("audit:1"), createdAt: T(74), updatedAt: T(74), branchId: B, actorId: S("waiter1"), action: "check.discount", entity: "checks", entityId: id("check:t7"), data: { pct: 10, reason: "عميل دائم" }, approvedBy: S("manager") },
+      { ...base("audit:fb:d9"), createdAt: T(50), updatedAt: T(50), branchId: B, actorId: null, action: "guest.feedback", entity: "orders", entityId: id("order:d9"), data: { stars: 5, comment: "وصل سخن وبسرعة", tags: ["rider"] }, approvedBy: null },
+      { ...base("audit:fb:d11"), createdAt: T(400), updatedAt: T(400), branchId: B, actorId: null, action: "guest.feedback", entity: "orders", entityId: id("order:d11"), data: { stars: 3, comment: "اتأخر شوية", tags: [] }, approvedBy: null },
     ],
     shifts: [], cashMovements: [], receipts: [], ledgerEntries: [],
+    ...delivery,
+    ...demoMessagingRows({ restaurantId: R, T, id, customerId: cid, staffId: S, orderId: (k) => id(`order:${k}`) }),
+    ...crm.rows,
+    ...demoPaymentRows({ restaurantId: R, branchId: B, checks, payments, T, checkId: (k) => id(`check:${k}`), paymentId: (k) => id(k), staffId: S }),
   };
   return { data, users, pins, pinHashes };
 }

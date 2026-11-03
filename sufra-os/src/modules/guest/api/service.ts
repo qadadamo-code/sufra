@@ -18,6 +18,8 @@ import type { Units } from "@/lib/money";
 import { DEMO_ZONES, type DeliveryZone } from "../data/venue";
 import { stageOf, type Stage } from "../stages";
 import type { PaymentIntent } from "../pay/types";
+import { driverView, intakeDispatch, venueZones, type DriverView } from "@/modules/delivery/intake";
+import { zoneFee } from "@/modules/delivery/geo";
 
 /* ───────── shapes ───────── */
 
@@ -44,7 +46,7 @@ export interface PlaceOrderInput {
   lines: GuestOrderLine[];
   customer?: { name: string; phone: string } | null;
   note?: string;
-  delivery?: { zoneId: string; address: string; notes: string } | null;
+  delivery?: { zoneId: string; address: string; notes: string; lat?: number | null; lng?: number | null } | null;
   /** pre-order pickup time (ISO) */
   pickupAt?: string | null;
   payment?: PayChoice;
@@ -161,7 +163,7 @@ export class GuestService {
       tax: { ...tax, taxId: "", commercialRegister: "" },
       qr: s.qrOrdering,
       tipsEnabled: s.tipsEnabled,
-      zones: DEMO_ZONES,
+      zones: (await venueZones(this.repo, r.id)) ?? DEMO_ZONES,
     };
   }
 
@@ -191,10 +193,16 @@ export class GuestService {
     if (!order) return res;
     const db = makeDb(this.repo, order.restaurantId, order.branchId, null);
     const patch: Partial<Order> = {};
+    // delivery workflow: auto-accept per channel or wait in the staff inbox (src/modules/delivery/intake.ts)
+    const [settings] = await this.repo.list("settings", { where: { restaurantId: order.restaurantId } });
+    const gps = input.delivery?.lat != null && input.delivery?.lng != null && Number.isFinite(input.delivery.lat) && Number.isFinite(input.delivery.lng) ? { lat: input.delivery.lat, lng: input.delivery.lng } : null;
+    const intake = intakeDispatch({ settings: settings ?? null, order, zone, gps });
+    if (!input.tableCode) patch.dispatch = intake.dispatch; // QR orders stay with the waiter-confirm flow
     if (zone && input.delivery) {
-      patch.delivery = { address: input.delivery.address.trim().slice(0, 200), area: zone.name.ar, notes: input.delivery.notes.trim().slice(0, 200), lat: null, lng: null };
+      const check = order.checkId ? await this.repo.get("checks", order.checkId) : null;
+      patch.delivery = { address: input.delivery.address.trim().slice(0, 200), area: zone.name.ar, notes: input.delivery.notes.trim().slice(0, 200), lat: intake.door?.lat ?? null, lng: intake.door?.lng ?? null };
       patch.deliveryStatus = "pending";
-      patch.deliveryFee = zone.fee;
+      patch.deliveryFee = zoneFee(zone, check?.subtotal ?? 0);
     }
     if (input.pickupAt) patch.pickupAt = input.pickupAt;
     if (customer) {
@@ -202,8 +210,8 @@ export class GuestService {
       patch.customerId = c.id;
       if (order.checkId) await this.repo.update("checks", order.checkId, { customerId: c.id });
     }
-    // auto-send to the kitchen: online orders are auto-accepted; QR orders unless the waiter must confirm
-    const autoFire = !input.tableCode || !venue.qr.requireWaiterConfirm;
+    // auto-send to the kitchen only when the channel auto-accepts (QR: unless the waiter must confirm)
+    const autoFire = intake.autoFire;
     if (autoFire) {
       const items = await this.repo.list("orderItems", { where: { orderId: order.id } });
       const t = nowIso();
@@ -257,6 +265,12 @@ export class GuestService {
       driver: driver ? { name: driver.name.split(" ")[0], phone: driver.phone } : null,
       table: table?.label ?? null,
     };
+  }
+
+  /** rider position + ETA + door code while the order is on its way (tracking map) */
+  async driverView(slug: string, orderId: string): Promise<DriverView | null> {
+    if (!this.local) return this.rpc<DriverView | null>("guest_driver_view", { p_slug: slug, p_order_id: orderId });
+    return driverView(this.repo, slug, orderId);
   }
 
   /* the table's running bill */
@@ -369,6 +383,6 @@ export class GuestService {
 
   /** live updates: change feed in local mode; callers also poll (cloud anon has no Realtime rows) */
   watch(restaurantId: string, cb: () => void): () => void {
-    return this.repo.subscribe(["orders", "orderItems", "checks", "payments", "serviceCalls", "menuItems"], restaurantId, () => cb());
+    return this.repo.subscribe(["orders", "orderItems", "checks", "payments", "serviceCalls", "menuItems", "driverLocations"], restaurantId, () => cb());
   }
 }

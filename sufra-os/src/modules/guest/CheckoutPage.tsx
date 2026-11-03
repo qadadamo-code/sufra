@@ -5,7 +5,8 @@ import { useT } from "@/i18n/i18n";
 import { cn } from "@/lib/cn";
 import { Button, EmptyState, Input, Money, Segmented, Spinner } from "@/ui";
 import { GuestToggles } from "./ui/bits";
-import { demoProvider, type DemoOutcome, type PaymentIntent } from "./pay";
+import { useRepo } from "@/data/hooks";
+import { attachDemoRepo, demoProvider, type DemoOutcome, type PaymentIntent } from "./pay";
 
 const BASE = import.meta.env.BASE_URL;
 
@@ -21,9 +22,14 @@ export default function CheckoutPage() {
   const [method, setMethod] = useState<"card" | "wallet">("card");
   const [busy, setBusy] = useState<DemoOutcome | null>(null);
 
+  const repo = useRepo();
   useEffect(() => {
-    demoProvider.retrieve(intentId).then(setPi, () => setPi(null));
-  }, [intentId]);
+    attachDemoRepo(repo);
+    demoProvider.retrieve(intentId).then((p) => {
+      setPi(p);
+      if (p?.method === "wallet") setMethod("wallet");
+    }, () => setPi(null));
+  }, [intentId, repo]);
 
   const finish = async (outcome: DemoOutcome) => {
     if (!pi) return;

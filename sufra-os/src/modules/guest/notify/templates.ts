@@ -16,6 +16,7 @@ export type TemplateId =
   | "order_accepted_eta"
   | "order_ready_pickup"
   | "order_out_for_delivery"
+  | "order_arriving"
   | "order_delivered_receipt"
   | "order_cancelled"
   | "order_delayed"
@@ -70,6 +71,15 @@ export const TEMPLATES: Record<TemplateId, Template> = {
     },
     button: { label: { ar: "تتبع الطيار", en: "Track driver" }, urlVar: "link" },
     sample: { number: "42", driver_name: "إسلام", driver_phone: "01000000000", eta: "21:05", link: "https://sufra.app/app/r/sufra-zamalek/o/123" },
+  }),
+  order_arriving: t({
+    id: "order_arriving",
+    category: "UTILITY",
+    body: {
+      ar: "الطيار {{driver_name}} وصل عند العنوان بطلبك #{{number}} 📍\nلو محتاج تكلمه: {{driver_phone}}",
+      en: "{{driver_name}} has arrived with your order #{{number}} 📍\nNeed to reach them? {{driver_phone}}",
+    },
+    sample: { number: "42", driver_name: "إسلام", driver_phone: "01000000000" },
   }),
   order_delivered_receipt: t({
     id: "order_delivered_receipt",
@@ -144,13 +154,14 @@ export function toMeta(id: TemplateId, lang: Lang): { name: TemplateId; language
 
 /* ───────── order stage → template ───────── */
 
-export type NotifyStage = "received" | "accepted" | "ready_pickup" | "out_for_delivery" | "delivered" | "cancelled" | "delayed" | "paid";
+export type NotifyStage = "received" | "accepted" | "ready_pickup" | "out_for_delivery" | "arriving" | "delivered" | "cancelled" | "delayed" | "paid";
 
 export const STAGE_TEMPLATE: Record<NotifyStage, TemplateId> = {
   received: "order_received",
   accepted: "order_accepted_eta",
   ready_pickup: "order_ready_pickup",
   out_for_delivery: "order_out_for_delivery",
+  arriving: "order_arriving",
   delivered: "order_delivered_receipt",
   cancelled: "order_cancelled",
   delayed: "order_delayed",

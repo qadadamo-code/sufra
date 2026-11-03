@@ -22,7 +22,7 @@ const TABLE_TONE: Record<TableStatus, string> = {
   reserved: "border-line-strong border-dashed bg-surface-2 text-ink-2",
   blocked: "border-line bg-surface-3 text-faint line-through",
 };
-const PAY_TONE: Record<PaymentMethod, Tone> = { cash: "ok", card: "primary", wallet: "brass", instapay: "info", online: "warn" };
+const PAY_TONE: Record<PaymentMethod, Tone> = { cash: "ok", card: "primary", wallet: "brass", instapay: "info", online: "warn", gift_card: "neutral" };
 
 export default function OverviewPage() {
   const { t, lang, loc, L } = useT();

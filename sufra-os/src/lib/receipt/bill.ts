@@ -77,7 +77,8 @@ export function toFinanceBill(b: ReceiptBill): Bill {
 }
 
 /** Sufra tender → sufra-finance tender. "online" (pay link) settles through the card/gateway clearing account. */
-export const finMethod = (m: PaymentMethod): FinMethod => (m === "online" ? "card" : m);
+// gift cards settle against the house account; the gift-card op reclasses it to the 2204 liability (marketing/DESIGN.md)
+export const finMethod = (m: PaymentMethod): FinMethod => (m === "online" ? "card" : m === "gift_card" ? "house" : m);
 
 /** Sufra payments keep the tip outside `amount`; finance counts it inside. */
 export const toFinancePayments = (ps: { method: PaymentMethod; amount: Units; tip: Units }[]): FinPayment[] =>
