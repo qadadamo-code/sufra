@@ -245,7 +245,8 @@ export function payrollJournalLines(slips: PayslipDraft[]): { account: string; d
 }
 
 /** Pay-out account for a method (wallet/InstaPay salaries go out of the bank). */
-export const payoutAccount = (m: PayMethod | "cash" | "bank" | "wallet") => (m === "cash" ? ACC.cash : ACC.bank);
+/** cash salaries come out of the safe (not a till), everything else out of the bank */
+export const payoutAccount = (m: PayMethod | "cash" | "bank" | "wallet") => (m === "cash" ? ACC.safe : ACC.bank);
 
 /* ───────── pools ───────── */
 

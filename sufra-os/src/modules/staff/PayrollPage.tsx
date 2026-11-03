@@ -303,7 +303,7 @@ function PayRunDialog({ run, onClose }: { run: PayrollRun; onClose: () => void }
       }
     >
       <Select label={L("اتصرف إزاي؟", "Paid how?")} value={method} onChange={(e) => setMethod(e.target.value as PayMethod | "by_person")} options={[{ value: "by_person", label: L("زي ما مكتوب لكل موظف", "As set per employee") }, ...Object.entries(PAY_METHOD).map(([k, v]) => ({ value: k, label: v[lang] }))]} />
-      <p className="mt-3 text-[13px] text-muted">{L("القيد: من حـ/ رواتب مستحقة (٢٤٠١) إلى حـ/ الخزينة أو البنك", "Journal: Dr salaries payable (2401) / Cr cash or bank")}</p>
+      <p className="mt-3 text-[13px] text-muted">{L("القيد: من حـ/ رواتب مستحقة (٢٤٠١) إلى حـ/ الخزنة (١١٠٦) أو البنك (١١٠٥)", "Journal: Dr salaries payable (2401) / Cr safe (1106) or bank (1105)")}</p>
     </Dialog>
   );
 }

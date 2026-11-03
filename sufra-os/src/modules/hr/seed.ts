@@ -214,12 +214,7 @@ export function demoHrRows(c: Ctx) {
     addPunch(k, sh.date, "in", inMs);
     const endMs = zonedToMs(sh.end <= sh.start ? addDays(sh.date, 1) : sh.date, sh.end, TZ);
     if (endMs > nowMs) continue; // still at work
-    // breaks for the kitchen (logged on the terminal)
-    if (PEOPLE[k].station === "grill" || PEOPLE[k].station === "hot") {
-      const bs = startMs + 4 * 3_600_000 + Math.floor(rnd() * 30) * 60_000;
-      addPunch(k, sh.date, "break_start", bs);
-      addPunch(k, sh.date, "break_end", bs + (35 + Math.floor(rnd() * 15)) * 60_000);
-    }
+    // (breaks are not seeded: keeps the demo seed lean)
     const rr = rnd();
     if (!isToday && rr < 0.03) continue; // forgot to clock out
     const busy = weekday(sh.date) === 4 || weekday(sh.date) === 5;
