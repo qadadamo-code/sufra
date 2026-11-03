@@ -1,10 +1,14 @@
--- 0008_payments checks on plain Postgres (after stubs + 0001…0005 + 0008 + seed.sql):
+-- 0008_payments checks on plain Postgres (after stubs + all migrations; self-contained fixture, no seed needed):
 --   PGUSER=postgres supabase/tests/payments_run.sh
 \set ON_ERROR_STOP 1
+insert into restaurants (id, slug, name) values ('aaaaaaaa-0000-4000-8000-000000000001', 'pay-test', '{"ar":"تجربة","en":"Test"}');
+insert into branches (id, restaurant_id, name, slug) values ('aaaaaaaa-0000-4000-8000-000000000002', 'aaaaaaaa-0000-4000-8000-000000000001', '{"ar":"ف","en":"B"}', 'main');
+insert into settings (restaurant_id, tax, invoice) values ('aaaaaaaa-0000-4000-8000-000000000001', '{}', '{}');
+insert into checks (id, restaurant_id, branch_id, total) values ('aaaaaaaa-0000-4000-8000-000000000003', 'aaaaaaaa-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000002', 500000);
 do $$
 declare ck checks; r jsonb; n int; rid uuid;
 begin
-  select * into ck from checks where status = 'open' order by opened_at limit 1;
+  select * into ck from checks where id = 'aaaaaaaa-0000-4000-8000-000000000003';
   rid := ck.restaurant_id;
   insert into payment_intents (id, restaurant_id, branch_id, check_id, kind, provider, amount, tip, currency, request)
   values ('pi_test_idem', rid, ck.branch_id, ck.id, 'link', 'paymob', 100000, 0, 'EGP', '{}');
@@ -44,7 +48,7 @@ begin
   values ('pi_test_exp', rid, ck.branch_id, ck.id, 'link', 'kashier', 1000, '{}', now() - interval '1 minute', 'https://x');
   r := guest_payment_status('pi_test_exp');
   assert r->>'status' = 'expired' and r->>'redirectUrl' is null, 'expired link';
-  assert (guest_pay_config('sufra-zamalek')->>'currency') = 'EGP', 'pay config';
+  assert (guest_pay_config('pay-test')->>'currency') = 'EGP', 'pay config';
   raise notice 'payments_test: ok';
 end $$;
 

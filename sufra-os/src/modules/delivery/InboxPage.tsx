@@ -12,7 +12,7 @@ import { PageHeader } from "@/shell/PageHeader";
 import { acceptOrder, rejectOrder } from "./stages";
 import { dispatchOf } from "./settings";
 import { useDeliveryData, useNow, type OrderView } from "./useDelivery";
-import { ChannelBadge, ContactButtons, Countdown, DeliveryTabs, ItemLines } from "./ui";
+import { ChannelBadge, Countdown, DeliveryTabs, ItemLines } from "./ui";
 import { PhoneOrderDialog } from "./PhoneOrderDialog";
 import { AggregatorOrderDialog } from "./AggregatorOrderDialog";
 import { chime } from "./watch";

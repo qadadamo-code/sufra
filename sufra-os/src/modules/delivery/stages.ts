@@ -173,7 +173,7 @@ export async function pickUp(db: Db, orderId: string, shiftId: string | null): P
   const s = deliverySettings(settings);
   const d = dispatchOf(o);
   const to = o.delivery?.lat != null && o.delivery?.lng != null ? { lat: o.delivery.lat, lng: o.delivery.lng } : null;
-  const loc = o.driverId ? await db.get("driverLocations", o.driverId) : null;
+  const loc = o.driverId ? ((await db.list("driverLocations", { where: { driverId: o.driverId } }))[0] ?? null) : null;
   const eta = to ? new Date(Date.now() + travelMinutes(loc ?? s.origin, to, s.speedKmh) * 60_000).toISOString() : (d.promisedAt ?? null);
   return advance(db, orderId, "picked_up", { driverShiftId: shiftId, readyAt: d.readyAt ?? nowIso() }, {}, { eta });
 }

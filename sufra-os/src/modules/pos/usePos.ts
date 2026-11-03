@@ -48,7 +48,7 @@ export function useReceiptSourceBuilder() {
       return {
         tax: settings.tax,
         invoice: settings.invoice,
-        restaurant: { name: restaurant.name, phone: restaurant.phone },
+        restaurant: { name: restaurant.name, phone: restaurant.phone, slug: restaurant.slug },
         branch: branch ? { name: branch.name, address: branch.address, phone: branch.phone } : null,
         orderNumber: order?.number ?? null,
         waiter: order?.waiterId ? (staff.get(order.waiterId)?.name ?? null) : null,

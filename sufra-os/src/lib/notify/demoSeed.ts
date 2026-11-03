@@ -112,6 +112,15 @@ export function demoMessagingRows(c: Ctx): { conversations: Conversation[]; mess
     [2 * 24 * 60 - 30, "out", "تم إلغاء اشتراكك في رسايل العروض ✅ ابعت «اشتراك» لو حبيت ترجع.", { kind: "system", channel: "whatsapp", status: "read" }],
   ]);
 
+  convo("tarek", "طارق نصار", "01005551210", "10", [
+    [
+      9,
+      "out",
+      "طارق، المطبخ بدأ يجهز طلبك #14 🍳\nالوقت المتوقع: ٩:١٠\nhttps://sufra-planet-crm.vercel.app/app/r/sufra-zamalek/o/ta2",
+      { kind: "template", template: "order_accepted_eta", category: "utility", status: "pending_tap", orderId: c.orderId("ta2"), dedupeKey: `${c.orderId("ta2")}:accepted`, sentAt: null, sentBy: null },
+    ],
+  ]);
+
   convo("ksa", "Faisal Al-Harbi", "0551234567", null, [[50, "in", "Hello, do you deliver to Riyadh? 😄"]]);
 
   /* consent */

@@ -181,6 +181,17 @@ pending/submitted/valid/rejected with sufra-finance `triage()` (24 h deadline, 3
 // Only eta_status / eta_submission_uuid / eta_errors may change (receipts_immutable trigger in 0002_pos.sql).
 ```
 
+## Online payments (`src/modules/payments`, `src/modules/guest/pay`, `/api/pay-*`)
+
+Paymob / Kashier (Egypt) and Moyasar (KSA) behind one gateway layer: Vercel Edge functions in the repo root `api/`
+(`pay-intent`, `pay-webhook-{paymob,kashier,moyasar}`, `pay-callback`, `pay-refund`, `pay-status`; shared code in
+`api/_lib/pay-*.ts`, type-check with `sufra-os/node_modules/.bin/tsc -p api`). Pay at table with method choice, POS
+**pay-by-link** (QR / WhatsApp / copy, the check closes itself when the verified payment lands), `/payments`
+(transactions, refunds with manager PIN, settlements, reconciliation, CSV) and Settings → Payments. Locally the
+DemoProvider simulates everything. Owner setup (env vars, webhook URLs, documents): `docs/PAYMENTS-SETUP.md`;
+design + sources: `src/modules/guest/pay/DESIGN.md`; schema `supabase/migrations/0008_payments.sql`
+(`supabase/tests/payments_run.sh`).
+
 ## Design system (`src/ui`)
 
 Tokens in `src/styles/index.css` (same identity as sufra-web: sage-stone neutrals, deep teal, brass; Reem Kufi / IBM Plex Sans Arabic /

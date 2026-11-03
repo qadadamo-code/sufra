@@ -1,5 +1,7 @@
 # WhatsApp order notifications — setup notes (Wave 2)
 
+> **Built in Wave 2:** see `docs/WHATSAPP-SETUP.md`, `src/lib/notify` (sending, consent, inbox logic) and `api/whatsapp-send.ts` / `api/whatsapp-webhook.ts` (the server endpoints below were implemented under those names).
+
 Templates: `templates.ts` (AR + EN, all **Utility**). Interface: `notifier.ts` (`Notifier`, `LogNotifier` today).
 
 ## What the restaurant owner must provide (Meta)

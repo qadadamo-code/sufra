@@ -63,7 +63,8 @@ export function reconcile(intents: PaymentIntentRow[], payments: Payment[], chec
       continue;
     }
     matched++;
-    if (check && check.status !== "paid" && check.status !== "void" && check.paid >= check.total) issues.push({ issue: "check_left_open", intent: pi, payment: pay, check, diff: 0 });
+    // dine-in only: a prepaid delivery / pickup order legitimately stays open until it is handed over
+    if (check && check.tableIds.length && (pi.kind === "guest" || pi.kind === "link") && check.status !== "paid" && check.status !== "void" && check.paid >= check.total) issues.push({ issue: "check_left_open", intent: pi, payment: pay, check, diff: 0 });
   }
   for (const p of online) {
     if (used.has(p.id)) continue;

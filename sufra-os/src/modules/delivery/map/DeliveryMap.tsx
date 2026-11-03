@@ -126,7 +126,6 @@ export const DeliveryMap = forwardRef<MapHandle, DeliveryMapProps>(function Deli
     const p = propsRef.current;
     const pts: [number, number][] = [...(p.pins ?? []).map((x) => [x.lat, x.lng] as [number, number])];
     for (const s of p.shapes ?? []) {
-      if (s.dim) continue;
       const g = s.geometry;
       for (const q of g.kind === "ring" ? ringPoints(g.center, g.radiusKm, 12) : g.points) pts.push([q.lat, q.lng]);
     }
@@ -229,7 +228,7 @@ export const DeliveryMap = forwardRef<MapHandle, DeliveryMapProps>(function Deli
     if (!g) return;
     g.clearLayers();
     for (const s of props.shapes ?? []) {
-      const style: L.PathOptions = { color: s.color, weight: s.dim ? 1.5 : 2.5, opacity: s.dim ? 0.45 : 0.9, fillColor: s.color, fillOpacity: s.dim ? 0.05 : 0.14, dashArray: s.dim ? "4 6" : undefined };
+      const style: L.PathOptions = { color: s.color, weight: s.dim ? 2 : 3, opacity: s.dim ? 0.75 : 0.95, fillColor: s.color, fillOpacity: s.dim ? 0.08 : 0.16, dashArray: s.dim ? "5 6" : undefined };
       const layer = s.geometry.kind === "ring" ? L.circle([s.geometry.center.lat, s.geometry.center.lng], { radius: s.geometry.radiusKm * 1000, ...style }) : L.polygon(s.geometry.points.map((p) => [p.lat, p.lng] as [number, number]), style);
       if (s.label) layer.bindTooltip(esc(s.label), { direction: "center", permanent: !s.dim, className: "dm-zone-tip" });
       layer.on("click", (e) => {

@@ -21,6 +21,9 @@ export default defineModule({
     { path: "/settings", title: { ar: "عام", en: "General" } },
     { path: "/settings/invoice", title: { ar: "الفاتورة", en: "Invoice" } },
     { path: "/settings/tax", title: { ar: "الضرايب", en: "Tax" } },
+    { path: "/settings/payments", title: { ar: "الدفع", en: "Payments" } }, // route lives in src/modules/payments
+    { path: "/settings/delivery", title: { ar: "التوصيل", en: "Delivery" } },
+    { path: "/settings/messaging", title: { ar: "الرسايل", en: "Messaging" } }, // route lives in src/modules/messaging
     { path: "/settings/users", title: { ar: "المستخدمين", en: "Users" } },
   ],
   features: [

@@ -79,7 +79,10 @@ export type RedemptionStatus = "applied" | "redeemed" | "voided";
 
 /** A promotion used on a check/order. "applied" while the check is open, "redeemed" once paid. */
 export interface PromoRedemption extends TenantRow {
-  promotionId: string;
+  /** null for loyalty rewards / points (see rewardId) */
+  promotionId: string | null;
+  /** loyalty reward id, or "points" for points used as money off */
+  rewardId: string | null;
   code: string | null;
   customerId: string | null;
   checkId: string | null;

@@ -120,7 +120,37 @@ export class MessagingService {
     return c ?? null;
   }
 
+  /** consent register row, else the CRM flag on the customer (customer.consent.whatsapp — 0009_crm) as an implied opt-in */
+  async effectiveConsent(conv: Pick<Conversation, "phone" | "customerId">): Promise<MessagingConsent | null> {
+    const row = await this.consentOf(conv.phone);
+    if (row || !conv.customerId) return row;
+    const cu = await this.db.get("customers", conv.customerId);
+    const flag = (cu as { consent?: { whatsapp?: boolean; at?: string | null } } | null)?.consent;
+    if (!flag?.whatsapp) return null;
+    const at = flag.at ?? this.iso();
+    return { id: "crm", restaurantId: this.db.restaurantId, createdAt: at, updatedAt: at, phone: conv.phone, customerId: conv.customerId, channel: "whatsapp", status: "opted_in", source: "import", wording: "", capturedAt: at, capturedBy: null, history: [] };
+  }
+
+  /** keeps the CRM's customer.consent.whatsapp flag in step with the register */
+  private async syncCustomer(customerId: string | null, status: "opted_in" | "opted_out", source: ConsentSource, at: string) {
+    if (!customerId) return;
+    try {
+      const cu = await this.db.get("customers", customerId);
+      if (!cu) return;
+      const prev = (cu as { consent?: Record<string, unknown> }).consent ?? { whatsapp: false, sms: false, email: false, push: false };
+      await this.db.update("customers", customerId, { consent: { ...prev, whatsapp: status === "opted_in", at, via: source } } as never);
+    } catch {
+      /* CRM columns not migrated yet */
+    }
+  }
+
   async recordConsent(input: { phone: string; status: "opted_in" | "opted_out"; source: ConsentSource; wording?: string; customerId?: string | null; by?: string | null }): Promise<MessagingConsent> {
+    const row = await this.writeConsent(input);
+    await this.syncCustomer(row.customerId, row.status, row.source, row.capturedAt);
+    return row;
+  }
+
+  private async writeConsent(input: { phone: string; status: "opted_in" | "opted_out"; source: ConsentSource; wording?: string; customerId?: string | null; by?: string | null }): Promise<MessagingConsent> {
     const e = this.e164(input.phone);
     const at = this.iso();
     const prev = await this.consentOf(e);
@@ -192,7 +222,7 @@ export class MessagingService {
     const body = tpl ? renderTemplate(tpl.id, lang, input.vars ?? {}) : input.text ? input.text.trim() : [input.media?.caption, input.media?.link].filter(Boolean).join("\n");
     if (!body) throw new Error("empty_message");
     const category: MessageCategory = tpl ? priceCategoryOf(tpl.category) : "service";
-    const consent = await this.consentOf(conv.phone);
+    const consent = await this.effectiveConsent(conv);
     const verdict = this.policy({ category, consent, conversation: conv, transactional: input.transactional });
 
     let sendAt = input.sendAt && Date.parse(input.sendAt) > this.now() ? input.sendAt : null;
@@ -264,7 +294,7 @@ export class MessagingService {
     for (const m of due) {
       if (m.category === "marketing" && this.inQuietHours()) continue;
       const c = await this.db.get("conversations", m.conversationId);
-      const consent = c ? await this.consentOf(c.phone) : null;
+      const consent = c ? await this.effectiveConsent(c) : null;
       const verdict = this.policy({ category: m.category ?? "service", consent, conversation: c, transactional: !!m.orderId });
       if (!verdict.ok) {
         await this.db.update("messages", m.id, { status: "skipped", error: verdict.reason });

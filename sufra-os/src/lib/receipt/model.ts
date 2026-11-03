@@ -27,7 +27,8 @@ export interface ReceiptSource {
   bill: ReceiptBill;
   tax: TaxSettings;
   invoice: InvoiceTemplate;
-  restaurant: { name: Localized; phone: string | null };
+  /** slug: builds the promo-block QR links (loyalty card / feedback / menu) */
+  restaurant: { name: Localized; phone: string | null; slug?: string };
   branch: { name: Localized; address: Localized; phone: string | null } | null;
   receiptNo: string | null;
   orderNumber: number | null;
@@ -83,6 +84,8 @@ export interface ReceiptModel {
   footer: Localized;
   eta: { uuid: string; qr: string } | null;
   issuedAt: string;
+  /** marketing promo block (Settings.invoice.promo) — next-visit coupon, loyalty/feedback QR */
+  promo: { title: Localized; body: Localized; code: string | null; qr: string | null } | null;
 }
 
 const pct = (bp: number) => `${(bp / 100).toFixed(bp % 100 ? 2 : 0).replace(/\.?0+$/, "")}%`;
@@ -167,7 +170,20 @@ export function buildReceiptModel(src: ReceiptSource): ReceiptModel {
     footer: src.invoice.footer,
     eta: src.invoice.showQr && src.eta ? src.eta : null,
     issuedAt: src.issuedAt,
+    promo: promoBlock(src),
   };
+}
+
+/** Extension point for marketing: the receipt promo block, if enabled and in its dates (not on returns). */
+export function promoBlock(src: Pick<ReceiptSource, "invoice" | "kind" | "issuedAt" | "restaurant">): ReceiptModel["promo"] {
+  const p = src.invoice.promo;
+  if (!p?.enabled || src.kind === "RC") return null;
+  if ((p.startsAt && src.issuedAt < p.startsAt) || (p.endsAt && src.issuedAt >= p.endsAt)) return null;
+  const origin = typeof window !== "undefined" ? window.location.origin : "https://sufra.app";
+  const appBase = (import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? "/app/";
+  const base = `${origin}${appBase}r/${src.restaurant.slug ?? ""}`;
+  const qr = p.qr === "none" ? null : p.qr === "url" ? p.url : !src.restaurant.slug ? null : p.qr === "loyalty" ? `${base}/me` : p.qr === "menu" ? base : `${base}/me?feedback=1`;
+  return { title: p.title, body: p.body, code: p.code, qr: qr || null };
 }
 
 /** "2026-10-23 21:04" in Cairo-local wall time of the device (Latin digits, like ETA). */

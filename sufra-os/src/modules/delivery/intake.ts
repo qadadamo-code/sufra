@@ -71,7 +71,7 @@ export async function driverView(repo: Repo, slug: string, orderId: string): Pro
   const stage = d?.stage ?? (o.deliveryStatus === "picked_up" ? "picked_up" : o.deliveryStatus === "delivered" ? "delivered" : "accepted");
   const onTheWay = stage === "picked_up" || stage === "arrived";
   const driver = o.driverId ? await repo.get("memberships", o.driverId) : null;
-  const loc = onTheWay && o.driverId ? await repo.get("driverLocations", o.driverId) : null;
+  const loc = onTheWay && o.driverId ? (await repo.list("driverLocations", { where: { restaurantId: r.id, driverId: o.driverId } }))[0] ?? null : null;
   const door = o.delivery?.lat != null && o.delivery?.lng != null ? { lat: o.delivery.lat, lng: o.delivery.lng } : null;
   const fresh = loc && Date.now() - Date.parse(loc.at) < 15 * 60_000;
   return {

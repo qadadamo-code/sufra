@@ -78,8 +78,12 @@ describe("GuestService (local backend)", () => {
     const [cust] = await repo.list("customers", { where: { phone: "01005559999" } });
     expect(cust.name).toBe("Test Guest");
     expect(o.customerId).toBe(cust.id);
+    // online delivery waits in the staff inbox (manual accept by default — src/modules/delivery)
+    expect(o.dispatch?.stage).toBe("received");
+    expect(o.dispatch?.expiresAt).toBeTruthy();
+    expect((await repo.list("orderItems", { where: { orderId } })).every((i) => i.status === "new")).toBe(true);
     const t = (await svc.track(DEMO_SLUG, orderId))!;
-    expect(t.stage).toBe("accepted");
+    expect(t.stage).toBe("received");
     expect(t.totals.deliveryFee).toBe(major(25));
     await wait();
     expect(seen.some((e) => e.id === orderId && e.origin === "peer")).toBe(true);

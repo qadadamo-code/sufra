@@ -20,6 +20,7 @@ import { stageOf, type Stage } from "../stages";
 import type { PaymentIntent } from "../pay/types";
 import { driverView, intakeDispatch, venueZones, type DriverView } from "@/modules/delivery/intake";
 import { zoneFee } from "@/modules/delivery/geo";
+import { recordGuestConsent, type GuestConsentInput } from "@/lib/notify/guestConsent";
 
 /* ───────── shapes ───────── */
 
@@ -82,6 +83,8 @@ export interface TrackInfo {
   status: Order["status"];
   createdAt: string;
   pickupAt: string | null;
+  /** promised ready/door time once the restaurant accepted (delivery module) */
+  promisedAt?: string | null;
   note: string;
   items: { name: Localized; qty: number; status: OrderItem["status"]; unit: Units; modifiers: Localized[] }[];
   checkId: string | null;
@@ -256,6 +259,7 @@ export class GuestService {
       status: o.status,
       createdAt: o.openedAt,
       pickupAt: o.pickupAt ?? null,
+      promisedAt: o.dispatch?.promisedAt ?? null,
       note: o.note,
       items: items.map((i) => ({ name: i.name, qty: i.qty, status: i.status, unit: lineUnitPrice(i), modifiers: i.modifiers.map((m) => m.name) })),
       checkId: o.checkId,
@@ -379,6 +383,11 @@ export class GuestService {
       }
     }
     return { points };
+  }
+
+  /** WhatsApp consent from the checkout / loyalty checkbox (src/lib/notify/guestConsent.ts; 0007_messaging.sql) */
+  recordConsent(slug: string, input: GuestConsentInput): Promise<void> {
+    return recordGuestConsent(this.repo, slug, input);
   }
 
   /** live updates: change feed in local mode; callers also poll (cloud anon has no Realtime rows) */

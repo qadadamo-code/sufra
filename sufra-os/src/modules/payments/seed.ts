@@ -36,6 +36,15 @@ export function demoPaymentRows(c: Ctx): { paymentIntents: PaymentIntentRow[]; p
     out.push(pi);
     d2pay.reference = pi.id;
   }
+  // other seeded web orders paid online (delivery module's demo data) — each backed by its gateway payment
+  for (const p of c.payments) {
+    if (p.method !== "online" || p.reference || p.status !== "captured" || p.id === d2pay?.id) continue;
+    const pi = row(`auto-${p.id.slice(0, 8)}`, Math.max(1, Math.round((Date.parse(c.T(0)) - Date.parse(p.createdAt)) / 60_000) + 1), {
+      kind: "online_order", status: "succeeded", amount: p.amount, tip: p.tip, checkId: p.checkId, method: "card", providerRef: `TXN-${4472000 + out.length}`, paymentId: p.id, fee: fee(p.amount + p.tip),
+    });
+    out.push(pi);
+    p.reference = pi.id;
+  }
   // table 7 asked for the bill: one guest tried pay-at-table, the card was declined
   const t7 = check("t7");
   if (t7) out.push(row("t7a", 6, { kind: "guest", status: "failed", amount: Math.round(t7.total / 2 / 1000) * 1000, checkId: t7.id, splitLabel: "1 / 2", failureReason: "card_declined", providerRef: "TXN-4471955" }));

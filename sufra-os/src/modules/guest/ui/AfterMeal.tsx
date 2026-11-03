@@ -157,6 +157,8 @@ export function FeedbackCard({ svc, slug, checkId, orderId, tableCode }: { svc: 
   );
 }
 
+const CLUB_WORDING = { ar: "موافق أستقبل رسايل النقط والعروض على واتساب — أقدر ألغي في أي وقت", en: "Send me points and offers on WhatsApp — I can opt out any time" };
+
 export function LoyaltyCard({ svc, slug, checkId, defaultName = "", defaultPhone = "" }: { svc: GuestService; slug: string; checkId?: string | null; defaultName?: string; defaultPhone?: string }) {
   const { L } = useT();
   const [name, setName] = useState(defaultName);
@@ -164,6 +166,7 @@ export function LoyaltyCard({ svc, slug, checkId, defaultName = "", defaultPhone
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [points, setPoints] = useState<number | null>(null);
+  const [waOptIn, setWaOptIn] = useState(false);
 
   const join = async () => {
     if (!normalizePhone(phone)) return setErr(L("رقم موبايل مصري صحيح (01xxxxxxxxx)", "A valid Egyptian mobile (01xxxxxxxxx)"));
@@ -172,6 +175,8 @@ export function LoyaltyCard({ svc, slug, checkId, defaultName = "", defaultPhone
     try {
       const r = await svc.joinLoyalty(slug, { name, phone, checkId });
       setPoints(r.points);
+      // explicit opt-in for WhatsApp points/offers (marketing needs it); 0007_messaging.sql
+      if (waOptIn) void svc.recordConsent(slug, { phone, name, source: "qr_loyalty", granted: true, wording: L(CLUB_WORDING.ar, CLUB_WORDING.en) }).catch(() => undefined);
     } catch {
       setErr(L("حصلت مشكلة، جرّب تاني", "Something went wrong, try again"));
     } finally {
@@ -194,6 +199,10 @@ export function LoyaltyCard({ svc, slug, checkId, defaultName = "", defaultPhone
         <div className="mt-4 grid gap-2.5">
           <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={L("اسمك", "Your name")} autoComplete="name" aria-label={L("اسمك", "Your name")} />
           <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="01xxxxxxxxx" inputMode="tel" autoComplete="tel" dir="ltr" aria-label={L("الموبايل", "Mobile")} error={err ?? undefined} />
+          <label className="flex cursor-pointer items-start gap-2.5 text-[13px]">
+            <input type="checkbox" className="mt-0.5 size-5 shrink-0 accent-[var(--sf-brass)]" checked={waOptIn} onChange={(e) => setWaOptIn(e.target.checked)} />
+            <span>{L(CLUB_WORDING.ar, CLUB_WORDING.en)}</span>
+          </label>
           <Button variant="brass" size="lg" block onClick={join} loading={busy}>
             {L("انضم", "Join")}
           </Button>

@@ -1,8 +1,12 @@
-/** Rider shift on/off and live location (one row per rider in `driverLocations`, id = membership id). */
+/** Rider shift on/off and live location (one row per rider in `driverLocations`, id = locationId(driverId)). */
 import type { Db } from "@/data/hooks";
 import type { DriverLocation, DriverShift } from "@/data/types";
 import { nowIso } from "@/lib/time";
 import { haversineKm } from "./geo";
+import { seedId } from "@/lib/id";
+
+/** Stable row id of a rider's position (one row per rider). */
+export const locationId = (driverId: string) => seedId(`driver-location:${driverId}`);
 
 export async function currentShift(db: Db, driverId: string): Promise<DriverShift | null> {
   const [s] = await db.list("driverShifts", { where: { driverId, status: "on" }, orderBy: [{ field: "startedAt", dir: "desc" }], limit: 1 });
@@ -20,16 +24,16 @@ export async function startShift(db: Db, driverId: string): Promise<DriverShift>
   if (cur) return cur;
   const s = await db.insert("driverShifts", { branchId: await branchOf(db), driverId, status: "on", startedAt: nowIso(), endedAt: null, settlement: null });
   await db.audit("delivery.shift_on", "driverShifts", s.id, { driver: driverId });
-  const loc = await db.get("driverLocations", driverId);
-  if (loc) await db.update("driverLocations", driverId, { onShift: true });
+  const loc = await db.get("driverLocations", locationId(driverId));
+  if (loc) await db.update("driverLocations", loc.id, { onShift: true });
   return s;
 }
 
 export async function endShift(db: Db, shift: DriverShift): Promise<DriverShift> {
   const row = await db.update("driverShifts", shift.id, { status: "off", endedAt: nowIso() });
   await db.audit("delivery.shift_off", "driverShifts", shift.id, { driver: shift.driverId });
-  const loc = await db.get("driverLocations", shift.driverId);
-  if (loc) await db.update("driverLocations", shift.driverId, { onShift: false });
+  const loc = await db.get("driverLocations", locationId(shift.driverId));
+  if (loc) await db.update("driverLocations", loc.id, { onShift: false });
   return row;
 }
 
@@ -57,7 +61,8 @@ export function shouldSend(last: Fix | null, next: Fix, opts = { minMoveM: 30, m
 
 export async function saveLocation(db: Db, driverId: string, f: Fix, onShift = true): Promise<DriverLocation> {
   const patch = { lat: f.lat, lng: f.lng, accuracy: f.accuracy, heading: f.heading, speed: f.speed, at: new Date(f.at).toISOString(), onShift };
-  const cur = await db.get("driverLocations", driverId);
-  if (cur) return db.update("driverLocations", driverId, patch);
-  return db.insert("driverLocations", { id: driverId, driverId, ...patch });
+  const id = locationId(driverId);
+  const cur = await db.get("driverLocations", id);
+  if (cur) return db.update("driverLocations", id, patch);
+  return db.insert("driverLocations", { id, driverId, ...patch });
 }

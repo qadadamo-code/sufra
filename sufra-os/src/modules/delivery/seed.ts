@@ -5,6 +5,7 @@
 import type { DeliveryZoneRow, DispatchInfo, DriverLocation, DriverShift, LatLng, Localized, OrderChannel, ZoneGeometry } from "@/data/types";
 import { major, type Units } from "@/lib/money";
 import { DEMO_ORIGIN, newDispatch } from "./settings";
+import { locationId } from "./driverOps";
 
 const P = (lat: number, lng: number): LatLng => ({ lat, lng });
 
@@ -50,7 +51,7 @@ export function demoDeliveryRows(c: Ctx, settled: { cash: Units }): { deliveryZo
     shift("omar", "delivery3", 620, "settled", 280, { expected: settled.cash, handedIn: settled.cash, difference: 0, orders: 1, settledBy: c.S("cashier1"), settledAt: c.T(278), posShiftId: null, note: "" }),
   ];
   const loc = (driver: string, p: LatLng, ago: number, onShift: boolean, heading: number | null = null): DriverLocation => ({
-    id: c.S(driver), restaurantId: c.R, createdAt: c.T(ago), updatedAt: c.T(ago), driverId: c.S(driver), lat: p.lat, lng: p.lng, accuracy: 12, heading, speed: onShift ? 6 : 0, at: c.T(ago), onShift,
+    id: locationId(c.S(driver)), restaurantId: c.R, createdAt: c.T(ago), updatedAt: c.T(ago), driverId: c.S(driver), lat: p.lat, lng: p.lng, accuracy: 12, heading, speed: onShift ? 6 : 0, at: c.T(ago), onShift,
   });
   const driverLocations: DriverLocation[] = [loc("delivery", DEMO_RIDERS.islam, 0.5, true, 40), loc("delivery2", DEMO_RIDERS.mahmoud, 1, true), loc("delivery3", DEMO_RIDERS.omar, 280, false)];
   return { deliveryZones, driverShifts, driverLocations };

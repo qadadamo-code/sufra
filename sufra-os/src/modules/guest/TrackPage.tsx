@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { lazy, Suspense, useEffect, useRef } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Bike, MapPin, MessageCircle, Phone, Smartphone, Store } from "lucide-react";
 import { useT } from "@/i18n/i18n";
@@ -16,6 +16,9 @@ import { usePayment } from "./ui/usePayment";
 import { getNotifier } from "./notify/notifier";
 import type { NotifyStage } from "./notify/templates";
 import type { Stage } from "./stages";
+
+// rider on the map + ETA + door code while out for delivery (delivery module; lazy so Leaflet loads only then)
+const TrackDriver = lazy(() => import("@/modules/delivery/TrackDriver"));
 
 /** Order tracking: /r/:slug/o/:orderId — live status timeline, driver, totals, pay, rate. */
 export default function TrackPage() {
@@ -77,6 +80,7 @@ function TrackView() {
       out_for_delivery: { ...base, driver_name: o.driver?.name ?? L("الطيار", "our driver"), driver_phone: o.driver?.phone ?? venue.phone ?? "-", eta: etaClock(new Date().toISOString(), 15, lang) },
       delivered: { ...base, receipt_link: link, rate_link: `${link}#rate` },
       cancelled: { ...base, reason: L("المطعم مش قادر يجهّز الطلب", "The restaurant can't fulfil the order"), refund: o.totals.paid ? L("هيرجعلك المبلغ خلال ٣–٥ أيام عمل", "Refund within 3–5 business days") : L("مفيش مبلغ اتخصم", "Nothing was charged"), phone: venue.phone ?? "-" },
+      arriving: {},
       delayed: {},
       paid: {},
     };
@@ -124,7 +128,7 @@ function TrackView() {
   const c = STAGE_COPY[o.stage];
   const finished = o.stage === "delivered" || o.stage === "picked_up" || o.stage === "served";
   const etaMin = o.mode === "delivery" ? 45 : PICKUP_MINUTES;
-  const eta = o.pickupAt ? clockOf(o.pickupAt, lang) : etaClock(o.createdAt, etaMin, lang);
+  const eta = o.pickupAt ? clockOf(o.pickupAt, lang) : o.promisedAt ? clockOf(o.promisedAt, lang) : etaClock(o.createdAt, etaMin, lang);
 
   return (
     <div className="min-h-dvh bg-bg pb-16">
@@ -199,6 +203,12 @@ function TrackView() {
             }}
           />
         </section>
+
+        {o.mode === "delivery" && o.stage === "out_for_delivery" ? (
+          <Suspense fallback={null}>
+            <TrackDriver svc={svc} slug={slug} orderId={o.orderId} restaurantId={venue.restaurantId} />
+          </Suspense>
+        ) : null}
 
         {o.delivery ? (
           <section className="flex items-start gap-3 rounded-[22px] border border-line bg-surface p-4 text-[14px]">

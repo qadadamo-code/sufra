@@ -9,7 +9,7 @@ import { TABLE_NAMES, type CollectionName } from "./types";
 /** fixed reference instant: rows are emitted relative to it */
 export const SEED_REF = new Date("2026-10-23T21:00:00+03:00");
 
-const JSONB = new Set(["name", "description", "address", "openingHours", "modifiers", "delivery", "discount", "tax", "invoice", "qrOrdering", "locale", "data", "addresses"]);
+const JSONB = new Set(["name", "description", "address", "openingHours", "modifiers", "delivery", "discount", "tax", "invoice", "qrOrdering", "locale", "data", "addresses", "dispatch", "geometry", "hours", "settlement"]);
 const SKIP: Record<string, string[]> = { memberships: ["hasPin"] };
 const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/;
 
@@ -65,7 +65,7 @@ export function seedSql(): string {
   out += insert("printers", rows("printers"));
   for (const s of data.kitchenStations) if (s.printerId) out += `update public.kitchen_stations set printer_id = ${q(s.printerId)} where id = ${q(s.id)};\n`;
   out += "\n";
-  for (const c of ["menuCategories", "modifierGroups", "modifiers", "menuItems", "customers", "reservations", "checks", "orders", "orderItems", "payments", "serviceCalls", "settings", "auditLog"] as CollectionName[])
+  for (const c of ["menuCategories", "modifierGroups", "modifiers", "menuItems", "customers", "reservations", "checks", "orders", "orderItems", "payments", "serviceCalls", "settings", "auditLog", "deliveryZones", "driverShifts", "driverLocations"] as CollectionName[])
     out += insert(TABLE_NAMES[c], rows(c));
 
   // continue today's order numbers after the seeded ones

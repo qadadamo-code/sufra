@@ -169,6 +169,23 @@ export function ReceiptView({ model, className, style }: { model: ReceiptModel; 
     </div>
   ) : null;
 
+  const promo: ReactNode = model.promo ? (
+    <div className="promo" style={{ border: "1px dashed currentColor", borderRadius: "2mm", padding: "2mm", margin: "2mm 0", textAlign: "center" }}>
+      <div style={{ fontWeight: 700 }}>
+        <Bi v={model.promo.title} lang={lang} />
+      </div>
+      <div style={{ fontSize: ".9em" }}>
+        <Bi v={model.promo.body} lang={lang} />
+      </div>
+      {model.promo.code ? (
+        <div className="n" style={{ fontWeight: 700, fontSize: "1.25em", letterSpacing: ".08em", margin: "1mm 0" }}>
+          {model.promo.code}
+        </div>
+      ) : null}
+      {model.promo.qr ? <Qr text={model.promo.qr} mm={a4 ? 22 : 24} /> : null}
+    </div>
+  ) : null;
+
   const footer: ReactNode = model.footer.ar || model.footer.en ? (
     <div className="c" style={{ marginTop: "2mm", fontWeight: 600 }}>
       <Bi v={model.footer} lang={lang} />
@@ -237,6 +254,7 @@ export function ReceiptView({ model, className, style }: { model: ReceiptModel; 
           <div className="foot">
             {eta}
             <div style={{ flex: 1 }}>
+              {promo}
               {footer}
               <div className="tiny" style={{ textAlign: "start" }}>
                 Sufra OS · {model.issuedAt.slice(0, 10)}
@@ -281,6 +299,7 @@ export function ReceiptView({ model, className, style }: { model: ReceiptModel; 
           {totals}
           {eta ? <div className="hr" /> : null}
           {eta}
+          {promo}
           {footer}
           <div className="tiny">Sufra OS</div>
         </>

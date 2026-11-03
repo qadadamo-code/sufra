@@ -63,7 +63,7 @@ export function deliveryReport(orders: Order[], checks: Map<string, Pick<Check, 
     revenue += amount;
     const c = ch.get(d.channel) ?? { count: 0, revenue: 0 };
     ch.set(d.channel, { count: c.count + 1, revenue: c.revenue + amount });
-    const zk = d.zone ?? o.delivery?.area ?? (o.mode === "delivery" ? "—" : "takeaway");
+    const zk = d.aggregator?.theirRider ? "app_rider" : (d.zone ?? (o.mode === "delivery" ? (o.delivery?.area ?? "—") : "takeaway"));
     const z = zn.get(zk) ?? { count: 0, revenue: 0 };
     zn.set(zk, { count: z.count + 1, revenue: z.revenue + amount });
     byHour[hourOf(d.receivedAt) % 24]++;

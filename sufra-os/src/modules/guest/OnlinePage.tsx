@@ -19,6 +19,8 @@ import { MenuBrowser } from "./ui/Menu";
 import { ItemSheet } from "./ui/ItemSheet";
 import { CartBar, CartSheet } from "./ui/Cart";
 import { formatMoney } from "@/lib/money";
+import { zoneFee, zoneFor } from "@/modules/delivery/geo";
+import { LocateFixed } from "lucide-react";
 
 type Kind = "delivery" | "takeaway" | "later";
 
@@ -30,6 +32,7 @@ interface Profile {
   zoneId: string;
 }
 const PROFILE_KEY = "sufra-guest.profile";
+const WA_WORDING = { ar: "ابعتولي حالة الطلب على واتساب", en: "Send me order updates on WhatsApp" };
 
 /** Online ordering: /r/:slug — delivery, takeaway now, or pickup at a time. */
 export default function OnlinePage() {
@@ -55,6 +58,7 @@ function OnlineView() {
   const [payment, setPayment] = useState<PayChoice>("cash");
   const [tried, setTried] = useState(false);
   const [placing, setPlacing] = useState(false);
+  const [waOptIn, setWaOptIn] = useState(true);
   const [now, setNow] = useState(() => venueMinutes(new Date(), venue.timezone));
   useEffect(() => {
     const id = setInterval(() => setNow(venueMinutes(new Date(), venue.timezone)), 60_000);
@@ -73,7 +77,26 @@ function OnlineView() {
 
   const zone = venue.zones.find((z) => z.id === profile.zoneId) ?? null;
   const mode: OrderMode = kind === "delivery" ? "delivery" : "takeaway";
-  const fee = kind === "delivery" ? zone?.fee ?? 0 : 0;
+  // free-delivery threshold + zone by GPS come from the delivery-zones editor (src/modules/delivery)
+  const [gps, setGps] = useState<{ lat: number; lng: number } | null>(null);
+  const [locating, setLocating] = useState(false);
+  const locate = () => {
+    if (!navigator.geolocation) return;
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (p) => {
+        setLocating(false);
+        const g = { lat: p.coords.latitude, lng: p.coords.longitude };
+        setGps(g);
+        const hit = zoneFor(g, venue.zones.map((z) => ({ ...z, geometry: z.geometry ?? null, hours: z.hours ?? null, active: true, sort: 0 })));
+        if (hit) set({ zoneId: hit.id });
+        else toast({ title: L("موقعك برّه مناطق التوصيل", "Your location is outside our delivery area"), tone: "warn" });
+      },
+      () => setLocating(false),
+      { enableHighAccuracy: true, timeout: 15_000, maximumAge: 60_000 },
+    );
+  };
+  const fee = kind === "delivery" && zone ? zoneFee(zone, cartTotals(menu, cart, { mode, tax: venue.tax, deliveryFee: 0 }).subtotal) : 0;
   const totals = cartTotals(menu, cart, { mode, tax: venue.tax, deliveryFee: fee });
   const minOk = kind !== "delivery" || !zone || totals.subtotal >= zone.minOrder;
   const phoneOk = !!normalizePhone(profile.phone);
@@ -99,10 +122,12 @@ function OnlineView() {
         lines: cart.map((l) => ({ itemId: l.itemId, qty: l.qty, modifierIds: l.modifierIds, notes: l.notes })),
         customer: { name: profile.name, phone: profile.phone },
         note: note.trim(),
-        delivery: kind === "delivery" ? { zoneId: profile.zoneId, address: profile.address, notes: profile.notes } : null,
+        delivery: kind === "delivery" ? { zoneId: profile.zoneId, address: profile.address, notes: profile.notes, lat: gps?.lat ?? null, lng: gps?.lng ?? null } : null,
         pickupAt,
         payment,
       });
+      // consent for WhatsApp order updates (recorded with the exact wording; 0007_messaging.sql)
+      void svc.recordConsent(slug, { phone: profile.phone, name: profile.name, source: "online_checkout", granted: waOptIn, wording: L(WA_WORDING.ar, WA_WORDING.en) }).catch(() => undefined);
       // WhatsApp "order received" (logged preview until the Cloud API is connected)
       void getNotifier()
         .send({
@@ -151,6 +176,11 @@ function OnlineView() {
       {kind === "delivery" ? (
         <div className="grid gap-2.5">
           <div className="flex gap-1.5 overflow-x-auto no-scrollbar" role="radiogroup" aria-label={L("المنطقة", "Area")}>
+            {venue.zones.some((z) => z.geometry) ? (
+              <button type="button" onClick={locate} aria-pressed={!!gps} className={cn("inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-[13.5px] font-semibold", gps ? "border-ok bg-ok-soft text-ok" : "border-line")}>
+                <LocateFixed className={cn("size-4", locating && "animate-pulse")} /> {gps ? L("موقعي ✓", "My location ✓") : L("موقعي", "My location")}
+              </button>
+            ) : null}
             {venue.zones.map((z) => (
               <button key={z.id} type="button" role="radio" aria-checked={profile.zoneId === z.id} onClick={() => set({ zoneId: z.id })} className={cn("h-9 shrink-0 rounded-full border px-3.5 text-[13.5px] font-semibold transition-colors", profile.zoneId === z.id ? "border-primary bg-primary-soft text-primary" : "border-line hover:border-line-strong")}>
                 {loc(z.name)}
@@ -159,7 +189,7 @@ function OnlineView() {
           </div>
           {zone ? (
             <div className="grid grid-cols-3 gap-2 text-center">
-              <Fact label={L("التوصيل", "Delivery")} value={<Money value={zone.fee} compact />} />
+              <Fact label={zone.freeOver ? L(`مجاني فوق ${formatMoney(zone.freeOver, { lang, compact: true })}`, `Free over ${formatMoney(zone.freeOver, { lang, compact: true })}`) : L("التوصيل", "Delivery")} value={fee === 0 && zone.fee > 0 ? <span className="text-ok">{L("مجاني", "Free")}</span> : <Money value={zone.fee} compact />} />
               <Fact label={L("أقل طلب", "Min. order")} value={<Money value={zone.minOrder} compact />} />
               <Fact label={L("الوقت", "ETA")} value={<span className="num" dir="ltr">{zone.etaMin}–{zone.etaMax}′</span>} />
             </div>
@@ -196,6 +226,10 @@ function OnlineView() {
         <Input label={L("الاسم", "Name")} value={profile.name} onChange={(e) => set({ name: e.target.value })} autoComplete="name" error={tried && !profile.name.trim() ? L("مطلوب", "Required") : undefined} />
         <Input label={L("الموبايل", "Mobile")} value={profile.phone} onChange={(e) => set({ phone: e.target.value })} inputMode="tel" autoComplete="tel" dir="ltr" placeholder="01xxxxxxxxx" error={tried && !phoneOk ? L("رقم موبايل مصري صحيح", "A valid Egyptian mobile") : undefined} hint={L("هنبعتلك حالة الطلب على واتساب", "We'll send order updates on WhatsApp")} />
       </div>
+      <label className="flex cursor-pointer items-center gap-2.5 text-[13.5px]">
+        <input type="checkbox" className="size-5 accent-[var(--sf-primary)]" checked={waOptIn} onChange={(e) => setWaOptIn(e.target.checked)} />
+        <span>{L(WA_WORDING.ar, WA_WORDING.en)} <span className="text-muted">{L("— تقدر توقفها بكلمة «وقف»", "— reply STOP any time")}</span></span>
+      </label>
       {kind === "delivery" ? (
         <div className="grid gap-3">
           <Input label={L("العنوان", "Address")} icon={<MapPin />} value={profile.address} onChange={(e) => set({ address: e.target.value })} autoComplete="street-address" placeholder={L("الشارع ورقم العمارة", "Street and building")} error={tried && !profile.address.trim() ? L("مطلوب", "Required") : undefined} />

@@ -852,7 +852,7 @@ export interface DriverShift extends TenantRow {
   } | null;
 }
 
-/** Last known position of a rider (one row per rider, id = membership id). */
+/** Last known position of a rider (one row per rider, unique driverId). */
 export interface DriverLocation extends TenantRow {
   driverId: string;
   lat: number;

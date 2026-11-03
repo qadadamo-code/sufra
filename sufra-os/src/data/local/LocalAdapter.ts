@@ -30,7 +30,7 @@ type Msg =
 const USERS = "_users";
 const PINS = "_pins";
 const META = "_meta";
-const SEED_VERSION = "1";
+const SEED_VERSION = "2"; // bump when the demo seed changes shape (2: delivery riders, zones, dispatch)
 
 export interface LocalAdapterOptions {
   /** IndexedDB database + BroadcastChannel name. Tests use unique names. */

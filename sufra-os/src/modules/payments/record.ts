@@ -29,10 +29,12 @@ export interface RecordResult {
 }
 
 /** Mark a (demo) intent succeeded and record its payment once. */
-export async function recordIntentLocal(repo: Repo, intentId: string, outcome: PaymentIntentStatus = "succeeded", providerRef: string | null = null): Promise<RecordResult> {
+export async function recordIntentLocal(repo: Repo, intentId: string, outcome: PaymentIntentStatus = "succeeded", providerRef: string | null = null, opts: { repair?: boolean } = {}): Promise<RecordResult> {
   const pi = await repo.get("paymentIntents", intentId);
   if (!pi) throw new Error("not_found");
-  if (FINAL.includes(pi.status)) return { status: pi.status, paymentId: pi.paymentId, duplicate: true };
+  // repair: a succeeded intent whose payment row is missing (reconciliation "paid_not_recorded")
+  const repair = !!opts.repair && pi.status === "succeeded" && !pi.paymentId && !!pi.checkId && outcome === "succeeded";
+  if (FINAL.includes(pi.status) && !repair) return { status: pi.status, paymentId: pi.paymentId, duplicate: true };
   if (outcome !== "succeeded") {
     await repo.update("paymentIntents", pi.id, { status: outcome, redirectUrl: null, providerRef: providerRef ?? pi.providerRef, failureReason: outcome === "failed" ? "card_declined" : outcome === "processing" ? null : outcome });
     return { status: outcome, paymentId: null, duplicate: false };
@@ -61,6 +63,6 @@ export async function recordIntentLocal(repo: Repo, intentId: string, outcome: P
     }
   }
   const updated = await repo.update("paymentIntents", pi.id, { status: "succeeded", paymentId, redirectUrl: null, providerRef: providerRef ?? pi.providerRef });
-  for (const h of handlers.get(pi.kind) ?? []) await Promise.resolve(h(updated)).catch(() => undefined);
+  if (!repair) for (const h of handlers.get(pi.kind) ?? []) await Promise.resolve(h(updated)).catch(() => undefined);
   return { status: "succeeded", paymentId, duplicate: false };
 }

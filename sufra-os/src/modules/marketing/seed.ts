@@ -277,7 +277,7 @@ export function demoCrmRows(c: Ctx) {
       if (redeemed && camp.promotionId) {
         const p = promotions.find((x) => x.id === camp.promotionId)!;
         promoRedemptions.push({
-          ...base(`red:${camp.id}:${cu.id}`, (sentDaysAgo - 3) * DAY), promotionId: p.id, code, customerId: cu.id, checkId: null, orderId: null, channel: "pos", status: "redeemed",
+          ...base(`red:${camp.id}:${cu.id}`, (sentDaysAgo - 3) * DAY), promotionId: p.id, rewardId: null, code, customerId: cu.id, checkId: null, orderId: null, channel: "pos", status: "redeemed",
           discount: p.type === "amount" ? p.value : E(60), deliveryDiscount: 0, lineDiscounts: {}, revenue, campaignId: camp.id, points: 0, at: c.T((sentDaysAgo - 3) * DAY),
         });
       }
@@ -303,7 +303,7 @@ export function demoCrmRows(c: Ctx) {
       const days = Math.floor(rnd() * 45);
       const p = promo(k);
       promoRedemptions.push({
-        ...base(`red:${k}:${i}`, days * DAY), promotionId: p.id, code: p.code, customerId: cu.id, checkId: null, orderId: null, channel: k === "ahlan20" || k === "freedelivery" ? "online" : "pos",
+        ...base(`red:${k}:${i}`, days * DAY), promotionId: p.id, rewardId: null, code: p.code, customerId: cu.id, checkId: null, orderId: null, channel: k === "ahlan20" || k === "freedelivery" ? "online" : "pos",
         status: "redeemed", discount: k === "freedelivery" ? 0 : E(disc + Math.floor(rnd() * disc * 0.5)), deliveryDiscount: k === "freedelivery" ? E(35) : 0, lineDiscounts: {},
         revenue: E(350 + Math.floor(rnd() * 900)), campaignId: null, points: 0, at: c.T(days * DAY),
       });
