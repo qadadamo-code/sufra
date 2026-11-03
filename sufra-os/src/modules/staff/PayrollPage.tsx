@@ -99,9 +99,9 @@ function Runs() {
           columns={[
             { key: "p", header: L("الشهر", "Month"), cell: (r) => <span className="font-semibold">{f.month(r.period)}</span> },
             { key: "b", header: L("الفرع", "Branch"), cell: (r) => (r.branchId ? hr.session.branches.find((b) => b.id === r.branchId)?.name[lang] : L("كل الفروع", "All")), hideOnMobile: true },
-            { key: "n", header: L("الموظفين", "Staff"), cell: (r) => <span className="num">{r.totals.headcount}</span>, align: "center", hideOnMobile: true },
-            { key: "g", header: L("الإجمالي", "Gross"), cell: (r) => <span className="num">{money(r.totals.gross)}</span>, align: "end", hideOnMobile: true },
-            { key: "net", header: L("الصافي", "Net"), cell: (r) => <span className="num font-bold">{money(r.totals.net)}</span>, align: "end" },
+            { key: "n", header: L("الموظفين", "Staff"), cell: (r) => <span className="tabular-nums">{r.totals.headcount}</span>, align: "center", hideOnMobile: true },
+            { key: "g", header: L("الإجمالي", "Gross"), cell: (r) => <span className="tabular-nums">{money(r.totals.gross)}</span>, align: "end", hideOnMobile: true },
+            { key: "net", header: L("الصافي", "Net"), cell: (r) => <span className="tabular-nums font-bold">{money(r.totals.net)}</span>, align: "end" },
             { key: "s", header: L("الحالة", "Status"), cell: (r) => <Badge tone={RUN_STATUS[r.status].tone}>{RUN_STATUS[r.status].label[lang]}</Badge> },
           ]}
         />
@@ -192,12 +192,12 @@ function RunDetail() {
           onRowClick={(s) => nav(`/staff/payroll/slip/${s.id}`)}
           columns={[
             { key: "who", header: L("الموظف", "Staff"), cell: (s) => { const m = hr.memberOf(s.membershipId); return m ? <PersonCell m={m} p={hr.profileOf(m.id)} size="sm" sub={s.position} /> : s.name; } },
-            { key: "days", header: L("أيام", "Days"), cell: (s) => <span className="num">{s.workedDays}{s.absentDays ? <span className="text-danger"> −{s.absentDays}</span> : null}</span>, align: "center", hideOnMobile: true },
-            { key: "gross", header: L("الإجمالي", "Gross"), cell: (s) => <span className="num">{money(s.gross)}</span>, align: "end", hideOnMobile: true },
-            { key: "ins", header: L("تأمينات", "Insurance"), cell: (s) => <span className="num text-muted">{money(s.employeeInsurance)}</span>, align: "end", hideOnMobile: true },
-            { key: "tax", header: L("ضريبة", "Tax"), cell: (s) => <span className="num text-muted">{money(s.incomeTax)}</span>, align: "end", hideOnMobile: true },
-            { key: "adv", header: L("سلف", "Advance"), cell: (s) => (s.advanceRecovered ? <span className="num text-brass">{money(s.advanceRecovered)}</span> : "—"), align: "end", hideOnMobile: true },
-            { key: "net", header: L("الصافي", "Net"), cell: (s) => <span className="num font-bold">{money(s.net)}</span>, align: "end" },
+            { key: "days", header: L("أيام", "Days"), cell: (s) => <span className="tabular-nums">{s.workedDays}{s.absentDays ? <span className="text-danger"> −{s.absentDays}</span> : null}</span>, align: "center", hideOnMobile: true },
+            { key: "gross", header: L("الإجمالي", "Gross"), cell: (s) => <span className="tabular-nums">{money(s.gross)}</span>, align: "end", hideOnMobile: true },
+            { key: "ins", header: L("تأمينات", "Insurance"), cell: (s) => <span className="tabular-nums text-muted">{money(s.employeeInsurance)}</span>, align: "end", hideOnMobile: true },
+            { key: "tax", header: L("ضريبة", "Tax"), cell: (s) => <span className="tabular-nums text-muted">{money(s.incomeTax)}</span>, align: "end", hideOnMobile: true },
+            { key: "adv", header: L("سلف", "Advance"), cell: (s) => (s.advanceRecovered ? <span className="tabular-nums text-brass">{money(s.advanceRecovered)}</span> : "—"), align: "end", hideOnMobile: true },
+            { key: "net", header: L("الصافي", "Net"), cell: (s) => <span className="tabular-nums font-bold">{money(s.net)}</span>, align: "end" },
             { key: "pm", header: L("الصرف", "Pay by"), cell: (s) => <span className="text-[12.5px] text-muted">{PAY_METHOD[s.payMethod][lang]}</span>, hideOnMobile: true },
           ]}
         />
@@ -208,12 +208,12 @@ function RunDetail() {
           rowKey={(l) => l.account}
           dense
           columns={[
-            { key: "a", header: L("الحساب", "Account"), cell: (l) => <span><span className="num text-muted">{l.account}</span> · {accountName(l.account, lang)}</span> },
-            { key: "d", header: L("مدين", "Debit"), cell: (l) => (l.debit ? <span className="num">{money(l.debit)}</span> : ""), align: "end" },
-            { key: "c", header: L("دائن", "Credit"), cell: (l) => (l.credit ? <span className="num">{money(l.credit)}</span> : ""), align: "end" },
+            { key: "a", header: L("الحساب", "Account"), cell: (l) => <span><span className="tabular-nums text-muted">{l.account}</span> · {accountName(l.account, lang)}</span> },
+            { key: "d", header: L("مدين", "Debit"), cell: (l) => (l.debit ? <span className="tabular-nums">{money(l.debit)}</span> : ""), align: "end" },
+            { key: "c", header: L("دائن", "Credit"), cell: (l) => (l.credit ? <span className="tabular-nums">{money(l.credit)}</span> : ""), align: "end" },
           ]}
         />
-        <p className="num px-5 pt-2 text-[12.5px] text-muted">
+        <p className="tabular-nums px-5 pt-2 text-[12.5px] text-muted">
           {L("الإجمالي", "Totals")}: {money(journal.reduce((a, l) => a + l.debit, 0))} = {money(journal.reduce((a, l) => a + l.credit, 0))}
         </p>
       </Section>
@@ -228,7 +228,7 @@ function RunDetail() {
               { key: "w", header: L("الموظف", "Staff"), cell: (a) => hr.memberOf(a.membershipId)?.name ?? "" },
               { key: "k", header: L("النوع", "Kind"), cell: (a) => <Badge tone={a.kind === "bonus" || a.kind === "allowance" ? "ok" : "danger"}>{ADJ_KIND[a.kind][lang]}</Badge> },
               { key: "r", header: L("السبب", "Reason"), cell: (a) => a.reason, hideOnMobile: true },
-              { key: "a", header: L("المبلغ", "Amount"), cell: (a) => <span className="num">{money(a.amount)}</span>, align: "end" },
+              { key: "a", header: L("المبلغ", "Amount"), cell: (a) => <span className="tabular-nums">{money(a.amount)}</span>, align: "end" },
               { key: "x", header: "", cell: (a) => (run.status === "draft" ? <IconButton size="sm" label={L("امسح", "Remove")} onClick={() => db.remove("payrollAdjustments", a.id)}><Trash2 className="size-4" /></IconButton> : null), align: "end" },
             ]}
           />

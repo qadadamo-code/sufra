@@ -81,7 +81,7 @@ export default function ProfilePage() {
           {m.phone ? (
             <a href={`tel:${m.phone}`} className="inline-flex h-11 items-center gap-2 rounded-xl border border-line px-4 font-semibold hover:bg-surface-2">
               <Phone className="size-4" />
-              <span dir="ltr" className="num">{m.phone}</span>
+              <span dir="ltr" className="tabular-nums">{m.phone}</span>
             </a>
           ) : null}
           {hr.canManage ? (
@@ -206,7 +206,7 @@ function DocsTab({ membershipId, p }: { membershipId: string; p: StaffProfile | 
                   {d.fileUrl ? <img src={d.fileUrl} alt="" className="size-12 rounded-lg object-cover" /> : <span className="grid size-12 place-items-center rounded-lg bg-surface-3 text-muted"><FileText className="size-5" /></span>}
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-semibold">{DOC_KIND[d.kind][lang]}</span>
-                    <span className="num block truncate text-[12.5px] text-muted">{d.number || "—"} · {d.expiresAt ? L(`لحد ${f.day(d.expiresAt, { day: "numeric", month: "short", year: "numeric" })}`, `until ${f.day(d.expiresAt, { day: "numeric", month: "short", year: "numeric" })}`) : L("مالوش تاريخ انتهاء", "no expiry")}</span>
+                    <span className="tabular-nums block truncate text-[12.5px] text-muted">{d.number || "—"} · {d.expiresAt ? L(`لحد ${f.day(d.expiresAt, { day: "numeric", month: "short", year: "numeric" })}`, `until ${f.day(d.expiresAt, { day: "numeric", month: "short", year: "numeric" })}`) : L("مالوش تاريخ انتهاء", "no expiry")}</span>
                   </span>
                   {a ? <Badge tone={a.state === "soon" ? "warn" : "danger"} size="sm">{a.state === "soon" ? L("قرب يخلص", "Expiring") : L("منتهي", "Expired")}</Badge> : <Badge tone="ok" size="sm">{L("ساري", "Valid")}</Badge>}
                 </button>
@@ -352,7 +352,7 @@ function PinDialog({ membershipId, name, onClose }: { membershipId: string; name
   const [pin, setPin] = useState(String(1000 + Math.floor(Math.random() * 9000)));
   return (
     <Dialog open onClose={onClose} size="sm" title={L(`PIN جديد لـ ${name}`, `New PIN for ${name}`)} footer={<Button block disabled={!/^\d{4,6}$/.test(pin)} onClick={async () => { await db.repo.auth.setPin(db.restaurantId, membershipId, pin); await db.update("memberships", membershipId, { hasPin: true }); await db.audit("staff.pin", "memberships", membershipId, {}); toast({ title: L(`الـ PIN بقى ${pin}`, `PIN is now ${pin}`), tone: "success" }); onClose(); }}>{L("احفظ", "Save")}</Button>}>
-      <Input label="PIN" inputMode="numeric" dir="ltr" maxLength={6} value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))} className="num text-center text-[22px] tracking-[0.4em]" />
+      <Input label="PIN" inputMode="numeric" dir="ltr" maxLength={6} value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))} className="tabular-nums text-center text-[22px] tracking-[0.4em]" />
     </Dialog>
   );
 }

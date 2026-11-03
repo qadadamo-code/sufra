@@ -52,7 +52,7 @@ export function DayList({ days, tz, onPick, compact }: { days: DayEval[]; tz: st
         <li key={d.date}>
           <button type="button" disabled={!onPick} onClick={() => onPick?.(d)} className={cn("flex w-full items-center gap-3 py-2.5 text-start", onPick && "hover:bg-surface-2/70 rounded-xl px-2 -mx-2")}>
             <span className="w-24 shrink-0 text-[13.5px] font-semibold">{f.day(d.date)}</span>
-            <span className="num min-w-0 flex-1 truncate text-[13.5px] text-muted">
+            <span className="tabular-nums min-w-0 flex-1 truncate text-[13.5px] text-muted">
               {d.firstIn ? f.time(d.firstIn, tz) : "—"} → {d.lastOut ? f.time(d.lastOut, tz) : "—"}
               {!compact && d.workedMin ? ` · ${minutesText(d.workedMin, lang)}` : ""}
               {d.lateMin ? <span className="text-warn"> · {L("تأخير", "late")} {minutesText(d.lateMin, lang)}</span> : null}
@@ -155,12 +155,12 @@ export function AdvanceCard({ a, right }: { a: Advance; right?: React.ReactNode 
       {a.status === "paid" || a.status === "settled" ? (
         <>
           <Meter className="mt-2.5" label={L("المسدَّد", "Recovered")} value={pctDone} tone="ok" />
-          <p className="num mt-1 text-[12.5px] text-muted">
+          <p className="tabular-nums mt-1 text-[12.5px] text-muted">
             {L("اتخصم", "Recovered")} {formatMoney(a.recovered, { lang, currency: hr.currency, compact: true })} · {L("باقي", "left")} {formatMoney(a.amount - a.recovered, { lang, currency: hr.currency, compact: true })}
           </p>
         </>
       ) : (
-        <p className="num mt-1.5 text-[12.5px] text-muted">{sched.map((s) => `${f.month(s.period)}: ${formatMoney(s.amount, { lang, compact: true, bare: true })}`).join(" · ")}</p>
+        <p className="tabular-nums mt-1.5 text-[12.5px] text-muted">{sched.map((s) => `${f.month(s.period)}: ${formatMoney(s.amount, { lang, compact: true, bare: true })}`).join(" · ")}</p>
       )}
     </div>
   );

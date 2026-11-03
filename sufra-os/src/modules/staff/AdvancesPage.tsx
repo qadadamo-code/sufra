@@ -73,9 +73,9 @@ export default function AdvancesPage() {
           empty={<EmptyState compact title={L("مفيش سلف", "No advances")} />}
           columns={[
             { key: "who", header: L("الموظف", "Staff"), cell: (id) => { const m = hr.memberOf(id); return m ? <PersonCell m={m} p={hr.profileOf(id)} size="sm" /> : null; } },
-            { key: "total", header: L("اتصرف", "Paid out"), cell: (id) => <span className="num">{money(all.filter((a) => a.membershipId === id && (a.status === "paid" || a.status === "settled")).reduce((x, a) => x + a.amount, 0))}</span>, align: "end" },
-            { key: "rec", header: L("اتخصم", "Recovered"), cell: (id) => <span className="num">{money(all.filter((a) => a.membershipId === id).reduce((x, a) => x + a.recovered, 0))}</span>, align: "end", hideOnMobile: true },
-            { key: "left", header: L("الباقي", "Outstanding"), cell: (id) => <span className="num font-bold">{money(all.filter((a) => a.membershipId === id).reduce((x, a) => x + outstanding(a), 0))}</span>, align: "end" },
+            { key: "total", header: L("اتصرف", "Paid out"), cell: (id) => <span className="tabular-nums">{money(all.filter((a) => a.membershipId === id && (a.status === "paid" || a.status === "settled")).reduce((x, a) => x + a.amount, 0))}</span>, align: "end" },
+            { key: "rec", header: L("اتخصم", "Recovered"), cell: (id) => <span className="tabular-nums">{money(all.filter((a) => a.membershipId === id).reduce((x, a) => x + a.recovered, 0))}</span>, align: "end", hideOnMobile: true },
+            { key: "left", header: L("الباقي", "Outstanding"), cell: (id) => <span className="tabular-nums font-bold">{money(all.filter((a) => a.membershipId === id).reduce((x, a) => x + outstanding(a), 0))}</span>, align: "end" },
           ]}
         />
       </Section>

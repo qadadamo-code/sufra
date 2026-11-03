@@ -31,8 +31,8 @@ export function PayslipView({ slip, restaurant, profile, lang, currency }: { sli
         <div className="text-end text-[12px] text-[#5b6a64]">
           <p className="text-[15px] font-bold text-[#16211e]">{slip.name}</p>
           <p>{slip.position}</p>
-          {profile?.nationalId ? <p className="num">{T("رقم قومي", "National ID")}: {profile.nationalId}</p> : null}
-          <p className="num">{T("أجر التأمين", "Insurable wage")}: {m(slip.insurableWage)}</p>
+          {profile?.nationalId ? <p className="tabular-nums">{T("رقم قومي", "National ID")}: {profile.nationalId}</p> : null}
+          <p className="tabular-nums">{T("أجر التأمين", "Insurable wage")}: {m(slip.insurableWage)}</p>
         </div>
       </header>
       <section className="mt-3 grid grid-cols-4 gap-2 text-center text-[12px]">

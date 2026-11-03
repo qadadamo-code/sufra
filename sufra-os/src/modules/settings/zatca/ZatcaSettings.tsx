@@ -143,8 +143,8 @@ export default function ZatcaSettings() {
       <SettingsNav />
       <PageHeader
         icon={<Stamp />}
-        title={L("هيئة الزكاة والضريبة والجمارك — فاتورة", "ZATCA — FATOORA e-invoicing")}
-        subtitle={L("الربط والتكامل (المرحلة الثانية): الفواتير المبسطة بتتبلّغ خلال ٢٤ ساعة، والضريبية بتتعتمد قبل التسليم", "Phase 2 integration: simplified invoices reported within 24 h, standard invoices cleared before hand-over")}
+        title={L("هيئة الزكاة — فاتورة", "ZATCA e-invoicing")}
+        subtitle={L("المرحلة الثانية: الربط والتكامل مع منصة فاتورة", "FATOORA Phase 2 integration")}
         actions={
           <>
             <Button variant="ghost" icon={<RotateCcw className="size-4" />} disabled={!dirty} onClick={() => setZ(zatcaSettingsOf(settings))}>

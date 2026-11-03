@@ -279,8 +279,8 @@ export function demoHrRows(c: Ctx) {
       const ec = effectiveComp(compBy.get(m.id), hr);
       return { id: m.id, hours: sums.get(m.id)!.workedMin / 60, points: ec.servicePoints, tipsEligible: ec.tipsEligible, tipsTaken: 0 };
     }),
-    E(18_460),
-    E(301_250),
+    E(14_380),
+    E(96_400),
   );
   const runId = c.id("hr:run:last");
   const paidAt = `${payDate(lastPeriod, hr.payDay)}T13:00:00.000Z`;
@@ -316,7 +316,7 @@ export function demoHrRows(c: Ctx) {
   };
   const payrollRuns: PayrollRun[] = [{
     ...base("run:last", paidAt), branchId: null, period: lastPeriod, country: "EG", status: "paid", totals, createdBy: c.staffId("accountant"), approvedBy: c.staffId("owner"), approvedAt: paidAt,
-    paidAt, paidBy: c.staffId("accountant"), ledgerEntryIds: [accrual.id, payment.id], snapshot: { pools: { tips: pools.tipsPool, service: pools.servicePool, serviceCollected: E(301_250) } }, note: "",
+    paidAt, paidBy: c.staffId("accountant"), ledgerEntryIds: [accrual.id, payment.id], snapshot: { pools: { tips: pools.tipsPool, service: pools.servicePool, serviceCollected: E(96_400) } }, note: "",
   }];
 
   const attendanceDevices: AttendanceDevice[] = [{

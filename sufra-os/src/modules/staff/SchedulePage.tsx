@@ -104,7 +104,7 @@ export default function SchedulePage() {
               style={{ borderInlineStartColor: tplColor(s) }}
               title={s.published ? undefined : L("مسودة — مش منشور", "Draft — not published")}
             >
-              <span className="num block font-bold">{hmRange(s.start, s.end)}</span>
+              <span className="tabular-nums block font-bold">{hmRange(s.start, s.end)}</span>
               <span className="block truncate text-muted">{s.station ? (STATION[s.station]?.[lang] ?? s.station) : ""}{s.note ? ` · ${s.note}` : ""}</span>
             </button>
           ))}
@@ -136,7 +136,7 @@ export default function SchedulePage() {
               {L("انسخ الأسبوع اللي فات", "Copy last week")}
             </Button>
             <Button icon={<Megaphone />} disabled={!unpublished} onClick={async () => { const n = await publishWeek(db, branchId, week, addDays(week, 6)); toast({ title: L(`اتنشر ${n} وردية — الفريق يقدر يشوف جدوله`, `Published ${n} shifts — the team can see their schedule`), tone: "success" }); }}>
-              {L("انشر الجدول", "Publish")} {unpublished ? <span className="num rounded-full bg-white/20 px-1.5 text-[12px]">{unpublished}</span> : null}
+              {L("انشر الجدول", "Publish")} {unpublished ? <span className="tabular-nums rounded-full bg-white/20 px-1.5 text-[12px]">{unpublished}</span> : null}
             </Button>
           </>
         ) : null}
@@ -146,11 +146,11 @@ export default function SchedulePage() {
       <div className="grid gap-3 rounded-[20px] border border-line bg-surface p-4 shadow-sf-sm">
         <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1">
           <p className="font-bold">{L("تكلفة العمالة مقابل المبيعات المتوقعة", "Labour cost vs forecast sales")}</p>
-          <p className="num text-[14px] text-muted">{L("ساعات", "Hours")} <b className="text-ink">{Math.round(tot.hours)}</b></p>
+          <p className="tabular-nums text-[14px] text-muted">{L("ساعات", "Hours")} <b className="text-ink">{Math.round(tot.hours)}</b></p>
           {hr.canPay ? (
             <>
-              <p className="num text-[14px] text-muted">{L("التكلفة", "Cost")} <b className="text-ink">{formatMoney(tot.cost, { lang, whole: true, currency: hr.currency })}</b></p>
-              <p className="num text-[14px] text-muted">{L("المبيعات المتوقعة", "Forecast sales")} <b className="text-ink">{formatMoney(tot.sales, { lang, whole: true, currency: hr.currency })}</b></p>
+              <p className="tabular-nums text-[14px] text-muted">{L("التكلفة", "Cost")} <b className="text-ink">{formatMoney(tot.cost, { lang, whole: true, currency: hr.currency })}</b></p>
+              <p className="tabular-nums text-[14px] text-muted">{L("المبيعات المتوقعة", "Forecast sales")} <b className="text-ink">{formatMoney(tot.sales, { lang, whole: true, currency: hr.currency })}</b></p>
               <Badge tone={labourPct <= hr.rules.labourTargetBps / 100 ? "ok" : "warn"}>{L(`العمالة ${labourPct.toFixed(1)}٪ (الهدف ${hr.rules.labourTargetBps / 100}٪)`, `labour ${labourPct.toFixed(1)}% (target ${hr.rules.labourTargetBps / 100}%)`)}</Badge>
             </>
           ) : (
@@ -168,7 +168,7 @@ export default function SchedulePage() {
                   {hr.canPay ? <span className={cn("w-1/2 rounded-t", pct > hr.rules.labourTargetBps / 100 ? "bg-warn" : "bg-primary")} style={{ height: `${Math.min(100, (x.cost / max) * 100 * 3)}%` }} /> : <span className="w-1/2 rounded-t bg-primary" style={{ height: `${Math.min(100, x.hours * 1.5)}%` }} />}
                 </div>
                 <p className="mt-1 truncate text-[11.5px] font-semibold">{f.day(x.d, { weekday: "short" })}</p>
-                <p className="num truncate text-[11px] text-muted">{hr.canPay ? `${pct.toFixed(0)}%` : `${Math.round(x.hours)}h`}</p>
+                <p className="tabular-nums truncate text-[11px] text-muted">{hr.canPay ? `${pct.toFixed(0)}%` : `${Math.round(x.hours)}h`}</p>
               </div>
             );
           })}
@@ -179,7 +179,7 @@ export default function SchedulePage() {
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-[13px] font-semibold text-muted">{L("اسحب قالب على الجدول:", "Drag a template onto the grid:")}</span>
           {templates.map((t) => (
-            <span key={t.id} draggable onDragStart={() => setDrag({ kind: "tpl", tpl: t })} className="num inline-flex h-9 cursor-grab items-center gap-1.5 rounded-full border border-line bg-surface px-3 text-[13px] font-semibold shadow-sf-sm active:cursor-grabbing">
+            <span key={t.id} draggable onDragStart={() => setDrag({ kind: "tpl", tpl: t })} className="tabular-nums inline-flex h-9 cursor-grab items-center gap-1.5 rounded-full border border-line bg-surface px-3 text-[13px] font-semibold shadow-sf-sm active:cursor-grabbing">
               <span className="size-2.5 rounded-full" style={{ background: t.color }} />
               {t.name[lang]} {hmRange(t.start, t.end)}
             </span>
@@ -215,7 +215,7 @@ export default function SchedulePage() {
                       <PersonPhoto m={m} p={hr.profileOf(m.id)} size="sm" />
                       <div className="min-w-0">
                         <p className="max-w-[110px] truncate text-[13px] font-semibold">{m.name}</p>
-                        <p className="num text-[11.5px] text-muted">{L(`${Math.round(hrs)} ساعة`, `${Math.round(hrs)} h`)}</p>
+                        <p className="tabular-nums text-[11.5px] text-muted">{L(`${Math.round(hrs)} ساعة`, `${Math.round(hrs)} h`)}</p>
                       </div>
                     </div>
                   </th>
@@ -239,7 +239,7 @@ export default function SchedulePage() {
                 <li key={sw.id} className="flex flex-wrap items-center gap-3 py-2.5">
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold">{from?.name} → {to?.name ?? L("أي حد", "anyone")}</p>
-                    <p className="num text-[13px] text-muted">{sh ? `${f.day(sh.date)} ${hmRange(sh.start, sh.end)}` : ""} · {sw.reason}</p>
+                    <p className="tabular-nums text-[13px] text-muted">{sh ? `${f.day(sh.date)} ${hmRange(sh.start, sh.end)}` : ""} · {sw.reason}</p>
                   </div>
                   <Badge tone={SWAP_STATUS[sw.status].tone}>{SWAP_STATUS[sw.status].label[lang]}</Badge>
                   {hr.canManage ? (

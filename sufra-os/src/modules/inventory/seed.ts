@@ -643,7 +643,8 @@ function build(c: InventorySeedCtx, openingOverride: Map<string, number> | null)
     const g = c.id(`sales:${day}`);
     for (const [id, q] of dayUse) {
       const wobble = 0.85 + ((day * 7 + id.charCodeAt(3)) % 30) / 100;
-      doOut(id, q3(q * wobble), "sale", at(day, 23, 30), { refType: "daily_sales", refId: g, groupId: g, note: "مبيعات اليوم (ملخص)" });
+      const unit = itemBy.get(id)!.baseUnit;
+      doOut(id, unit === "pc" && q >= 1 ? Math.max(1, Math.round(q * wobble)) : q3(q * wobble), "sale", at(day, 23, 30), { refType: "daily_sales", refId: g, groupId: g, note: "مبيعات اليوم (ملخص)" });
     }
   }
   // today: produce for the day (service is in full swing — a bit more), then deduct the seed's fired lines exactly like deductForItems (refType order_item)

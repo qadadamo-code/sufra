@@ -294,6 +294,45 @@ design + sources: `src/modules/guest/pay/DESIGN.md`; schema `supabase/migrations
 - Owner overview shows today's profit estimate, cash on hand and upcoming obligations. Seed: ~3 months of books (`accounting/seed.ts`).
 - SQL checks: `supabase/tests/accounting_run.sh`; screenshots: `node scripts/shots-accounting.mjs <base> <dir>`.
 
+## Inventory, recipes & purchasing + menu manager (`src/modules/inventory`, `src/modules/menu`, `supabase/migrations/0012_inventory.sql`)
+
+- **Menu manager** (`/menu`): categories (drag-reorder, station, colour) and items (photo upload, AR/EN, description, base price
+  + price per channel — dine-in/takeaway/delivery/QR/online/apps — and per branch, VAT flag, station, prep time, allergens,
+  calories, selling-hours windows e.g. breakfast, hidden-on-channel, 86 toggle), modifier groups with per-modifier recipes,
+  combos (`comboOf`), drag-reorder, bulk price change with preview + rounding, live food cost / margin from recipes, and
+  **menu engineering** (stars / plowhorses / puzzles / dogs). Shared selling rules: `src/modules/menu/rules.ts` (`priceFor`,
+  `sellable`, `onSchedule`) — used by the POS (`addLine` channel price, outside-hours block) and the local guest menu/order.
+- **Stock** (`/inventory`): ~90 ingredients + 8 prep items (sub-recipes) in the demo; units with conversions (`units.ts`:
+  kg/g, L/ml, pc, dozen + item packs: carton = 24 pc, sack 25 kg …); locations per branch (store, kitchen, cold room, bar);
+  min/par/max; suppliers + price lists per item; last cost and **moving weighted-average cost** (EAS 2 — sufra-finance
+  `applyMove` on milli-base-units, `costing.ts`). Positions in `stockLevels`, every change an append-only `stockMoves` row.
+- **Recipes / BOM** (`recipes`): per menu item, per modifier (optionally scoped to one item: "large" mango ≠ "large" lemon-mint;
+  negative qty removes an ingredient), per prep item with yield; trim yield / cooking loss grossed up; live cost & food cost %.
+- **Deduction on sale** (`deduct.ts`): at **send** (POS send/fire, waiter app, QR auto-fire / waiter confirm, online accept) —
+  the moment the food is made, so the kitchen's on-hand is right during service; lines never sent (a counter drink) are
+  deducted when the check closes. Idempotent per order line (`refType "order_item"`); a void after send reclassifies the cost
+  to waste ("void_after_send"); "Re-check sale deductions" sweeps lines fired on an offline device. `settings.inventory.deductAt
+  = "paid"` switches to paid-only.
+- **Moves**: receiving (GRN against a PO, qty/price variance, lots + expiry for tracked items), transfers (same branch at once;
+  between branches requested → sent → received), **waste** with reasons + photo, production of prep items, **stock counts**
+  (full/partial, blind on the phone, variance report, approve → `count_adjust` moves; sales during the count are kept).
+- **Purchasing**: suggested orders from par/min + last week's usage × (lead + cover days) − on hand − on order; POs
+  `draft → sent → partial → received → invoiced → paid` (`purchasing.ts`, same machine as the SQL trigger); supplier invoice
+  with input VAT; supplier balances, overdue, payments; send by WhatsApp / call / **Sufra supplier marketplace** — the website's
+  25 suppliers / ~250 products are **copied** into `src/modules/inventory/marketplace/` (compare prices against what you pay,
+  order through Sufra → marketplace PO showing the supplier's plan + commission on delivered value, or contact directly).
+- **Ledger** (via `@/modules/accounting/api`): sale cost Dr 5101/5102/5103 Cr 1301/1302/1303 · waste Dr 5201 (staff meals 5301)
+  · count Dr/Cr 5401 · supplier invoice Dr inventory + 1401 input VAT Cr 2101 (finance `postPurchase` semantics) · payment Dr 2101
+  Cr 1105/1101. Transfers/production move value inside inventory (no entry). Postings never block service (audit on failure).
+- **Alerts & reports**: low/out, expiring/expired batches (derived FIFO), supplier price rises, count variance; theoretical vs
+  actual usage, COGS breakdown, waste, valuation, purchase history, supplier performance (on-time, fill rate, price changes).
+- Permissions: `inventory.view`, `inventory.count` (kitchen: counts/waste), `inventory.manage` (chef/manager),
+  `purchasing.manage` (+ accountant). Tests: `src/modules/inventory/inventory.test.ts`, `src/modules/menu/menu.test.ts`.
+  Screenshots + POS→stock check: `node scripts/shots-inventory.mjs <base> <dir>`.
+- Hardening TODO (cloud): tablets write `stock_moves`/`stock_levels` directly (RLS allows POS roles; moves are append-only).
+  Move the deduction into a SECURITY DEFINER function fired by an `order_items` trigger, and apply channel prices / selling
+  hours inside the 0005 guest RPCs (today they use `menu_items.price`).
+
 ## Design system (`src/ui`)
 
 Tokens in `src/styles/index.css` (same identity as sufra-web: sage-stone neutrals, deep teal, brass; Reem Kufi / IBM Plex Sans Arabic /

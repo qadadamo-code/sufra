@@ -70,7 +70,7 @@ export default function TimeclockPage() {
                   <button type="button" onClick={() => { setErr(null); setStep({ k: "pin", m }); }} className={cn("flex w-full flex-col items-center gap-2 rounded-[20px] border bg-surface p-4 shadow-sf-sm transition-transform active:scale-[0.98]", h ? "border-ok/50" : "border-line")}>
                     <PersonPhoto m={m} p={hr.profileOf(m.id)} size="lg" status={h ? (h.state === "in" ? "online" : "away") : null} />
                     <span className="max-w-full truncate text-[15px] font-bold">{m.name}</span>
-                    <span className="num text-[12.5px] text-muted">{h ? L(`جوه من ${minutesText(Math.floor((now - Date.parse(h.since)) / 60000), lang)}`, `in for ${minutesText(Math.floor((now - Date.parse(h.since)) / 60000), lang)}`) : sh ? hmRange(sh.start, sh.end) : "—"}</span>
+                    <span className="tabular-nums text-[12.5px] text-muted">{h ? L(`جوه من ${minutesText(Math.floor((now - Date.parse(h.since)) / 60000), lang)}`, `in for ${minutesText(Math.floor((now - Date.parse(h.since)) / 60000), lang)}`) : sh ? hmRange(sh.start, sh.end) : "—"}</span>
                   </button>
                 </li>
               );
@@ -110,7 +110,7 @@ export default function TimeclockPage() {
           <div className="grid justify-items-center gap-3">
             <CheckCircle2 className={cn("size-20", step.kind === "in" ? "text-ok" : "text-primary")} />
             <p className="text-[26px] font-bold">{step.kind === "in" ? L(`أهلاً ${step.m.name.split(" ")[0]} — يوم موفق`, `Welcome ${step.m.name.split(" ")[0]} — have a good shift`) : L(`تسلم إيدك يا ${step.m.name.split(" ")[0]}`, `Thanks ${step.m.name.split(" ")[0]} — see you`)}</p>
-            <p className="num text-[18px] text-muted">
+            <p className="tabular-nums text-[18px] text-muted">
               {step.kind === "in" ? <LogIn className="me-1 inline size-5" /> : <LogOut className="me-1 inline size-5" />}
               {new Date().toLocaleTimeString(lang === "ar" ? "ar-EG-u-nu-latn" : "en-GB", { hour: "numeric", minute: "2-digit", timeZone: hr.tz })}
             </p>

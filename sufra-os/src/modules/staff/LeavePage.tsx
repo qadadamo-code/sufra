@@ -104,7 +104,7 @@ export default function LeavePage() {
             const on = onDay(d);
             return (
               <div key={d} className={cn("min-h-[62px] rounded-xl border border-line p-1 text-start", d === hr.today && "border-brass bg-brass-soft/30")}>
-                <p className="num text-[11.5px] font-semibold text-muted">{Number(d.slice(8))}</p>
+                <p className="tabular-nums text-[11.5px] font-semibold text-muted">{Number(d.slice(8))}</p>
                 <div className="mt-0.5 flex flex-wrap gap-0.5">
                   {on.slice(0, 4).map((r) => {
                     const m = hr.memberOf(r.membershipId);
@@ -133,12 +133,12 @@ export default function LeavePage() {
           rowKey={(m) => m.id}
           columns={[
             { key: "who", header: L("الموظف", "Staff"), cell: (m) => <PersonCell m={m} p={hr.profileOf(m.id)} size="sm" /> },
-            { key: "ent", header: L("الاستحقاق", "Entitled"), cell: (m) => <span className="num">{balOf(m.id).ent}</span>, align: "center", hideOnMobile: true },
-            { key: "acc", header: L("المتراكم", "Accrued"), cell: (m) => <span className="num">{balOf(m.id).annual.accrued}</span>, align: "center", hideOnMobile: true },
-            { key: "taken", header: L("خد", "Taken"), cell: (m) => <span className="num">{balOf(m.id).annual.taken}</span>, align: "center" },
+            { key: "ent", header: L("الاستحقاق", "Entitled"), cell: (m) => <span className="tabular-nums">{balOf(m.id).ent}</span>, align: "center", hideOnMobile: true },
+            { key: "acc", header: L("المتراكم", "Accrued"), cell: (m) => <span className="tabular-nums">{balOf(m.id).annual.accrued}</span>, align: "center", hideOnMobile: true },
+            { key: "taken", header: L("خد", "Taken"), cell: (m) => <span className="tabular-nums">{balOf(m.id).annual.taken}</span>, align: "center" },
             { key: "avail", header: L("المتاح", "Available"), cell: (m) => <Badge tone={balOf(m.id).annual.available > 0 ? "ok" : "warn"}>{balOf(m.id).annual.available}</Badge>, align: "center" },
-            { key: "casual", header: L("عارضة", "Casual"), cell: (m) => <span className="num">{balOf(m.id).casual.available}/{hr.rules.leave.casual}</span>, align: "center", hideOnMobile: true },
-            { key: "sick", header: L("مرضي", "Sick"), cell: (m) => <span className="num">{balOf(m.id).sick.taken}</span>, align: "center", hideOnMobile: true },
+            { key: "casual", header: L("عارضة", "Casual"), cell: (m) => <span className="tabular-nums">{balOf(m.id).casual.available}/{hr.rules.leave.casual}</span>, align: "center", hideOnMobile: true },
+            { key: "sick", header: L("مرضي", "Sick"), cell: (m) => <span className="tabular-nums">{balOf(m.id).sick.taken}</span>, align: "center", hideOnMobile: true },
           ]}
         />
       </Section>

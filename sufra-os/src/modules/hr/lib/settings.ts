@@ -124,7 +124,7 @@ export const DEFAULT_HR: HrSettings = {
   },
   leave: { annualFirstYear: 15, annual: 21, annualSenior: 30, seniorYears: 10, seniorAge: 50, minMonths: 6, casual: 6, casualFromAnnual: true, sickPaid: 15 },
   advances: { maxBps: 5000, defaultInstallments: 3 },
-  expectedDailySales: major(85_000),
+  expectedDailySales: major(45_000),
   labourTargetBps: 2800,
 };
 

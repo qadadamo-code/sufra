@@ -99,7 +99,7 @@ export function QtyInput({ item, value, onChange, label, defaultUnit, className,
         <input
           autoFocus={autoFocus}
           inputMode="decimal"
-          className="num min-w-0 flex-1 bg-transparent px-3 text-[15px] outline-none"
+          className="num w-0 min-w-14 flex-1 bg-transparent px-3 text-[15px] outline-none"
           value={text}
           onChange={(e) => {
             setText(e.target.value);
@@ -109,7 +109,7 @@ export function QtyInput({ item, value, onChange, label, defaultUnit, className,
         />
         <select
           aria-label={lang === "ar" ? "الوحدة" : "Unit"}
-          className="border-s border-line bg-surface-2 px-2 text-[13px] font-semibold text-ink-2 outline-none"
+          className="w-auto max-w-[55%] shrink-0 truncate border-s border-line bg-surface-2 px-2 text-[13px] font-semibold text-ink-2 outline-none"
           value={unit}
           onChange={(e) => {
             const nu = units.find((x) => x.id === e.target.value)!;

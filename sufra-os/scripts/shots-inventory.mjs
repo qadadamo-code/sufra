@@ -104,8 +104,8 @@ for (const [w, theme, lang] of combos) {
     await shot(page, `${name}-${tag}`, full);
   };
   const click = async (re) => {
-    const b = page.getByRole("button", { name: re }).first();
-    await b.click();
+    const b = page.getByRole("button", { name: re }).or(page.getByRole("radio", { name: re })).or(page.getByRole("tab", { name: re })).first();
+    await b.click({ timeout: 5000 }).catch((e) => errors.push(`${tag}: click ${re}: ${e.message.split("\n")[0]}`));
     await page.waitForTimeout(500);
   };
   if (want("overview")) await go("inventory", "inv-overview");
@@ -142,7 +142,7 @@ for (const [w, theme, lang] of combos) {
   }
   if (want("reports")) {
     await go("inventory/reports", "inv-report-usage");
-    await click(/تكلفة المبيعات|^COGS$/);
+    await click(/^(تكلفة المبيعات|COGS)$/);
     await shot(page, `inv-report-cogs-${tag}`);
   }
   if (want("menu")) {

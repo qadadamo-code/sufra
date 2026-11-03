@@ -115,7 +115,7 @@ export function AdvanceRequestDialog({ onClose, managerMode }: { onClose: () => 
         {sched.length ? (
           <div className="sm:col-span-2 rounded-2xl bg-surface-2 p-3 text-[13.5px]">
             <p className="mb-1 flex items-center gap-1.5 font-semibold"><HandCoins className="size-4 text-brass" />{L("هتتخصم كده:", "Deducted like this:")}</p>
-            <p className="num text-muted">{sched.map((s) => `${f.month(s.period)}: ${formatMoney(s.amount, { lang, compact: true })}`).join(" · ")}</p>
+            <p className="tabular-nums text-muted">{sched.map((s) => `${f.month(s.period)}: ${formatMoney(s.amount, { lang, compact: true })}`).join(" · ")}</p>
           </div>
         ) : null}
       </div>

@@ -30,7 +30,7 @@ export const ZATCA_LABEL: Record<ZatcaInvoiceStatus | "overdue", { ar: string; e
   cleared: { ar: "تم الاعتماد", en: "Cleared" },
   warning: { ar: "مقبول بتحذيرات", en: "Accepted with warnings" },
   rejected: { ar: "مرفوض", en: "Rejected" },
-  demo: { ar: "تجريبي — مش متبعت", en: "Demo — not sent" },
+  demo: { ar: "تجريبي", en: "Demo" },
   overdue: { ar: "فات ميعاد الـ ٢٤ ساعة", en: "Past 24 h" },
 };
 const DOC: Record<string, { ar: string; en: string }> = {
@@ -115,7 +115,7 @@ export default function ZatcaQueue() {
             <ArrowLeft className="size-3.5 flip-rtl" /> {L("الكاشير", "POS")}
           </Link>
         }
-        title={L("الفواتير الإلكترونية — هيئة الزكاة", "ZATCA e-invoices")}
+        title={L("فواتير هيئة الزكاة", "ZATCA e-invoices")}
         subtitle={L(`فاتورة (المرحلة الثانية) · ${z.environment === "production" ? "إنتاج" : z.environment === "simulation" ? "محاكاة" : "بيئة المطورين (sandbox)"}`, `FATOORA Phase 2 · ${z.environment}`)}
         actions={
           <div className="flex flex-col items-end gap-1">
@@ -175,7 +175,7 @@ export default function ZatcaQueue() {
             rowKey={(d) => d.id}
             columns={[
               { key: "no", header: L("الفاتورة", "Invoice"), cell: (d) => <span className="num font-semibold">{d.invoiceNo}</span> },
-              { key: "type", header: L("النوع", "Type"), cell: (d) => <Badge tone={d.docType === "invoice" ? (d.kind === "standard" ? "primary" : "neutral") : "brass"} size="sm">{DOC[`${d.kind}:${d.docType}`][lang]}</Badge> },
+              { key: "type", header: L("النوع", "Type"), hideOnMobile: true, cell: (d) => <Badge tone={d.docType === "invoice" ? (d.kind === "standard" ? "primary" : "neutral") : "brass"} size="sm">{DOC[`${d.kind}:${d.docType}`][lang]}</Badge> },
               {
                 key: "icv",
                 header: "ICV",

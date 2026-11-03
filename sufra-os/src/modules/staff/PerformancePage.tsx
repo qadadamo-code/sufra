@@ -77,12 +77,12 @@ export default function PerformancePage() {
           rowKey={(r) => r.m.id}
           columns={[
             { key: "who", header: L("الموظف", "Staff"), cell: (r) => <PersonCell m={r.m} p={hr.profileOf(r.m.id)} size="sm" /> },
-            { key: "sales", header: L("المبيعات", "Sales"), cell: (r) => <span className="num font-semibold">{r.sales ? money(r.sales) : "—"}</span>, align: "end" },
-            { key: "avg", header: L("متوسط الشيك", "Avg check"), cell: (r) => <span className="num">{r.nChecks ? money(r.avg) : "—"}</span>, align: "end", hideOnMobile: true },
-            { key: "ups", header: L("إضافات", "Upsells"), cell: (r) => <span className="num">{r.ups || "—"}</span>, align: "center", hideOnMobile: true },
-            { key: "resp", header: L("الرد على النداء", "Call response"), cell: (r) => (r.resp !== null ? <span className="num">{Math.round(r.resp)}{L("ث", "s")} · {r.calls}</span> : "—"), align: "center", hideOnMobile: true },
-            { key: "tips", header: L("بقشيش", "Tips"), cell: (r) => <span className="num">{r.tips ? money(r.tips) : "—"}</span>, align: "end", hideOnMobile: true },
-            { key: "rate", header: L("التقييم", "Rating"), cell: (r) => (r.rating !== null ? <span className="num">★ {r.rating.toFixed(1)}</span> : "—"), align: "center", hideOnMobile: true },
+            { key: "sales", header: L("المبيعات", "Sales"), cell: (r) => <span className="tabular-nums font-semibold">{r.sales ? money(r.sales) : "—"}</span>, align: "end" },
+            { key: "avg", header: L("متوسط الشيك", "Avg check"), cell: (r) => <span className="tabular-nums">{r.nChecks ? money(r.avg) : "—"}</span>, align: "end", hideOnMobile: true },
+            { key: "ups", header: L("إضافات", "Upsells"), cell: (r) => <span className="tabular-nums">{r.ups || "—"}</span>, align: "center", hideOnMobile: true },
+            { key: "resp", header: L("الرد على النداء", "Call response"), cell: (r) => (r.resp !== null ? <span className="tabular-nums">{Math.round(r.resp)}{L("ث", "s")} · {r.calls}</span> : "—"), align: "center", hideOnMobile: true },
+            { key: "tips", header: L("بقشيش", "Tips"), cell: (r) => <span className="tabular-nums">{r.tips ? money(r.tips) : "—"}</span>, align: "end", hideOnMobile: true },
+            { key: "rate", header: L("التقييم", "Rating"), cell: (r) => (r.rating !== null ? <span className="tabular-nums">★ {r.rating.toFixed(1)}</span> : "—"), align: "center", hideOnMobile: true },
             { key: "att", header: L("الالتزام", "Attendance"), cell: (r) => <Badge tone={r.score >= 90 ? "ok" : r.score >= 75 ? "warn" : "danger"}>{r.score}%</Badge>, align: "center" },
           ]}
         />

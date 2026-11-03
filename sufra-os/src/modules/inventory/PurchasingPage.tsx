@@ -10,7 +10,7 @@ import { dayLabel } from "@/lib/time";
 import { Badge, Button, Dialog, EmptyState, Input, Money, Segmented, Select, Switch, Table, useToast, type Column } from "@/ui";
 import { MoneyInput } from "@/modules/marketing/ui";
 import { PoBadge, Qty, pct } from "./bits";
-import { cancelPo, createPo, dailyUsage, invoicePo, paySupplier, poLine, poMessage, poTotals, receivePo, receiptVariance, sendPo, suggestOrders, updatePoLines, waLink, type ReceiveLine, type Suggestion } from "./purchasing";
+import { cancelPo, commissionUnits, createPo, dailyUsage, invoicePo, paySupplier, poLine, poMessage, poTotals, receivePo, receiptVariance, sendPo, suggestOrders, updatePoLines, waLink, type ReceiveLine, type Suggestion } from "./purchasing";
 import { useInventory } from "./useInventory";
 
 type View = "open" | "receive" | "pay" | "all";
@@ -252,7 +252,7 @@ export function PoSheet({ po, onClose }: { po: PurchaseOrder; onClose: () => voi
           <div className="rounded-2xl border border-brass/40 bg-brass-soft/50 p-3.5 text-[13.5px]">
             <p className="flex items-center gap-1.5 font-semibold text-brass-text"><Store className="size-4" />{L("طلب عن طريق سوق سُفرة", "Ordered through the Sufra marketplace")}</p>
             <p className="mt-1 text-muted">
-              {L("المورد على باقة", "Supplier plan")} <b>{po.marketplace.plan}</b> · {L("عمولة", "commission")} {po.marketplace.commissionPct}٪ {L("على المستلم فعلًا", "on delivered value")}: <b className="num text-ink">{formatMoney(po.marketplace.commission, { lang })}</b> {L("من", "of")} <span className="num">{formatMoney(po.marketplace.base, { lang, whole: true })}</span>
+              {L("المورد على باقة", "Supplier plan")} <b>{po.marketplace.plan}</b> · {L("عمولة", "commission")} {po.marketplace.commissionPct}٪ {L("على المستلم فعلًا", "on delivered value")}: {po.marketplace.base ? <><b className="num text-ink">{formatMoney(po.marketplace.commission, { lang })}</b> {L("من", "of")} <span className="num">{formatMoney(po.marketplace.base, { lang, whole: true })}</span></> : <>{L("متوقع", "estimated")} <b className="num text-ink">{formatMoney(commissionUnits(po.marketplace.plan, t.net - po.deliveryFee), { lang })}</b> {L("لما يتسلّم", "once delivered")}</>}
             </p>
             <p className="mt-0.5 text-[12px] text-muted">{L("العمولة على المورد مش عليك — سعرك هو سعر الكتالوج. سُفرة بتحصّل وتحوّل للمورد.", "Commission is charged to the supplier, not you — you pay the catalogue price. Sufra collects and pays the supplier out.")}</p>
           </div>

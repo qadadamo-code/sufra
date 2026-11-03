@@ -68,7 +68,7 @@ export default function AttendancePage() {
       {view === "day" && date === hr.today ? (
         <Section title={L("مين موجود دلوقتي", "Who's in now")} icon={<Clock />} subtitle={L("بيتحدث لوحده من كل الأجهزة", "Live from every device")}>
           {scheduledToday.length || here.size ? (
-            <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
               {[...new Set([...scheduledToday.map((r) => r.m.id), ...here.keys()])].map((id) => {
                 const m = hr.memberOf(id);
                 if (!m) return null;
@@ -80,7 +80,7 @@ export default function AttendancePage() {
                     <PersonPhoto m={m} p={hr.profileOf(id)} status={h ? (h.state === "in" ? "online" : "away") : null} />
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-semibold">{m.name}</p>
-                      <p className="num truncate text-[12.5px] text-muted">
+                      <p className="tabular-nums truncate text-[12.5px] text-muted">
                         {sh ? hmRange(sh.start, sh.end) : L("بدون وردية", "no shift")}
                         {h ? ` · ${L("من", "since")} ${f.time(h.since, hr.tz)}` : ""}
                       </p>
@@ -105,12 +105,12 @@ export default function AttendancePage() {
             empty={<EmptyState compact title={L("مفيش ورديات اليوم ده", "No shifts that day")} />}
             columns={[
               { key: "who", header: L("الموظف", "Staff"), cell: (r) => <PersonCell m={r.m} p={hr.profileOf(r.m.id)} size="sm" /> },
-              { key: "shift", header: L("الوردية", "Shift"), cell: (r) => <span className="num">{shifts.filter((s) => s.membershipId === r.m.id && s.date === date).map((s) => hmRange(s.start, s.end)).join(" · ") || "—"}</span>, hideOnMobile: true },
-              { key: "in", header: L("حضور", "In"), cell: (r) => <span className="num">{r.day?.firstIn ? f.time(r.day.firstIn, hr.tz) : "—"}</span> },
-              { key: "out", header: L("انصراف", "Out"), cell: (r) => <span className="num">{r.day?.lastOut ? f.time(r.day.lastOut, hr.tz) : "—"}</span> },
-              { key: "worked", header: L("شغل", "Worked"), cell: (r) => <span className="num">{r.day?.workedMin ? minutesText(r.day.workedMin, lang) : "—"}</span>, hideOnMobile: true },
-              { key: "late", header: L("تأخير", "Late"), cell: (r) => (r.day?.lateMin ? <span className="num text-warn">{minutesText(r.day.lateMin, lang)}</span> : "—"), hideOnMobile: true },
-              { key: "ot", header: L("إضافي", "OT"), cell: (r) => (r.day && r.day.overtimeMin + r.day.restDayMin ? <span className="num text-primary">{minutesText(r.day.overtimeMin + r.day.restDayMin, lang)}</span> : "—"), hideOnMobile: true },
+              { key: "shift", header: L("الوردية", "Shift"), cell: (r) => <span className="tabular-nums">{shifts.filter((s) => s.membershipId === r.m.id && s.date === date).map((s) => hmRange(s.start, s.end)).join(" · ") || "—"}</span>, hideOnMobile: true },
+              { key: "in", header: L("حضور", "In"), cell: (r) => <span className="tabular-nums">{r.day?.firstIn ? f.time(r.day.firstIn, hr.tz) : "—"}</span> },
+              { key: "out", header: L("انصراف", "Out"), cell: (r) => <span className="tabular-nums">{r.day?.lastOut ? f.time(r.day.lastOut, hr.tz) : "—"}</span> },
+              { key: "worked", header: L("شغل", "Worked"), cell: (r) => <span className="tabular-nums">{r.day?.workedMin ? minutesText(r.day.workedMin, lang) : "—"}</span>, hideOnMobile: true },
+              { key: "late", header: L("تأخير", "Late"), cell: (r) => (r.day?.lateMin ? <span className="tabular-nums text-warn">{minutesText(r.day.lateMin, lang)}</span> : "—"), hideOnMobile: true },
+              { key: "ot", header: L("إضافي", "OT"), cell: (r) => (r.day && r.day.overtimeMin + r.day.restDayMin ? <span className="tabular-nums text-primary">{minutesText(r.day.overtimeMin + r.day.restDayMin, lang)}</span> : "—"), hideOnMobile: true },
               { key: "st", header: L("الحالة", "Status"), cell: (r) => (r.day ? <DayBadge status={r.day.status} notYet={r.day.status === "absent" && r.day.deductionDays === 0} /> : null) },
             ]}
           />
@@ -121,11 +121,11 @@ export default function AttendancePage() {
             columns={[
               { key: "who", header: L("الموظف", "Staff"), cell: (r) => <PersonCell m={r.m} p={hr.profileOf(r.m.id)} size="sm" /> },
               { key: "score", header: L("الالتزام", "Score"), cell: (r) => <Badge tone={r.sum.score >= 90 ? "ok" : r.sum.score >= 75 ? "warn" : "danger"}>{r.sum.score}%</Badge> },
-              { key: "days", header: L("أيام شغل", "Days"), cell: (r) => <span className="num">{r.sum.workedDays}/{r.sum.scheduledDays}</span>, align: "center" },
-              { key: "late", header: L("تأخير", "Late"), cell: (r) => <span className="num">{r.sum.lateCount} · {minutesText(r.sum.lateMin, lang)}</span>, hideOnMobile: true },
+              { key: "days", header: L("أيام شغل", "Days"), cell: (r) => <span className="tabular-nums">{r.sum.workedDays}/{r.sum.scheduledDays}</span>, align: "center" },
+              { key: "late", header: L("تأخير", "Late"), cell: (r) => <span className="tabular-nums">{r.sum.lateCount} · {minutesText(r.sum.lateMin, lang)}</span>, hideOnMobile: true },
               { key: "abs", header: L("غياب", "Absent"), cell: (r) => <span className={cn("num", r.sum.absentDays && "font-bold text-danger")}>{r.sum.absentDays}</span>, align: "center" },
-              { key: "ot", header: L("إضافي", "Overtime"), cell: (r) => <span className="num">{minutesText(r.sum.overtimeMin + r.sum.restDayMin, lang)}</span>, hideOnMobile: true },
-              { key: "ded", header: L("خصم (يوم)", "Deduct (days)"), cell: (r) => <span className="num">{r.sum.lateDeductionDays + r.sum.absentDays * hr.rules.absenceDays}</span>, align: "center", hideOnMobile: true },
+              { key: "ot", header: L("إضافي", "Overtime"), cell: (r) => <span className="tabular-nums">{minutesText(r.sum.overtimeMin + r.sum.restDayMin, lang)}</span>, hideOnMobile: true },
+              { key: "ded", header: L("خصم (يوم)", "Deduct (days)"), cell: (r) => <span className="tabular-nums">{r.sum.lateDeductionDays + r.sum.absentDays * hr.rules.absenceDays}</span>, align: "center", hideOnMobile: true },
             ]}
           />
         )}
@@ -170,7 +170,7 @@ function CorrectionDialog({ membershipId, date, onClose }: { membershipId: strin
             {p.photoUrl ? <img src={p.photoUrl} alt="" className="size-10 rounded-lg object-cover" /> : <span className="grid size-10 place-items-center rounded-lg bg-surface-3 text-muted">{p.source === "mobile" ? <MapPin className="size-4" /> : p.source === "device" ? <Fingerprint className="size-4" /> : <Clock className="size-4" />}</span>}
             <div className="min-w-0 flex-1">
               <p className={cn("font-semibold", p.voided && "line-through")}>
-                <span className="num">{f.time(p.at, hr.tz)}</span> · {PUNCH_KIND[p.kind][lang]}
+                <span className="tabular-nums">{f.time(p.at, hr.tz)}</span> · {PUNCH_KIND[p.kind][lang]}
               </p>
               <p className="truncate text-[12.5px] text-muted">
                 {PUNCH_SOURCE[p.source][lang]}
@@ -215,7 +215,7 @@ function UnmappedPunches({ punches }: { punches: AttendancePunch[] }) {
             <li key={u} className="flex flex-wrap items-center gap-3 py-2.5">
               <Fingerprint className="size-5 text-muted" />
               <p className="min-w-0 flex-1">
-                <b className="num">#{u}</b> · {L(`${ps.length} بصمة`, `${ps.length} punches`)} · <span className="num text-muted">{f.time(ps[0].at, hr.tz)}</span>
+                <b className="tabular-nums">#{u}</b> · {L(`${ps.length} بصمة`, `${ps.length} punches`)} · <span className="tabular-nums text-muted">{f.time(ps[0].at, hr.tz)}</span>
               </p>
               <Select
                 aria-label={L("اربط بموظف", "Link to staff")}
@@ -257,7 +257,7 @@ function DevicesSection() {
                 <span className={cn("grid size-11 place-items-center rounded-xl", online ? "bg-ok-soft text-ok" : "bg-surface-3 text-muted")}><Fingerprint className="size-5" /></span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-semibold">{d.name}</p>
-                  <p className="num truncate text-[12.5px] text-muted">{d.model} · SN {d.serial} · {d.lastSeenAt ? `${L("آخر اتصال", "seen")} ${f.time(d.lastSeenAt, hr.tz)}` : L("لسه ماتصلش", "never connected")}</p>
+                  <p className="tabular-nums truncate text-[12.5px] text-muted">{d.model} · SN {d.serial} · {d.lastSeenAt ? `${L("آخر اتصال", "seen")} ${f.time(d.lastSeenAt, hr.tz)}` : L("لسه ماتصلش", "never connected")}</p>
                 </div>
                 <Badge tone={online ? "ok" : "neutral"} dot pulse={!!online}>{online ? L("متصل", "Online") : L("مش متصل", "Offline")}</Badge>
                 <Button size="sm" variant="ghost" icon={<RefreshCw />} onClick={async () => setSecret({ serial: d.serial, secret: await rotateDeviceSecret(db, d.id) })} aria-label={L("مفتاح جديد", "New key")} />
@@ -274,15 +274,15 @@ function DevicesSection() {
           <ol className="grid list-decimal gap-2 ps-5 text-[14px]">
             <li>{L("على الجهاز: القائمة ← الاتصال ← إعدادات السيرفر (Cloud Server)", "On the terminal: Menu → Comm. → Cloud Server Setting")}</li>
             <li>
-              {L("عنوان السيرفر", "Server address")}: <code className="num rounded bg-surface-3 px-1.5">{server}</code> · {L("بورت", "port")} <code className="num">443</code> · HTTPS
+              {L("عنوان السيرفر", "Server address")}: <code className="tabular-nums rounded bg-surface-3 px-1.5">{server}</code> · {L("بورت", "port")} <code className="tabular-nums">443</code> · HTTPS
             </li>
             <li>
-              {L("لو الجهاز أو البرنامج الوسيط بيقبل رابط كامل", "If the terminal/relay accepts a full URL")}: <code className="num break-all rounded bg-surface-3 px-1.5">https://{server}/api/attendance-push?key={secret.secret}</code>
+              {L("لو الجهاز أو البرنامج الوسيط بيقبل رابط كامل", "If the terminal/relay accepts a full URL")}: <code className="tabular-nums break-all rounded bg-surface-3 px-1.5">https://{server}/api/attendance-push?key={secret.secret}</code>
             </li>
             <li>{L("لو الجهاز مابيقبلش مفتاح: سجّل IP الفرع الثابت في الجهاز ده (allowed IPs)", "If it can't send a key: register the branch's fixed IP on this terminal (allowed IPs)")}</li>
           </ol>
           <div className="mt-3 flex items-center gap-2 rounded-xl bg-brass-soft px-3 py-2">
-            <code className="num flex-1 text-[16px] font-bold text-brass-text">{secret.secret}</code>
+            <code className="tabular-nums flex-1 text-[16px] font-bold text-brass-text">{secret.secret}</code>
             <Button size="sm" variant="ghost" icon={<Copy />} onClick={() => navigator.clipboard?.writeText(secret.secret)}>{L("انسخ", "Copy")}</Button>
           </div>
         </Dialog>
