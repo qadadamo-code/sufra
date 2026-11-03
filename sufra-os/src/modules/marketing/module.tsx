@@ -18,7 +18,7 @@ export default defineModule({
   title: { ar: "التسويق والولاء", en: "Marketing & loyalty" },
   description: { ar: "نقاط وعروض وكوبونات وكروت هدايا وحملات واتساب وإعلانات", en: "Points, offers, coupons, gift cards, WhatsApp campaigns and ads" },
   permission: "marketing.view",
-  shortcut: "g m",
+  shortcut: "g e",
   nav: { path: "/marketing", group: "manage", order: 22 },
   keywords: ["loyalty", "points", "coupon", "promo", "campaign", "gift card", "ads", "reviews", "نقاط", "كوبون", "عرض", "حملة", "كارت هدية", "إعلان", "تقييم"],
   routes: [

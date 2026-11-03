@@ -142,12 +142,18 @@ export function demoCrmRows(c: Ctx) {
       spent = cu.totalSpent;
       lastDays = cu.lastVisitAt ? Math.max(0, Math.round((c.now.getTime() - Date.parse(cu.lastVisitAt)) / 86_400_000)) : 30;
     } else if (cu.id === c.id("customer:crm:dup")) return;
+    else if (i >= c.customers.length + NEW - 6) {
+      // fresh leads (Wi-Fi portal, reservations, QR sign-ups) that haven't visited yet
+      cu.source = (["wifi", "reservation", "qr", "wifi", "manual", "reservation"] as const)[i % 6];
+      cu.createdAt = cu.updatedAt = c.T((1 + (i % 9)) * DAY);
+      return;
+    }
     else {
       const r = rnd();
       // a realistic mix: many one-timers, some regulars, a few champions, some lapsed
       visits = r < 0.3 ? 1 : r < 0.6 ? 2 + Math.floor(rnd() * 3) : r < 0.9 ? 5 + Math.floor(rnd() * 8) : 14 + Math.floor(rnd() * 16);
       const joined = Math.round((c.now.getTime() - Date.parse(cu.createdAt)) / 86_400_000);
-      lastDays = rnd() < 0.25 ? Math.min(joined, 60 + Math.floor(rnd() * 150)) : Math.min(joined, Math.floor(rnd() * 35));
+      lastDays = rnd() < 0.42 ? Math.min(joined, 35 + Math.floor(rnd() * 150)) : Math.min(joined, Math.floor(rnd() * 35));
       spent = 0;
     }
     const joined = Math.max(lastDays, Math.round((c.now.getTime() - Date.parse(cu.createdAt)) / 86_400_000));
@@ -415,7 +421,7 @@ export function demoCrmRows(c: Ctx) {
     other("pizza-sherif", L("بيتزا شريف – المعادي", "Pizza Sherif – Maadi"), "#9a3b6b"),
   ];
   const profile = (rid: string, city: string, area: string, cuisines: string[], priceLevel: MarketProfile["priceLevel"], rating: number): MarketProfile => ({
-    id: rid, restaurantId: rid, createdAt: c.created, updatedAt: c.created, city, area, cuisines, priceLevel, rating, listed: true,
+    id: c.id(`market-profile:${rid}`), restaurantId: rid, createdAt: c.created, updatedAt: c.created, city, area, cuisines, priceLevel, rating, listed: true,
   });
   const marketProfiles: MarketProfile[] = [
     profile(R, "cairo", "zamalek", ["egyptian", "grills"], 3, 4.7),

@@ -87,7 +87,7 @@ export function MoneyInput({ value, onChange, label, hint, className }: { value:
       label={label}
       hint={hint}
       inputMode="decimal"
-      dir="ltr"
+      className="num"
       value={text}
       onChange={(e) => {
         setText(e.target.value);
@@ -115,7 +115,7 @@ export function NumberInput({ value, onChange, label, hint, suffix, min = 0, ste
       hint={hint}
       type="number"
       inputMode="decimal"
-      dir="ltr"
+      className="num"
       min={min}
       step={step}
       value={Number.isFinite(value) ? value : 0}

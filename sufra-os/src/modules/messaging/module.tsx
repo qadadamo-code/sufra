@@ -25,7 +25,7 @@ export default defineModule({
   title: { ar: "واتساب والرسايل", en: "WhatsApp & messages" },
   description: { ar: "صندوق رسايل مشترك، قوالب واتساب، موافقات الزباين وسجل الرسايل", en: "Shared inbox, WhatsApp templates, customer consent and the message log" },
   permission: "messages.use",
-  shortcut: "g m",
+  shortcut: "g i",
   nav: { path: "/messages", group: "service", order: 65, useBadge: useInboxBadge },
   keywords: ["whatsapp", "واتساب", "inbox", "رسايل", "رسائل", "sms", "templates", "قوالب", "opt-in", "STOP"],
   routes: [

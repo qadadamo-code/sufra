@@ -72,7 +72,7 @@ export default function CampaignResults() {
               <li key={f.k} className="grid gap-1">
                 <div className="flex justify-between text-[13.5px]">
                   <span className="font-semibold">{f.k}</span>
-                  <span className="num">{f.v}{i ? <span className="ms-2 text-muted">{pct(f.v / Math.max(1, funnel[i - 1].v))}</span> : null}</span>
+                  <span className="num" dir="ltr">{f.v}{i ? <span className="ms-2 text-muted">· {pct(f.v / Math.max(1, funnel[i - 1].v))}</span> : null}</span>
                 </div>
                 <span className="h-3 overflow-hidden rounded-full bg-surface-3">
                   <span className="block h-full rounded-full bg-primary" style={{ width: `${(f.v / max) * 100}%`, opacity: 1 - i * 0.15 }} />

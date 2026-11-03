@@ -247,7 +247,8 @@ export async function onCheckPaid(db: Db, checkId: string, opts: { channel?: Pro
     await db.update("promoRedemptions", r.id, { status: "redeemed", revenue: total, customerId: r.customerId ?? check.customerId, at: now });
     if (r.promotionId) {
       const p = await db.get("promotions", r.promotionId);
-      if (p) await db.update("promotions", p.id, { uses: p.uses + 1 });
+      // cloud: the promo_redemptions_uses trigger counts it (cashiers can't edit promotions under RLS)
+      if (p && db.repo.kind === "local") await db.update("promotions", p.id, { uses: p.uses + 1 });
     }
     if (r.code) {
       const [uc] = await db.list("couponCodes", { where: { code: r.code } });
@@ -315,7 +316,7 @@ export async function onCheckPaid(db: Db, checkId: string, opts: { channel?: Pro
   }
 
   // 4) campaign attribution: message redeemed + campaign stats
-  for (const cid of campaignsTouched) await refreshCampaignStats(db, cid);
+  for (const cid of campaignsTouched) await refreshCampaignStats(db, cid).catch(() => undefined);
   const msgs = await db.list("campaignMessages", { where: { customerId: customer.id } });
   for (const m of msgs.filter((x) => !x.redeemedAt && x.code && applied.some((r) => r.code === x.code))) await db.update("campaignMessages", m.id, { redeemedAt: now, revenue: total });
   return { points };

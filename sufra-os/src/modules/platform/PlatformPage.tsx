@@ -112,7 +112,7 @@ function Sponsored() {
 
       <Section title={L("جدول الحجوزات (٤ أسابيع)", "Bookings calendar (4 weeks)")} icon={<CalendarRange />}>
         <div className="overflow-x-auto thin-scrollbar">
-          <div className="min-w-[860px]">
+          <div className="min-w-[860px]" dir="ltr">
             <div className="grid" style={{ gridTemplateColumns: `14rem repeat(${days.length}, minmax(0,1fr))` }}>
               <div />
               {days.map((d) => (

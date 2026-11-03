@@ -41,7 +41,7 @@ export default function ReportsPage() {
 
       <div className="grid gap-5 xl:grid-cols-2">
         <Section title={L("جداد وراجعين بالشهر", "New vs returning by month")} icon={<Users />}>
-          <div className="flex h-48 items-end gap-3" role="img" aria-label={L("زباين جداد وراجعين", "New and returning guests")}>
+          <div className="flex h-48 items-stretch gap-3" dir="ltr" role="img" aria-label={L("زباين جداد وراجعين", "New and returning guests")}>
             {nvr.map((x) => (
               <div key={x.month} className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
                 <div className="flex w-full flex-1 flex-col justify-end overflow-hidden rounded-t-md">

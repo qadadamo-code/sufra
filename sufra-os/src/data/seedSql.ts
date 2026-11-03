@@ -17,6 +17,8 @@ const SKIP: Record<string, string[]> = { memberships: ["hasPin"] };
 const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/;
 
 const snake = (k: string) => k.replace(/[A-Z]/g, (c) => "_" + c.toLowerCase());
+/** reserved words used as column names (promotions."window") */
+const col = (k: string) => (["window"].includes(snake(k)) ? `"${snake(k)}"` : snake(k));
 const q = (s: string) => `'${s.replace(/'/g, "''")}'`;
 
 function lit(key: string, v: unknown): string {
@@ -30,6 +32,11 @@ function lit(key: string, v: unknown): string {
     const s = Math.round((Date.parse(v) - SEED_REF.getTime()) / 1000);
     return s === 0 ? "now()" : `now() ${s < 0 ? "-" : "+"} interval '${Math.abs(s)} seconds'`;
   }
+  // booking dates (ad_bookings.starts_on/ends_on) stay relative to "today" like the timestamps
+  if ((key === "startsOn" || key === "endsOn") && typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v)) {
+    const d = Math.round((Date.parse(`${v}T00:00:00Z`) - Date.parse(`${SEED_REF.toISOString().slice(0, 10)}T00:00:00Z`)) / 86_400_000);
+    return d === 0 ? "current_date" : `current_date ${d < 0 ? "-" : "+"} ${Math.abs(d)}`;
+  }
   if (typeof v === "string") return q(v);
   return q(JSON.stringify(v));
 }
@@ -39,8 +46,8 @@ function insert(table: string, rows: Record<string, unknown>[], skip: string[] =
   // union: rows with optional fields (CRM tables) — every key any row has
   const keys = (union ? [...new Set(rows.flatMap((r) => Object.keys(r)))] : Object.keys(rows[0])).filter((k) => !skip.includes(k));
   const extraKeys = extra ? Object.keys(extra(rows[0])) : [];
-  const cols = [...keys.map(snake), ...extraKeys].join(", ");
-  const values = rows.map((r) => `  (${[...keys.map((k) => lit(k, r[k])), ...(extra ? Object.values(extra(r)) : [])].join(", ")})`).join(",\n");
+  const cols = [...keys.map(col), ...extraKeys].join(", ");
+  const values = rows.map((r) => `  (${[...keys.map((k) => (union && !(k in r) ? "default" : lit(k, r[k]))), ...(extra ? Object.values(extra(r)) : [])].join(", ")})`).join(",\n");
   return `insert into public.${table} (${cols}) values\n${values}\non conflict (id) do nothing;\n\n`;
 }
 

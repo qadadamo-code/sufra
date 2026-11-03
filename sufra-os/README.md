@@ -20,6 +20,7 @@ Set `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` (see `.env.example`, `supabas
 ## Demo logins
 
 Email (password **`sufra2026`**): `owner@sufra.demo`, `admin@sufra.demo`, `manager@sufra.demo`, `accountant@sufra.demo`.
+Sufra platform admin (Sufra staff, not a restaurant role): `platform@sufra.demo` / `sufra2026`, or PIN **0000** ("فريق منصة سُفرة") → `/platform`.
 On the login screen these appear as one-tap demo accounts.
 
 PIN (shared devices — `/app/login/pin`, the device is already paired to the demo restaurant in local mode):
@@ -229,6 +230,26 @@ design + sources: `src/modules/guest/pay/DESIGN.md`; schema `supabase/migrations
   scheduled after delivery / a paid visit. Webhook `api/whatsapp-webhook.ts` (HMAC `X-Hub-Signature-256`) → `messaging_ingest_webhook()`.
 - Schema `supabase/migrations/0007_messaging.sql` (+ `supabase/tests/messaging_test.sql`). Setup, env vars and Meta steps:
   [`docs/WHATSAPP-SETUP.md`](docs/WHATSAPP-SETUP.md). Screenshots: `node scripts/shots-messaging.mjs <base> <dir>`.
+
+## CRM, loyalty, marketing & Sufra ads (`src/modules/customers`, `src/modules/marketing`, `src/modules/platform`, `src/lib/promo`)
+
+- **Customers** (`/customers`): search + filters (tier, RFM, source, tag, leads), profile (contact, consent, birthday, tags,
+  addresses, visits/orders, favourite items, LTV, points & tier history, stamps, coupons, feedback, notes, referrals), lead
+  capture (QR join, online checkout, Wi-Fi/manual, reservations), duplicate merge, CSV import/export, rule-based
+  **segments** with live counts and automatic **RFM** (champions, loyal, new, promising, at risk, lost).
+- **Marketing** (`/marketing`): loyalty program (points per EGP, point value, tiers with multipliers/perks, stamp cards,
+  rewards, expiry), offers & coupons (`src/lib/promo/engine.ts` — line discounts before tax, stacking, windows, limits,
+  BOGO, combo, free delivery, first order, unique codes), gift cards (2204 liability), campaigns (segment → WhatsApp/SMS →
+  personalised A/B text → offer with unique codes → schedule/send; results + ROI), automated journeys, the restaurant's
+  own promos (QR-menu/online banners, receipt promo block + QR), reviews, customer reports, and **"اشتري إعلان"**.
+- **POS**: key **C** / "كوبون / نقاط" → offers, coupons, loyalty rewards/points (phone or loyalty QR `SUFRA:<phone>`);
+  gift card tender. Paid checks call `onCheckPaid` (points, stamps, tiers, redemptions, referral, attribution).
+- **Guest**: banners on `/r/:slug` and the table menu, coupon box at online checkout, loyalty card `/r/:slug/me`, e-gift
+  cards `/r/:slug/gift`.
+- **Sufra platform** (`/platform`, role `platform_admin`): restaurants directory, sponsored slots & pricing, bookings
+  calendar, approvals, performance. Public feed for the marketplace: `public_sponsored(city, cuisine)` (see
+  `src/modules/marketing/DESIGN.md`).
+- Schema: `supabase/migrations/0009_crm.sql`; SQL checks: `supabase/tests/crm_run.sh`; screenshots: `scripts/shots-crm.mjs`.
 
 ## Design system (`src/ui`)
 

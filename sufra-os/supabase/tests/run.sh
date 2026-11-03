@@ -7,6 +7,6 @@ DB="sufra_test_$$"
 createdb "$DB"
 trap 'dropdb --if-exists "$DB"' EXIT
 psql -v ON_ERROR_STOP=1 -q -d "$DB" -f supabase/tests/supabase_stubs.sql
-psql -v ON_ERROR_STOP=1 -q -d "$DB" -f supabase/migrations/0001_init.sql
+for f in supabase/migrations/*.sql; do psql -v ON_ERROR_STOP=1 -q -d "$DB" -f "$f"; done
 psql -v ON_ERROR_STOP=1 -q -d "$DB" -f supabase/seed.sql
 psql -v ON_ERROR_STOP=1 -q -d "$DB" -f supabase/tests/rls_test.sql
